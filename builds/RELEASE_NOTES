@@ -1,0 +1,153 @@
+
+
+
+
+
+
+        ##################################### RELEASE NOTES
+         3.2.61-20< faulty > reverted to 3.1.50
+         3.2.61-30 experimental
+
+
+        ############################################################################## 3.2.13
+        #was config-network-device build experimental [ok]
+
+
+
+
+
+        ############################################################################## 3.2.13-2
+
+
+        EEPROM-UPDATE:     wip changes avoid using on this build
+
+        NETWORK-MIGRATION: this build is the first to include upstream network config migration
+                           for /etc/config/network to split l2/l3 devices
+
+
+        NOTE: Users of VPNPBR or with non-basic network configurations should skip this release
+
+
+        SEE-FORUM-FOR-MORE FINER DETAILS
+        https://forum.openwrt.org/t/rpi4-community-build/69998/900?u=wulfy23
+
+
+
+
+
+
+        ############################################################################## 3.1.30ish?
+
+        WWWMODS:            Not wanting to delay the current version any longer
+                            3.1.57-23 contains some www features that are not
+                            yet parameterized.
+
+                            For the uber-security concious... please use
+                            #> rpi-support.sh nowwwmods
+                            the pages are authenticated albeit fairly alpha-ish 
+
+
+
+        NEWINIOPTIONS:      To remove auth from YOUTUBEDL you can use
+                             YOUTUBEDL_NOAUTH=1
+
+                             DLWRAPPER=1 #firstboot-setup-only
+                                          caches adblock and banip lists
+                                          weekly
+
+
+
+
+
+         KNOWNISSUES:       eeprom-update via luci (or 'rpi4_eeprom.sh updaterecommended')
+                             -excludes vl805
+                             -runs regardless of whether an update is needed
+                              use sparingly or use the direct command
+                              $> rpi-eeprom-update -a
+
+
+
+
+        POSSIBLEVFATISSUE:  not really confirmed but attempted to use a new usbstick
+                            (Product:  SanDisk 3.2Gen1) and df -h would freeze/take
+                            a long time with its default filesystem (vfat)
+                            Possible false positive as was setting up block mount
+                            so may have been double mounted or something
+
+
+        ############################################################################## 3.1.17ish
+
+        NEWINIOPTIONS:      You may wish to enable RMMOD="" or may wish to disable
+                            OPKGFEEDS_USEHTTP=1 (faster) if enabled
+
+        UPDATENOTICECHANGE: builds after 2.9.17-116 will contain some small changes to the
+        (rollingout)        update checking and notification code...
+
+                            anticipate some teething issues with old versions
+
+                            please pm me on the forum or post on the thread if you see odd
+                            behavior...
+
+                            https://forum.openwrt.org/t/rpi4-community-build/69998/772?u=wulfy23
+
+
+        BACKUPFEATURE:      The backup feature in the above notice makes files available for
+                            download at http://IP/backup this may or may not pose some
+                            security concerns (typically internal lan related only) depending
+                            on your environment... if you use this feature... you can;
+                            
+                                  click 'refresh' after downloading the file
+                            
+                            to remove and clear...
+                            These files are currently store on /tmp so reboot will also
+                            clear...
+
+                                 For best compatibility they specifically exclude;
+
+                                       -/etc/rc.local
+                                       -/boot/cmdline.txt
+                                       -/etc/opkg*
+
+        ACME CRONTAB ENTRY NOTE: https://forum.openwrt.org/t/rpi4-community-build/69998/761?u=wulfy23
+
+
+        OPENSSL-BUMP http://lists.openwrt.org/pipermail/openwrt-devel/2021-March/034476.html
+        (r16345+1.1.1k)
+
+
+
+        PARTUUID-DEFAULT
+
+		20210330 all builds have been partuuid(usb-support) for around two months
+                 from now on forgo appending 'partuuid' to build foldernames
+
+                 see: ### partuuid-notes in this file or the rest at the bottom
+                      there are some backup/restore implications@cmdline.txt
+
+
+
+        REMOVE-FREIDFUNK https://forum.openwrt.org/t/rpi4-community-build/69998/619
+
+        NOTE: Sysupgrade -> Disable your friedfunk-feed!!!
+        ( actually not sure about this one... may have been a temporary upstream shift/glitch )
+        ( actually seems correct )
+
+
+
+
+        NOTE: 2.7.5x+ wrt.ini luci editing now@system>startup
+
+
+        
+
+
+
+        KNOWNISSUES:
+                     *fixed 3.2.55-23
+                     built backup and extra www feature links not shown when no update published
+                     3.2.13-2 vpn-pbr possible issues
+
+
+
+
+

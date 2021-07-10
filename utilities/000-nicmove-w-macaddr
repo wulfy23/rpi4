@@ -1,0 +1,271 @@
+#!/bin/sh
+
+
+#NOTE WHILE THESE SCRIPTS ARE MOSTLY FUNCTIONAL THEY ARE ARCHITECTURALLY INCORRECT
+#SUGGEST INPUT INTO MAINLINE FIX OR USE bobafetthotmail s variant
+#THEY ARE HERE FOR TESTING / REFERENCE PURPOSES ONLY AND NO LONGER RECOMMENDED FOR
+#GENERAL USE
+
+
+SVERSION="1.2.3-2"
+
+SNAME="NICMOVE_${HOTPLUG_TYPE}_${ACTION}_$(date +%Y%m%d-%H%M%S)"
+SLOG="/tmp/$SNAME-$IFACE-$DEVICENAME-$INTERFACE-$DEVICE"
+SLOGa="/tmp/NICMOVE_all"
+
+echV() {
+	DDm=$(date +%Y%m%d-%H%M%S)
+	logger -t "$SNAME" "${1}"
+}
+
+
+lognic() {
+	echV "${1}"
+}
+
+
+
+
+DDD=$(date +%Y%m%d-%H%M%S)
+
+HT="$HOTPLUG_TYPE" #HOTPLUG_TYPE='iface||net'
+ACT=${ACTION:-"none"}
+
+
+echV "init-$DDD-$HT-$ACT        slog:$SLOG sloga:$SLOGa"
+
+if uci show network | grep -q macmatch; then ###ON-DEFAULT-INCLUSION-EXIT-IF-UNNEEDED
+	echV "UCIMACMATCHlines: $(uci show network | grep macmatch)" debug
+else
+	echV "no uci macmatch setup exit" debug
+	exit 0
+fi
+
+
+
+
+if [ "$HOTPLUG_TYPE" = net ]; then
+	if [ "$ACTION" = add ] || [ "$ACTION" = remove ]; then
+		if echo ${DEVICENAME:-foobar} | grep -q "SQM"; then
+			echV "$SNAME-$HT-$ACT skipSQM $DEVICENAME" >/dev/kmsg
+			exit 0
+		fi
+	fi
+fi
+
+
+if [ "$HOTPLUG_TYPE" = net ]; then
+	case "$INTERFACE" in
+		"sit"*|"ifb"*|"teql"*|"ip6gre"*|"erspan"*|"gre"*|"dummy"*)
+			exit 0
+		;;
+		"tunl"*|"tnl"*|"ip6tun"*|"ip6tnl"*|"sit"*)
+			exit 0
+		;;
+		"wlan"*)
+			exit 0
+		;;
+	esac
+fi
+
+if [ "$HOTPLUG_TYPE" = iface ]; then
+	case "$INTERFACE" in
+		"loopback"*)
+			exit 0
+		;;
+	esac
+fi
+
+
+
+
+
+if [ "$HOTPLUG_TYPE" = net ] && [ "$ACTION" = remove ]; then
+	echV "$SNAME skip-DDD-$DEVICENAME-$ACTION" >/dev/kmsg
+	exit 0
+fi
+
+
+
+
+
+if [ "$HOTPLUG_TYPE" = iface ] && [ "$ACTION" = ifdown ]; then
+	: #probably return too
+	echV "ifdown $INTERFACE exit"; exit 0
+fi
+if [ "$HOTPLUG_TYPE" = iface ] && [ "$ACTION" = ifupdate ]; then
+	echV "ifupdate $INTERFACE exit"; exit 0
+fi
+
+if [ "$HOTPLUG_TYPE" = iface ] && [ "$ACTION" = add ]; then
+	: #DEVPATH
+fi
+
+
+
+
+
+
+
+if [ -z "$ACTION" ]; then ACTION="unknown"; fi
+
+if [ -z "$DEVICENAME" ]; then
+	if [ -z "$DEVICE" ]; then
+		DEVICE="${INTERFACE}"
+	fi
+	NICMAC=$(ip add show $DEVICE | grep ether | tr -s ' ' ' ' | cut -d' ' -f3)
+else
+	NICMAC=$(ip add show $DEVICENAME | grep ether | tr -s ' ' ' ' | cut -d' ' -f3)
+fi
+
+if [ -z "$NICMAC" ]; then NICMAC="30:20:10:01:02:03"; fi
+
+if [ "$HOTPLUG_TYPE" = iface ]; then
+	i="$DEVICE"
+else
+	i="$DEVICENAME" #or INTERFACE
+fi
+
+
+
+
+
+
+if uci show network | grep macmatch | grep "$NICMAC"; then
+	UCIPFX=$(uci show network | grep macmatch | grep "$NICMAC" | cut -d'.' -f1,2)
+	#secondvalue to match with INTERFACE at IFUP #ifthereisafirstvalue!
+	UCIPFXb=$(uci show network | grep macmatch | grep "$NICMAC" | cut -d'.' -f2)
+
+	UCIINTERFACE=$(uci -q get $UCIPFX.ifname)
+	UCIMACADDR=$(uci -q get $UCIPFX.macaddr)
+
+	echV "MATCHED $NICMAC to $UCIPFX UCIINTERFACE:${UCIINTERFACE} INTERFACE:${INTERFACE}"
+
+
+if [ "$HOTPLUG_TYPE" = "net" ]; then
+	if [ "$ACTION" = "add" ] || [ "$ACTION" = "move" ]; then
+		echV "keepgoing"
+	fi
+else
+	echV "TESTLEAVENOWnonNETaddORmove"
+	exit 0
+fi
+
+
+
+
+
+
+	if [ -z "$DEVICE" ]; then
+		DEVICE="${INTERFACE}"
+	fi
+
+
+
+	if [ "$DEVICE" != "$UCIINTERFACE" ]; then
+
+
+	echV "IFACEISHifupCHK2dbg $NICMAC @ $DEVICE != ${UCIINTERFACE} [${HOTPLUG_TYPE}]"
+
+
+
+	echV "Checking if uciiface is currently assigned elsewhere"
+	echV "Checking \$(ip a show dev \${UCIINTERFACE})"
+	echV "Checking $(ip a show dev ${UCIINTERFACE})"
+	#ip a show dev ${UCIINTERFACE}
+	#[root@dca632 /usbstick 48°]# ip a show dev eth5 2>/dev/null
+	#[root@dca632 /usbstick 47°]# echo $? 1
+
+	if [ -z $(ip a show dev ${UCIINTERFACE} 2>/dev/null) ]; then
+
+
+		DEVICENEWNAME="${UCIINTERFACE}"
+		DEVICENAME="${i}"
+
+
+		echV "EARLYMOVETEST1INLINECHANGE $DEVICENAME:$NICMAC:$DEVICENEWNAME"
+
+		ip link set ${DEVICENAME} down
+		ip link set ${DEVICENAME} name $DEVICENEWNAME
+		
+
+
+if [ ! -z "$UCIMACADDR" ]; then
+
+	echV "ALTMACADDRinUCI $UCIMACADDR"
+
+	if [ "$NICMAC" != "$UCIMACADDR" ]; then
+		echV "SETTINGNEWMAC $NICMAC > $UCIMACADDR"
+		ip link set dev $DEVICENEWNAME address $UCIMACADDR
+	fi
+
+else
+	echV "ALTMACADDRinUCI [no]> origmac $NICMAC"
+fi
+
+
+		ip link set ${DEVICENAME} up
+
+
+		sleep 3
+		exit 0
+
+	else
+		#lognic "EARLYMOVETESTUNABLEisTAKEN!!! $DEVICENAME:$NICMAC:$DEVICENEWNAME"
+		IFACEremapTname="remap-$DEVICE-$UCIINTERFACE" #@iface-ifup
+	fi
+
+
+
+
+	else
+
+lognic "EARLYMOVETEStseemsCORRECT $DEVICE:$UCIINTERFACE"
+
+
+	fi
+#fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+else
+
+
+	UCIINTERFACEg=$(uci show network | grep ifname | grep "$i" | cut -d'=' -f1)
+	UCIINTERFACE=$(uci -q get ${UCIINTERFACEg})
+
+	echV "NOMATCH $NICMAC to $UCIPFX UCIINTERFACE:${UCIINTERFACE} INTERFACE:${INTERFACE}"
+	echV "CHeCKINGif:ucif:${UCIINTERFACE} ($i) taken..."
+
+	if (uci show network | grep macmatch | cut -d'.' -f1,2 | while read ENTRY; do uci -q get $ENTRY.ifname; done) | grep -q "$i"; then
+
+	#echV "D> THISNAMEISTAKEN $i !!!!!!!!!!!!"
+
+
+	if [ "$HOTPLUG_TYPE" = iface ]; then #ifup
+		#echV "D> THISNAMEISTAKEN $i iface sleep 6 for net"
+		: #sleep 6
+	fi
+
+	else
+		echV "D> THISNAMEISFREE $i"
+	fi
+
+fi
+
+
+
+
+
+
+

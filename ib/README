@@ -1,0 +1,104 @@
+
+
+        ####################################### ib
+
+        20210623 add files tarball
+                 lessen need to extract rootfs
+                 to examine source
+
+
+        -build generator specific folder - wip
+
+
+
+
+        OVERVIEW - in a nutshell
+
+            this build is created using the imagebuilder
+
+
+
+        KEY-NON-STANDARD-MODS
+
+            -.config&PARTSIZEx2 ( see ibbuildinformation.txt )
+        
+            -image/Makefile adds updated elf+dat to the
+             *boot* partition
+
+            -( well rootfs too and some other custom imgs are
+             made also but this is not critical )
+
+
+        THEREST
+
+            -most of the rest of the build customisation is
+             done via files... which are a real wip
+             but can be found in rtfs imgs
+
+            -a few statix binaries are included within files
+
+                + busybox-static ( top-mcpu, base64, shred etc.  )
+                + nano ( for color ) + color profiles
+                + ooklaspeedtest and ffmpeg are git-getted.sh to
+                  save space
+
+            -on occasion out of tree ipk's are also present in
+             files and installed during firstboot
+
+                -luci-theme-argon
+                -mwan3-master-pr's (no longer needed)
+                -etc. etc.
+
+        
+        Unforunately, git wont store a re-tarred ibdir.tar.gz
+        (size) so i'm unable to upload re-usable imagebuilders...
+        which was/is something i'd like to do on occasion...
+
+
+
+        REUSE
+
+            -dependant on certain packages... checks are
+             in place in most spots but no doubt there
+             are many that are missed;
+
+
+                DEPENDSSTRICT
+
+                -L1 curl, wget, httping
+                    bash probably
+                    maybe a pstool such as pgrep et. al.
+
+                -L2 mostfstools: blkid, parted, fdisk, sfdisk etc
+                    fsck
+
+
+                DEPENDSLIKELY
+
+                -S1 dnsmasq-full, ipset, kmod-ipt-hashlimit etc. etc.
+                    a few more things related to above... conntrack maybe
+
+                -L3 telnet, jq, 
+                    sshfs/client-utils et. al. one of them anyway
+
+
+                DEPENDSCONDITIONAL
+
+                more packages depending on calling certain scripts/features
+
+
+            NOTES: avoid install procps-top/du/df etc.
+                    same goes for coreutils-PROGUSEDHEAVILY i.e. tar
+                    
+                    202101 gzip(full) breaks upgrade
+                    202101 ucert breaks sysupgrade
+
+
+
+
+
+
+
+
+
+

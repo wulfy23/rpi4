@@ -1,0 +1,56 @@
+
+
+
+    ##################################  hardware setup / recommendations
+
+
+    TYPICALSETUP:
+    
+        -rpi4 ( 2/1/4 all are fine 8 is untested but should be fine )
+		 ( 1gb version may run into troubles with certain build features
+           but fundamentally its hardware can do anything the others can
+           do on openwrt )
+         ( personally running 2GB but this was to save money and it
+           limits re-use options down the track... if in doubt
+           get the 4 )
+
+        -decent 3amp(2.5) psu ( external switch/button very handy )
+
+        -small heatsink minimum ( fine without it tho' )
+
+            
+        -sdcard    -> Samsung EVO Plus 32GB microSDXC UHS-I Class 10
+         (note: 2 cards are beneficial)
+
+		 ( if you intend to run from usb... do not use ssd drives
+           or at least without external power and if you have issues
+           test with a normal (low-power) usb key )
+
+
+        -anyone who seriously needs wireless should use a seperate ap
+            ( ipq806x / unify ap's / tp-link 225/245 recommended )
+
+        -WAN-Ethernet: For best results use a usb nic rtl-8152-3 / asix-ax88179
+            recommended;
+            -> TP-LINK UE300 USB3
+            
+        -optional-case
+
+
+
+    WISEMOVE:
+
+
+        -a usb stick in the upper usb3 slot used as "backup/persistent"
+         storage for anything that might not survive a failed upgrade...
+
+        -this external extra data partition is encouraged for most
+         openwrt devices with a usb slot... ( as is images that
+         contain the required packages / drivers to access this
+         data on a fresh install i.e. block-mount e2fsprogs etc. )
+         these packages should be contained in this build...
+
+
+
+
+

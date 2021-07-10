@@ -1,0 +1,142 @@
+
+
+    ___________________________________________________   CHANGELOG
+
+
+      3.2.61-31+      
+          
+                -fix fboot 17-ntp_fast dont act if non-original support once off
+                 cmdline use or original
+                -add ini edge case option for firstboot lanip/netmask
+                 add wrt.ini on /boot > /root/ to support abovefat32win users
+                 add sample to github/utilities/wrt.ini
+                -minor unfinished mods to statistics Disks
+
+
+      #################********************* possibly reverted
+
+      3.2.1x
+                -fix luci@bootstrap-intrusion log duplicate denied page
+                -merge mainline stage2 procd process end
+                -uptime@bootstrap formatting
+      
+      #################********************* possibly reverted
+
+
+
+      3.2.13-2
+                -test network config migration with argon theme [ok]
+                -retest newer argon theme/s > fail again
+                -add sshfs test size for next major build
+                -add smc usb nic driver
+
+
+      3.1.57-51 -youtubedl wip fix passing ini directory to dl.sh
+                 (and skip earlier alt-drive based check logic)
+                -add config-network-device revert on downgrade logic
+
+
+      3.1.57-39 -fix no longer catching luci login fail at loginrpt@bootstrap<error_page
+                -loginrpt sort reversed
+                -various eeprom-update HOOK ini setting files
+                -change updaterecommended well disable it... luci eeprom-update runs
+                 rpi4_eeprom.sh update (aka rpi-eeprom-update -a +hooks)
+
+
+      3.1.57-32 -fix passing of -R via one click flash
+                -fix vl805.sig removal in rpi-eeprom-update -r
+                -fix auto fetch at rpi-eeprom-update
+                -fix dont reflash identical eeproms at rpi4_eeprom.sh update recommended
+
+
+
+           
+     -r16595(75)
+                -add [*.]router dns alias [interacts with replacement index] startup+fboot[nomasqkick]@35-masqrouter
+                 provides i.e. https://dl.router/
+                -add custom [wip]/etc/profile [tba-org-save-replace-diff-mod]
+                -add UHTTPD_HANDLER
+                -quick tmp addition of 'nowwwmods'@RPI-SUPPORT.SH
+                -servicestate)@snapstate.sh print to kmsg final actions(servicestate restore disabled)
+                
+
+
+     -r16595(63)
+                -sysinfo.sh show smb mounts and pretty print ip6 leases
+                -implement NTP_FAST@fboot 17-ntpfast backport ini > 1 2.pool.openwrt if z
+                -add locate.sh locate/updatedb installer/wrapper
+                -experimental youtubedl and editor w/semi-auth default on (beta test)
+                -some minor fixes / parser for rpi4_eeprom.sh and rpi-support.sh@luci eeprom-update logic
+
+     -r16595(51)
+                -sysinfo.sh pretty odhcp6 lines and kerr trim
+                -add uuidgen for youtube-dl
+                -support/include /usr/bin/aria2c wrapper @fboot 523-banipng DLWRAPPER=1
+                 wip: reboot handline@persistentdata@?~>shutdown.sh
+                -rebootwrapper adjust peristent* to ignore busybox stop and call stop early on non tmpfs  
+                -add eeprom-update@rpi-support.sh > rpi4_eeprom.sh [fetch<H>|update|info|updaterecommended]
+                (optional hash@eeprom-update)
+
+
+     -r16595(23)
+                -add mqqtoggle service
+                -update / reinstate onrom service-default-pdata
+                 restorefiles/service-dpata/banip/backup
+                -remove all sleep and sync from updatecheck.sh/rpisysup.sh/rpi-sysup-online.sh*
+
+
+
+     -r16595(23)
+                -fixes to dl.sh, banner.touch@shut.sh, rebootwrap sleep7>2
+                -startup gratuitous tap opK
+                -add basic snort3 sample setup helper (and binaries for a few builds)
+                -disabled backport/force write of ashprofile(17) and lucicommands(965)
+                 speed up firstboot and less needless disk writes
+                -opkgfboot@51 start VERSION case, support alt
+                 ini-urls/proto, backport and default to http
+                 over cdn for official repos
+                -shutdown.sh touch /etc/banner
+				-add RMMOD ini option with samples@rc.custom-end
+                -add custom etc/profile NOTE: sysup no backport
+
+
+     -r16574(26~)
+                -add backup button and make flash red
+                -argon uci-defaults workaround
+                -argon add updatecheck.sh loggedin topbar
+                -remove most perftweaks and 20-smp
+                -add refresh on update-unavailable luci message
+                -add twicedaily for updatecheck and fix refresh drop state@etc also
+                -some 01-statecheck tidying
+                -jiggle some fboot messages bg-copy and dont try never existent utils
+
+
+
+
+
+
+
+
+         official
+
+
+                -r17050ish https://github.com/openwrt/openwrt/commit/b82cc8071366b8e96904a1b52af503442069b20d
+                 wifi logic
+              
+                -3.2.15? https://github.com/openwrt/openwrt/commit/b118aba8cbac58a45d4882cd79e18e56c3fbdc70
+                 procd no respawn stopped processes
+                -https://git.openwrt.org/?p=openwrt/openwrt.git;a=commit;h=ff2bb16730f629d54bde8ba85c75d8614741e3fd
+                 cypress firmware bump
+
+
+
+ 
+                -@118 mmc/xhci tweaks
+
+               -kernel: drop the conntrack rtcache patch
+
+
+
+
+
+
