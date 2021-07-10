@@ -3,6 +3,10 @@
     ___________________________________________________   CHANGELOG
 
 
+
+                 -add rtl8111(pci) driver for dfrobot thing
+
+
       3.2.61-31+      
           
                 -fix fboot 17-ntp_fast dont act if non-original support once off
