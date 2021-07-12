@@ -1,31 +1,43 @@
 
 
+
+
+
     ___________________________________________________   CHANGELOG
 
 
 
-                 -add rtl8111(pci) driver for dfrobot thing
 
-
-      3.2.61-31+      
-          
+      3.2.61-31 -add rtl8111(pci) driver for dfrobot thingy
+      3.2.69-x  -initial board_name support for 4-compute-module and 400
+                -4-compute-module notify dwc not present
                 -fix fboot 17-ntp_fast dont act if non-original support once off
                  cmdline use or original
                 -add ini edge case option for firstboot lanip/netmask
                  add wrt.ini on /boot > /root/ to support abovefat32win users
                  add sample to github/utilities/wrt.ini
                 -minor unfinished mods to statistics Disks
+                -fboot@73-persistcron handle no init.d/persistX no adds(aka non rpi community-ish)
+                 lots more todo here
+                -add NO_ONECLICKFLASH=1 for anyone who wishes to prevent accidental flashing
+                -fix NOUPDATECHECK html maincontent missing
+                -support more RPI4CMDLINEOPTS@13-fsckparts
+                -support NET_DUMMY_NUM
 
+
+      3.2.61-30
+                -major files reversion <> ~3.1.50~
+
+      
+      3.2.61-20
+                -failed dwc_otg and clean of shutdown.sh semi-broken reverted
 
       #################********************* possibly reverted
-
       3.2.1x
                 -fix luci@bootstrap-intrusion log duplicate denied page
                 -merge mainline stage2 procd process end
                 -uptime@bootstrap formatting
-      
       #################********************* possibly reverted
-
 
 
       3.2.13-2
@@ -138,6 +150,20 @@
                 -@118 mmc/xhci tweaks
 
                -kernel: drop the conntrack rtcache patch
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
