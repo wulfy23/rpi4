@@ -414,47 +414,15 @@ fi
 		#Bname="
 
 
-###Fsub="builds/rpi-4_snapshot_3.2.13-2_r16904_extra"
-###Bname="rpi4.64-snapshot-26363-3.2.13-2-r16904-ext4-sys.img.gz"
-
-#Fsub="builds/rpi-4_snapshot_3.1.57-50_r16707_extra"
-#Bname="rpi4.64-snapshot-26360-3.1.57-50-r16707-ext4-sys.img.gz"
-
-
-
-
-
-
-
-#Fsub="builds/rpi-4_snapshot_3.2.61-2_r17073_extra"
-#Bname="rpi4.64-snapshot-26529-3.2.61-2-r17073-ext4-sys.img.gz"
-
-#Fsub="builds/rpi-4_snapshot_3.2.61-5_r17073_extra"
-#Bname="rpi4.64-snapshot-26530-3.2.61-5-r17073-ext4-sys.img.gz"
-
-###buggyifmissingrclocal
-#Fsub="builds/rpi-4_snapshot_3.2.61-6_r17073_extra"
-#Bname="rpi4.64-snapshot-26531-3.2.61-6-r17073-ext4-sys.img.gz"
-
-
-
-
-#Fsub="builds/rpi-4_snapshot_3.2.61-17_r17073_extra"
-#Bname="rpi4.64-snapshot-26537-3.2.61-17-r17073-ext4-sys.img.gz"
-
-#Fsub="builds/rpi-4_snapshot_3.2.61-20_r17073_extra"
-#Bname="rpi4.64-snapshot-26551-3.2.61-20-r17073-ext4-sys.img.gz"
-
-
-Fsub="builds/rpi-4_snapshot_3.1.57-50_r16707_extra"
-Bname="rpi4.64-snapshot-26360-3.1.57-50-r16707-ext4-sys.img.gz"
-
-
+#REVERTBUILD
 #Fsub="builds/rpi-4_snapshot_3.2.61-30_r17073_extra"
 #Bname="rpi4.64-snapshot-26379-3.2.61-30-r17073-ext4-sys.img.gz"
 
-Fsub="builds/rpi-4_snapshot_3.2.61-30_r17073_extra"
-Bname="rpi4.64-snapshot-26379-3.2.61-30-r17073-ext4-sys.img.gz"
+#rtl1111-pci-boarddesc-interrupt
+Fsub="builds/rpi-4_snapshot_3.2.61-36_r17073_extra"
+Bname="rpi4.64-snapshot-26516-3.2.61-36-r17073-ext4-sys.img.gz"
+
+
 
 
 		#echo "no stable build available"; exit 0
@@ -469,35 +437,13 @@ Bname="rpi4.64-snapshot-26379-3.2.61-30-r17073-ext4-sys.img.gz"
 		#Fsub="
 		#Bname="
 
-#Fsub="builds/rpi-4_snapshot_3.2.55-23_r16970_extra"
-#Bname="rpi4.64-snapshot-26526-3.2.55-23-r16970-ext4-sys.img.gz"
 
+#Fsub="builds/rpi-4_snapshot_3.2.61-30_r17073_extra"
+#Bname="rpi4.64-snapshot-26379-3.2.61-30-r17073-ext4-sys.img.gz"
 
-#Fsub="builds/rpi-4_snapshot_3.2.61-2_r17073_extra"
-#Bname="rpi4.64-snapshot-26529-3.2.61-2-r17073-ext4-sys.img.gz"
+Fsub="builds/rpi-4_snapshot_3.2.61-36_r17073_extra"
+Bname="rpi4.64-snapshot-26516-3.2.61-36-r17073-ext4-sys.img.gz"
 
-#Fsub="builds/rpi-4_snapshot_3.2.61-5_r17073_extra"
-#Bname="rpi4.64-snapshot-26530-3.2.61-5-r17073-ext4-sys.img.gz"
-
-#buggyifmissingrclocal
-#Fsub="builds/rpi-4_snapshot_3.2.61-6_r17073_extra"
-#Bname="rpi4.64-snapshot-26531-3.2.61-6-r17073-ext4-sys.img.gz"
-
-
-#Fsub="builds/rpi-4_snapshot_3.2.61-17_r17073_extra"
-#Bname="rpi4.64-snapshot-26537-3.2.61-17-r17073-ext4-sys.img.gz"
-
-
-#Fsub="builds/rpi-4_snapshot_3.2.61-20_r17073_extra"
-#Bname="rpi4.64-snapshot-26551-3.2.61-20-r17073-ext4-sys.img.gz"
-
-
-
-#Fsub="builds/rpi-4_snapshot_3.1.57-50_r16707_extra"
-#Bname="rpi4.64-snapshot-26360-3.1.57-50-r16707-ext4-sys.img.gz"
-
-Fsub="builds/rpi-4_snapshot_3.2.61-30_r17073_extra"
-Bname="rpi4.64-snapshot-26379-3.2.61-30-r17073-ext4-sys.img.gz"
 
 
 

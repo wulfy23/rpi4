@@ -14,12 +14,16 @@
            limits re-use options down the track... if in doubt
            get the 4 )
 
-        -decent 3amp(2.5) psu ( external switch/button very handy )
+          20210715 note: cm4-dfrobot-carrier rtl1111 support added
+                         1g-nowifi-nommc(lite) model tested by @SyntaxTerror
 
-        -small heatsink minimum ( fine without it tho' )
+
+        -PSU decent 3amp(2.5) psu ( external switch/button very handy )
+
+        -HEATSINK small heatsink minimum ( fine without it tho' )
 
             
-        -sdcard    -> Samsung EVO Plus 32GB microSDXC UHS-I Class 10
+        -SDCARD    -> Samsung EVO Plus 32GB microSDXC UHS-I Class 10
          (note: 2 cards are beneficial)
 
 		 ( if you intend to run from usb... do not use ssd drives
@@ -27,11 +31,11 @@
            test with a normal (low-power) usb key )
 
 
-        -anyone who seriously needs wireless should use a seperate ap
+        -EXTERNAL-AP: anyone who seriously needs wireless should use a seperate ap
             ( ipq806x / unify ap's / tp-link 225/245 recommended )
 
         -WAN-Ethernet: For best results use a usb nic rtl-8152-3 / asix-ax88179
-            recommended;
+            recommended; (note: advise to retain default eth1 is wan settings )
             -> TP-LINK UE300 USB3
             
         -optional-case
@@ -49,6 +53,8 @@
          contain the required packages / drivers to access this
          data on a fresh install i.e. block-mount e2fsprogs etc. )
          these packages should be contained in this build...
+
+
 
 
 

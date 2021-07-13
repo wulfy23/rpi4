@@ -1,15 +1,12 @@
 
 
-
-
-
-
+    ##################################  OpenWrt builds for the rpi-4
+    
     see: https://forum.openwrt.org/t/rpi4-community-build/69998
          to request packages, provide feedback etc.
 
+    ################################################################
 
-
-    ##################################  OpenWrt builds for the rpi-4
 
 
     Credit and source courtesy of the OpenWrt team, contributors and
@@ -42,16 +39,23 @@
 
 
 
-    NOTES:  official images @ 21.02.0-rc1 available
-
-            first time OpenWrt users are recommended to use stable official
-            21.02 build before running these builds. i suppose it wouldn't
-            hurst to whack this on for a quick spin... but switch back to
-            an OfficialBuild as soon as you become confused... ;)
+    NOTES:  official images @ 21.02.0 seeon available
+            first time OpenWrt users recommended to use stable official
+            suppose it wouldn't hurt to whack this on for a quick spin...
+            switch back to an OfficialBuild as soon as you become confused... ;)
 
 
+    IMG-SPECS:
+         -ext4 300M-boot 900M-rootfs (no squashfs)
+         -opkg-alt-repo (base|core|luci) 100% non-modified
+         -over 223 additional drivers and packages
 
-	WIFI    
+
+
+
+
+
+	WIFI:
             note: technically atm, wifi is not supported by this build and
                   a stand alone auxillary AP is required for production env
 
@@ -62,24 +66,24 @@
                  first... use a third party access point ($65AUD/37US) and avoid
                  stress, time wastage, limited performance...
 
+        
+
 
 
     flashing) [see: forum thread top post in link above]
 
-        -'fac'=factory>unzip>sdcard
-        -'sys'=sysupgrade
-        
-        -ext4 300M-boot 900M-rootfs (squashfs untested) 
+        -'fac' = factory>(g)unzip>sdcard
+        -'sys' = sysupgrade
+
         
         -*non-comm-upgrade-only* !!! sysupgrade -p  !!! switch to take new partition sizes !!!
         -*non-comm-upgrade-only* sysupgrade on non-community backup + ensure rc.local has exit 0
-        -note: the two options above, upgrade to this build are less
-         advised... it's preferred if you start fresh factory->sdcard
-         ( a config backup etc/config/* restore is ok )
+        -note: the two options above, aka 'upgrading-to-this-build' are less advised/tested...
+               it's preferred if you start fresh factory->sdcard
+               ( a config backup etc/config/* restore is ok )
 
 
         NOTE: Flashing can take extra time... due to 1G i.e.;
-              (20210216~2.7.71+ unitializing blink status)
 
             Seriously... go hang the washing or something
 
@@ -88,11 +92,13 @@
         
              (green-act-led on means flashing)
              (usb key with led helps to see)
-
+             (20210216~2.7.71+ unitializing blink status)
+             -slow throbbing blink during firstboot setup solid when done(-ish)
 
 
 
     hardware) see HARDWARE for typical setup / recommendations   
+              202107note: dfrobot-cm4-carrier initial support added
 
 
       quirks)
@@ -104,28 +110,44 @@
          enable what you use, and provide feedback if something is bloaty /
          or needed by default. see forum for more info.
 
+        -extroot-overlay[unsupported]... (see lower)
+
         -~wifi ap/ac issue (reportedx2: mine works fine)
 
         -add /root/wrt.ini to your /etc/sysupgrade.conf (done automatically)
-        -create /etc/packagesremove.txt and add to sysupgrade.conf
+        -create /etc/packagesremove.txt and add to sysupgrade.conf(adding likely now automatic)
+
+
 
       
-      extras)
+      extras
         
-        opkg-alt-repo (base|core|luci) 100% non-modified
-        luci updatecheck notice with one-click flash
+        ##################################################################### specialfeatures
 
-        scripts;
+        -automatic re-install of packages post-upgrade (or not)
+        -luci updatecheck notice with one-click flash
+        -webui full-ish text editor
+        -webui browser ssh terminal (wip)
+        -youtube-download webui (wip requires external storage)
+        -smb/sshfs mount helper
+        -optimised / patched rpi-eeprom-update
+        -nano colors
+        -login sysinfo and sh/bash profile blingification
+        -easy user setup variables via wrt.ini (lanip, ntp-server, etc.) with luci editing
+
+
+        ##################################################################### scripts
 
          -rpi-sysup-online.sh automated upgrade
          -package restore (sysupgrade -R)
          -rpi4-official-opkg.sh for security and bugfixes from master
-         -rollback.sh|opK install <pkg|file>|wrtsnapback (betas)
          -luci updates notifications (points to master not build :( )
          -rpi-throttlewatch.sh ( test thermal/scaling )
-         -rpi-sysup-clean-backup.sh or similar wip (dump generic backups)
+         -rollback.sh|opK install <pkg|file>|wrtsnapback (betas)
+         -semi-discontinued use topbar: rpi-sysup-clean-backup.sh wip (dump generic backups)
 
-        opt-in/out;
+
+        ##################################################################### opt-in/out
 
          -persistent logs / statistics / nlbwmon / upgrade-data
          -sqmdscp console/other priority @> rpi4.qos
@@ -134,32 +156,42 @@
          -usbboot-support/auto-fsck (wip->multiboot/partresize/live-mode)
 
 
-        utilities;
+        ##################################################################### utilities
 
-         -parted
          -speedtest-ookla(git-dl'd)
+         -ffmpeg(git-dl'd)
          -base64, tac, stat, blkid, etc. etc.
+         -x parted (202107->now_mainline_openwrt-ipk)
 
 
     PACKAGES:
         
-        -bash (w-temperature@ps1)
-        -wget curl unzip htop lsof losetup strace vim-fuller
-        -openvpn + kmod-tun + wireguard + mwan3 + vpn-pbr
-        -banip + adblock
-        -nano colors
-        -many many more...
-       
-
-     ADDITIONS;
-
-        Uncommon requests are put to
-        the 3 or 5 build user test ( 20% interest )
+         -bash (w-temperature@ps1)
+         -wget curl unzip htop lsof losetup strace vim-fuller
+         -openvpn + kmod-tun + wireguard + mwan3 + vpn-pbr
+         -banip + adblock
+         -many many more...
 
 
+        
+        ##################################################################### requests
+        packages/features
 
+             1: required for firstboot net connectivity (or related functions)?
+             2: are they not too big?
+             3: can they easily be rendered dormant/intert?
+             5: are they common to other users?
+             6: if (complex) setup is required can you provide samples/automation?
+             7: do they cause any other conflicts with typical device operation
+                or other build related logic?
+
+             *Uncommon requests are put to the 3 or 5 build user test ( 20% interest )
+
+
+
+
+        ##################################################################### somefinerdetails 
         -see TODO
-
 
          -partuuid(usb-support) means backup restore requires you to check
          or move and replace your current cmdline.txt(distfeeds/customfeeds also)
@@ -188,20 +220,17 @@
          reports the problems, would likely effect, packagerestore
          upgrade, backup etc logix
 
-
-        -luci_statistics will fail to start if collectd-mod-x is not
-         installed and is enabled in /etc/config/luci_statistics > module,
-         as firstboot scripts setup these modules... and sysupgrade
-         auto-removes packages you have removed... i'd suggest just leaving
-         all modules installed for now and possibly cp statistics config
-         file pre/post upgrade if you want to disable some default modules...
-
+        -luci_statistics will fail to start if collectd-mod-x is not installed
+         and is enabled in /etc/config/luci_statistics > module, as firstboot
+         scripts setup these modules... and sysupgrade auto-removes packages
+         you have removed... i'd suggest just leaving all modules installed for
+         now and possibly cp statistics config file pre/post upgrade if you
+         want to disable some default modules...
 
         -rc.local style scripts should be placed in /etc/custom/startup ...
          see examples there and make sure to add to sysupgrade.conf avoid
          editing rc.local but if there is a real need ask on the support page
          and we'll work something out...
-
 
         -sdcard writes... unlike a stock image, this build makes use of sdcard
          storage to keep traffic / statistical data across reboots. if you are
@@ -218,70 +247,3 @@
         
         
         
-        ####################### oldmsgs
-    
-
-	http://lists.openwrt.org/pipermail/openwrt-devel/2021-March/034476.html
-
-	202101-02ish
-
-	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    IMPORTANT: build users running pre r15599 releases are advised to update
-               or check your dnsmasq(-full) version is above 2.82(over 2.83 for logspamfix)
-    https://forum.openwrt.org/t/security-advisory-2021-01-19-1-dnsmasq-multiple-vulnerabilities/85903
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    +odhcp6c +netifd +libwolfssl24 ~hostpad +dnsmasq-full ~banip
-    openvpn-openssl? wget-ssl?
-
-
-
-        20201110
-                -master has been fairly volatile of late... no builds currently...
-                         and for forseeable future ( few weeks minimum )
-
-
-
-		NOTE: 20201109 changes in master have placed a cloud around the operation
-              of opkg install from non-core/luci/base feeds ( and inconsistency
-              from imagebuilder ) .... until confidence is restored in it's
-              reliability... any opkg operations which are discussed below...
-              may not be considered reliable... this also means that the frequency
-               / availability of 'stable' builds will be affected...
-
-    
-    
-
-    ###########################################  old-release-progression-notes
-    
-    release-1.0>1.1>1.2>1.3>1.5>1.7>1.9>11-13(unstable)>1.15-17(almoststable-testing-elfdat)
-            2.3.505
-            2.3.551 testing
-
-    
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    IMPORTANT: build users running pre r15199 releases are advised to update
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    https://forum.openwrt.org/t/rpi4-community-build/69998/329?u=wulfy23
-
-    
-    
-    
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    IMPORTANT: build users running pre r15530 releases are advised to update
-    https://forum.openwrt.org/t/security-advisory-2021-01-19-1-dnsmasq-multiple-vulnerabilities/85903
-
-
-
-        
-
-
-
-
-
-	-OLDbug: mwan3 defaults bugger openwrt.org opkg update when enabled
-         update@20200923 testing ipk / next pkg fixes should resolve... 
-
-
-
-
-
