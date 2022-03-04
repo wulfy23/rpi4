@@ -1,0 +1,686 @@
+
+
+
+
+
+    ___________________________________________________   CHANGELOG
+
+
+        5.0.109 -9) sysinfo.sh refactor 'hosts' section (wip)
+        r19003  -11) refactor 351-hwrng be conditional and use /dev/hwrng
+                -13) remove hfs stuff - rarely needed can be postinstalled if needed
+                -13) simple-adblock localfix for ujail
+				-)
+                -)
+                -)
+                -)
+                -)
+                -)
+                -)
+                -)
+                -)
+                -)
+                -)
+                -)
+                -)
+                -)
+
+
+        5.0.105 -3) 45311 improve theme fixup resultmsg
+        r18913  -3) REMOVEDsee6 populate 'online' log @ /tmp/.booted.online from wan dhcp 'bound-ish' events
+                -3) support UPDATECHECK_BANNERMSGS="nofsckmessages"
+                -6) everyboot/51-onlinehook call hotplug/online 'smarter' on all boots
+                -13) fix double [all] in rpi4_eeprom.sh.hook
+                -13) tidy and reorder/organize fboot scripts (wip initial)
+                -15) 97-wifi dont act on Z WIFIDEFAULTON afaik has not been used in
+                     ages and or by anyone @>TBA WIFIDEFAULTOFF or other VARS
+                     also handle/interact with such logic
+                -21) support RPI_GPIO=1 fboot install python3 rpi.gpio
+                -33) add basic 'bullseye' dietpi chroot service on port 223
+                -35) remove sample init.d/autorate (stalish + nobody using)
+                -37) fix alpine1 chenter
+                -37) 21.02.2 now populates band not hwmode switch over to band
+                     nb:5g is default
+                -37) quickfix for argon dark updatecheck font color
+                -37) lets do argon dark again :)
+                -39) fix rpcd/acl.d/luci-mod-system.json uhttpd acl
+                -50ish) add rpi4_elfdat_switcher.sh firmware debugging tool
+                -21.02.2-23) regenerate with above changes
+
+        21.02.2 -13) bootstrap-dark was backported late, adjust fboot logic
+                     to support it on 21.02.2+ and rewrite to not be
+                     kernel version dependant @ header change
+
+        5.0.93  -9) sysinfo.sh fix duplicate matches on lan dhcp section lookup @synapse
+        r18777  -11) persistentX dont warn if datapart path and actually disabled
+                -13) no black font on welcome back notice
+                -15) bump rpi eeprom update base to: Tue Jan 25 14:30:41 UTC 2022
+                -21) get above Writing in rpi-support.sh
+                -31) support upgrade times
+                -55) qosify backport update
+                -65) ROOTFSEXPAND=1 fix rootfs label sanity check
+                     sometimes faulty blkid tail -n1 order logic
+                -67) hotplug/56 z detect handle case where uuid changed in fstab
+                -69 pkgs) add wipefs
+                -73) RCSHBASH defaultonforabit and backport
+                -97) fboot) fix faulty 97-TZ logic
+                -101) qosify update defaults (note: will not replace existing)
+                -101) migrate vpn-pbr config to pbr config prep
+                -105) add reboot_recovery snapshotting/revert tool (dl'd)
+                      for ROOTFSEXPAND_DATAPART users
+                -111) support quick 'snapshot' or 'revertos' from luci commands
+                -115) fix basenamelogger bug in profile.d RCSHDDIR no dir msg
+                -117) add notup and pending to everyboot also and ifup at end
+                      helps with intermittent likely isp related wan6
+                      failing to come up 20220216 possible related to ramfs
+                      boot/use without nicmove
+                -)
+                -)
+                -)
+                -)
+
+
+
+
+        5.0.77  -pkgs) add iptables-mod-tproxy (v2ray dep etc.)
+        r18711  -pkgs) 7 kmod-tcp-bbr
+                -rpi-support.sh print tcp algo + PERFTWEAKS_*
+                -9) sysinfo.sh workaround for pppoe half ipv6 info present for getpd (wip) @synapse
+                -11) backport newer https-dns-proxy no hotplug
+                -59) wifi fw back to official remove custom firmware versions due to user reports
+                -59) basic wip support for ROOTFSEXPAND_DATAPART=1 (opposing val) > /z
+                     -toggling backwards needs manual partition removal and scrub
+                      but most won't wish/need to do so
+                -71) ROOTFSEXPAND/ROOTFSEXPAND_DATAPART print both are off on sysupgrade
+                -75) rework wrtsnapback disabled at 13-metareset at 700-datapart bgcall
+                     /z present(andoriniDATAPART) will override ini bmnt blabel for a while
+                -79) fsck z DATAPART and carry upgrade report into new system common-v
+                -97) fix bootstrap dark light selection on master @LionHeartP
+                -99) add random welcome banner message tip
+                -99) support NOBANNERMSGS=1
+                -105) DATAPART < plog sync @ 012
+                -107) persistent nlb/stats add alt database dir exit
+                      note: reboot handled by above shut still stops
+                -107) fboot 700 togglepsave.sh to z or back if available
+                      requires ROOTFSEXPAND_DATAPART="psave"
+                -121) honour NOLUCIMODS @ non 4531x places
+                -123) support full prev upgradelog @ rpi-support.sh
+                -125) backport luci-mod-status
+                -127) 45311 add conditionals to fixup luci theme persistence when
+                      light or dark is set and 21.02 or master is fboot 
+                -151) DATAPART cleanup present messaging and detect label
+
+        5.0.67  -fboot) usbmode disable at ib level START=20 
+        r18672  -pkgs) zakeru46 mt7601u-firmware (iw-full is complicated wait for now)
+                -15) 99-pkgremovetxt exclude php from restore logic test
+                -17) timeout(triggerhappy) and nohup(oled) bbox ln
+                -21) slide dhcpv6-w-debug etc/custom/debug due to probable staleness
+                     update and add conditionals when needed
+                -23) tidy some tmp stuff
+                -23) sysctl unix sock dgram qlen
+                -27) nft-qos flush on stop workaround/fix
+                -31) partially support OVERCLOCK=(medium||high) @ everyboot/25-overclock
+                -35) bannermsg_fboot for sqm over 550 and PERFTWEAKS_Gbs z(+no commented)
+                     suggest Gbs and maybe OVERCLOCK
+                -37) update nano-w-color 4.2>6.0
+                -51) rpi-perftweaks fix TASKSET summary and handle midfreq dynamic on overclock
+                -51) sysupgrade.conf add /etc/msmtprc
+
+        5.0.19  -25 gpu-fw) revert to official: master@Aug 17 2021 (broken cpufreq on r18609+)
+        r18609  -37) get rid of fcrap -2 failed probe
+                -~ 01-state oops/verb/orgreplace/maint/special wip carp
+                -76/55) fix background script logging - wip
+                -76/55) enable log timeset as BOOTSTATE
+                -76/55) everyboot lbanner&&issue detections ~ wip
+                -79/55) fix userfileB rps xps ops
+                -79/55) showupghist @ rpi-support.sh
+                -79/55) bannermsg welcomeback w-upghist
+                -56) 400 fw fix names
+                -59) fix etc/init.d/init.d/nft-qos in FILES
+                -65) fix PHP7 dl
+                -65) dont pause on upgrade conntrack
+                -75) ln fmac bin (-0.7M)
+                -76) rm argon-2.2.9mod1 copy (-0.2M)
+                -77) /etc/custom/ifstate initial
+                -79) shutdown.sh nlbwmon endless wait fix
+                -79) php7 wget dont show progress
+                -91) oops ifstate stuff hplug rm'd!
+                -93) 012 scrap etc/config/opkg_r* to 100ishbytes aka about 15 files
+                -93) TEMPORARY hard restart of dnsmasq and https-dns @ 99-kickithttps if needed
+                -95) simple-adblock handle stale dhcp config on sysupgrade and no enabledservice
+                -95) rc.local/01-statecheck differentiate vanilla first ever
+                -96) print uptime.last if available on boot
+                -101) add uptime.last to sysinfo (.msgs and reason)
+                -103) add /etc/custom/reboot rundir (on reboot/halt/upgrade/shutdown for now)
+                -105) add /etc/custom/startup/NOTES + .disabled re: "use everyboot and single files for sysupgrade.conf"
+                -105) add /etc/custom/everyboot+firstboot/NOTES + /abc.disabled
+                -105) add HOTPLUG_DEBUG=1 @ earlyboot [for reboot on or off]
+                      /sbin/hotplug-call-debug install||remove for manual on||off
+                -107) rclocalfixup clean/log something wip
+                -111) move fboot/523-banipng > 13 prior to 15-services for a bit WIP
+                -115) report that a rootfs repair occured (80_mount~earlyboot/05~sysinfo.sh msgs)
+                -127) report that a rootfs repair occured (luci bannermsgs backon)
+                -135) fix bannermsg not showing on no updateavailable
+                -137) alt wifi fw
+                -153) provide oled TBA (nohup@fboot_27-busy, kmod-i2c-smbus), appzip on OLED="03c"@25-dtb_board
+                      https://forum.openwrt.org/t/rpi4-community-build/69998/2042?u=wulfy23
+                      edit: removed6@5.0.67-17 manual tar.gz only until bugs sorted
+
+        5.0.11  -kmod) add seeedstudio/lan78xx kmod
+        r18531  -pkgs) add ujail/seccomp > removed@~15minorbuildslater
+                -6) NOTAILROOMFIX for quick testing @ perftweaks and /early > 30
+                -10) scrub plog fboot/012 to around 30M max
+                -keys) retire oldkey dele leave c0ded in custom
+                -23 upg) rundir: add etc/custom/upgrade rundir (012-plog cleanup)
+                -23 upg) support /tmp/.sysupgrade.abort from userscripts above
+                            note: probably will create issues for one-click WIP
+                -23 upg) 713-okflagfilecmdlineonly for cmdline only admins (i.e. prevent luci flashing)
+                         or one-click
+                -23 updatecheckbar) wip support bannermsgs > removed
+                -25) lock check on argon install (phase1) 45311
+                -32) add vlan_autosetup.sh basic iot/guest helper script
+                -35) handle xx-xx-SNAPSHOT @ 99-try-packageinsttxt internet manifest check
+                -35) add luci-app-argon-config and procd-seccomp and procd-ujail to pkgignore@opK
+                     and COMMUNITYNEWPKG="${COMMUNITYNEWPKG} procd-ujail procd-seccomp"
+                     at 99-pkgremovetxt
+                -35) fix masqscript as integer not string @ 17-uci-generic (remove and backport rm)
+                     not needed is fallback already (ujail logread pointed this out)
+                -50) support buildinfo @ luciFOOT.sh in argon
+                -53) cat /sys/class/net/br-lan/address @ reboot half fix console error
+                     reported-by: @moodyblue
+                -59) update 43455 bin/clm to linux-firmware 2021-06-09 cypress/cyfmac-43455
+                -59) rpi-support.sh trim GPIO to active
+                -63) support TAILROOMFIX_FORCE=1 @ rpi-perftweaks.sh (rare just in case needed)
+                -65) support max_freq higher than 1500000 in case present rpi-perftweaks.sh
+                -65) 20-smp dont print tmp debugging stuff to console unless wanted
+                -71) 15-services handle https-dns-proxy early
+
+
+        3.x-5.0.6-bump 3.5 > 5.0 @ fw3~fw4 transitional builds
+        r18523  -FWv="165bd7bc5622ee1c721aa5da9af68935075abedd"
+                 #20220107 firmware: improve firmware camera detection + 2prevfixes
+                -next build will have ujail in testing/devel ~ r18823+
+ 
+        3.5.331 -BADgpu-fw update to: 56f1b8bbc888ba9e527f4ef6b003f2d397987d48 > 536baf33ae9007d027bffc8f42cb603664ecb5c4
+        r18436   kernel: Bump to 5.10.87>88 - 2021-12-23-ish
+                 12bc6e3677348adaffd155e7a04761e2661d4bff
+                -pkgs) kmod-sdhci might be needed ext readers?
+                -@SubZero re-introduce/introduce PERFTWEAKS_Gbs=1 (cpu affinity + steering)
+                 also globally re-add TASKSET for nlbwmon
+                 https://forum.openwrt.org/t/rpi4-community-build/69998/1864
+                -re-introduce WIP perftweaks userfile parser @ rpi-perftweaks.sh_userfileB
+                 (for advanced users still probably manual testing or PERFTWEAKS_SCRIPT="/bin/perftweaks_userfileB"
+                 (only had /etc/perftweaks.txt.sample also put in runtime location + clean a little)
+                -regen21.02.1-11here for wifi fix test
+
+                -upstream-pr) bcm2711-gpu-fw > closed@10days < needs changes without comment
+                              https://github.com/openwrt/openwrt/pull/4902
+
+                -~9+) ffmpeg switch from opkg back to tar.gz + support both option later
+                -13) fix perftweak -ne > != and add (newquick)20-smp custom w conditionals
+
+        3.5.317 -odd sysuponline bug... > wip > minor dbg tweaks (-T DONTREALLYFLASH) etc. etc.
+                 note: -2>-3 reupload seemed to sort of fix (manually added -2 paths or ftp issue?)
+                -iface/90-https ini parsing fix add ini HTTPS_DNS_DEBUG
+                -6) change PHP7=1 back to fg for a bit
+                -7) iface/90-https ini HTTPS_DNS_DEBUG temporarily get some more state info
+                -7) qosify tweak 00-defaults.conf 
+                -9) @synapse remove pcie_bus_perf from 13-fsckparts due to 2G rev1.2 usb reboot issue
+                -9) @synapse usb sysup exited on not mmc!
+                -15) @Phase1 rmem earlier via init.d/nlbwmon
+                -16) fix/workaround hostapd qos_map thingo@fboot_97-wifi
+                -16) firstboot/963-nlbwmondefaults add a few more protocols
+
+        3.5.315 -303d0012cd73da63e21133dadd90532d8328f5c2 gpu-fw (note:21.02.1-3 pre 21.02.2 test also)
+                -add hooks for no more php7 disable youtubedl+editor
+                -pkgs) rm php7 add php8 replacements (minus 1 json something) initially (not used yet in the build)
+                -7 ini) add PHP7=1 ipk download/install legacy ipks@45412 fboot(calls bin/php7...sh) WIP
+                -forgot to note somewhere around here if fboot is 21 change UPGRADEsFLAVOUR to 21 (wip)
+ 
+        3.5.305not?/151-20>>>?
+                -add sierra wireless kmods
+         r18270 -56-handleblock list vfat partition type fix bug w-nolabel skip all + various
+                -tasks.sh fix bug mkdir -p skips copy defaults and add /root/tasks/ to sysupgrade.conf@init
+                -99-kickit change 11+21 to 27+27 @ wait for wan given loop returns on nowait
+                -99-kickit iface[noauto] on sameline
+                -5) remove some legacy/unused scripts: everyboot/55-dummy firstboot/967-pumpstatistics
+                -5) rc.custom tidy > move board specific WIFIREMOVE to new etc/custom/earlyboot/ rundir
+                -next key: bf001edde69cab1e
+                -add /etc/ethers to sysupgrade.conf
+                -031-lanip dont print when Z
+                -add /etc/mosquitto/ to sysupgrade.conf just in case
+                -19) restore ARGONDARK=1 honouring for original-non-config argon theme
+                -19) fboot) mv 70-[tasks,backup] > 701-tasks+702-backup_{sysupVScron}
+                -19) fboot) 702-backup_cron improve user has existing (add to sysupgrade.conf)
+                -19!!!WIP) if firstboot is with non snapshot change UPGRADEsFLAVOUR > release (50-opkgfeedsdomainnocdn)
+                -19) move tailroom payload back to rpi-perftweaks.sh + conditional due to future work
+                     (and potential performance degradation now that its very uncommon)
+                -19) fix https-dns-proxy hotplug on pppoe
+                -21) remove alt firmware dirs (2.3M) until more recent clean structure active
+
+      3.5.151+  -ffmpeg is a tad large@7M alter previous fboot script to install conditionally
+                -tailroom icmp6 bug - skip workaround for a while as seems to effect nobody
+                -sysinfo.sh dont print non-enabled openvpn interfaces
+                -12) sqm-autorate via config/sqm autorate='1' (for lte/variable-bw-links)
+                -21) remove some legacy firstboot scripts that had exit 0 at the top
+                     (52-sqmcleanup, bootstrapheaderfix, 61-functionsmod)
+                     (27-setrootpassword)
+                     (970-bdappzip>97011-bdappzip remove fallback parted binary check for old builds)
+                -21) 963-nlbwmondefaults some optimisation and cleaning can use some more
+                -21) add note in backup.sh and tasks.sh that they are sort of not really for anything/incomplete/legacy
+                -23) fix tasks.sh so it actually works a little bit + support optional NOTASKS=1@ini to disable
+                -25) luciFOOT.sh rpi-support.sh > DISKS exclude /opt/docker|^shm|^overlay
+                -25) add dscp from conntrack to qos-debug.sh
+                -30) 56-handleblock dont log system partitions
+                -30) tasks.sh create summary files
+                -31) sqm-autorate remove sqm hook due to firstboot lockup bug
+                -35) sqm-autorate re-enable (as init.d~autorate) using lynx's variant for rate logic
+
+      3.5.139+  -pxe samples (misc/tftpboot@hetzner)
+                -disable custom rclone installer (now mainline)
+                -stage2: drop custom kill_remaining 'out of range' bug fixed upstream
+                 https://github.com/openwrt/openwrt/commit/4d3303b1bddf3c66fc0a05fb5eb45ceac48cd0d5
+                 -tweak output 3 per line
+                -built-in usb persistent nics via net/000-kickanic
+                -7) log wan ip changes or initial assignments
+                -15) drop custom parted(was conditional on really old builds)
+                -15) drop custom ffmpeg > select official package (+7M)
+                -20) is 21.02.1-2 also 
+                -20) tarfileinstaller.sh cleanup /*.tar.gz
+                -23) add block partition disk-by-* creator
+
+      3.5.101-6+-vpn-policy-routing: /etc/vpn-policy-routing.userfile.cache and init.d_off
+                                     helper debug script and ipset downloading/cache/multi
+                -script: netns-run-cmd.sh half done netns test client/container setup + cmd
+                -argon-theme: needs ARGONVER="2.2.9" to use and give users near vanilla for a while
+                -argon-theme: old version not /etc/dark by default
+
+      3.5.101   -fboot: 99-kickit dont kick odhcpd if in DISABLEDSERVICES
+                -macrun: +everyboot hook
+                -argon-theme: 2.2.9 initial testing
+                -argon-theme: 2.2.9 rewrite css basic bits [wip]
+                -argon-theme: 2.2.3 last stand nodark default (for stable not current~varies)
+                 use ARGONDARK="dark" for olddark or ARGONVER="2.2.9" for vanilla (stable~wip)
+                 new version with app-argon-config
+                -fboot: 45-luci-mods > split into 4531x-luci-NAME major refactor of argon 45311-luci-themes
+                -fboot: 70-backup add /etc/netdata just in case
+                -fboot: 71-macrunfboot create user specific sample file and add to sysupgrade.conf
+
+      3.5.99-x  -rpi4.qos: support ipset to dnsmasq bypass or user TXT file
+      r17795    -keepalived add to disable list (not packages) and backup list
+                -pkgs: add python3-pynacl (docker-dep@toasterdev)
+                -fix: openvpn DISABLED_SERVICES@imagebuilder(before 15-services)
+                -fix: rpisysup.sh check / wget timeout @ hetzner is not home
+                -https-dns-proxy: extend workaround for new/old versions conditionally
+                -rpi400: add wifi firmware + 43455 update w current
+                -fw: gpufw d2ab264b688a223e23029ffbba86820c8c6cb329
+                -cleanup: etc/custom/wifimods/ > ../_WIFIMODS (1.5M)is.5M@lib/firmware
+
+      3.5.75-7  -nft-qos: monitor fix rule exists re-enable statix populate at dhcp/00    
+                -nft-qos: bug monitor helper(statix-find) dont add via hotplug (cyclical)
+                -nft-qos: monitor ipv6 luci support
+                -script: rpi4-official-opkg.sh lockwait for run_mitigate.sh -A loop
+
+      3.5.67    -alias: pswww
+                -/etc/sysctl.d/19-nlbwmon_rmem_max > 1048576
+                -fboot 99-kickit: wait 9 if pending wait another 11 or ubus interface state wait
+                -fboot 99-kickit: unless auto=0
+                -fboot: add -q to all uci changes
+                -bug: config_backup_naming: .last@sysupgrade change to _last and rm old files via sysupT
+                -nft-qos: monitor fix rule exists lookup
+                -nft-qos: bug: nft-qos log 0 or z = off
+
+      3.5.65-67 -fw: dat_elf "18bd87ad4d2fe8cda98b51c93b4ba858c2f8da76" #29092021
+                -pkgs: drop luci-app-nut is buggy
+                -rpi-sysup-online.sh summary #handle-none and print #[active] and check testing
+                -nft-qos 00-mon dont reread statics on hotplug creates dupes
+                -validate_firmware_image dont print to console
+                -files: lib/firmware/brcm/brcmfmac43455-sdio.raspberrypi,4-compute-module.txt
+                -files: lib/firmware/brcm/brcmfmac43455-sdio.raspberrypi,400.txt
+                -files: rm xt_geoip > tba gitdl-script 1.5M compressed 4.5M uncompressed (tiny)
+                -appzip: basic initial /bin/xt_geoip_setup.sh @ github geoip.tar.gz [untested] > 972-xt_geoip
+                -manually apply orphan-fix for sqm_collectd.sh
+                -cron-ini: setup for WIREGUARD_WATCHDOG=1
+                -mod wireguard_watchdog [wip] to be iface specific
+                -luci: add mtr(4) to diagnostics (note: xhr may timeout)
+
+      3.5.61    -pkgs: test nut minimal packages ( nut-server service ) approx 2M
+                -pkgs: ddns-scripts-freedns, ddns-scripts-noip, dropbearconvert
+                -appzip: qemu@hetzner untested (~270M aarch64 only)
+                -silence verb_nft-qos dbg messages
+                -@-5 backport zerotier secfix
+                -nft-qos static.sh tmp_fix
+                -nft-qos monitor just add all for a while
+                -nft-qos core.sh type>device init tmpfix
+                -nft-qos firstboot insert new custom options 50-nft-qos-customopts
+                -@-11 nft-qos initd pull lan(inc. statix ipv4!) hosts from arp on startup
+                -nft-qos-tba some ipv6 monitor additions (not supported in gui wait)
+                -@-11 nft-qos initd pull ipv6 from odhcpd (no gui no br-lan check)
+
+      3.5.56-3  -key: rotate build_key-s de1e2a0 > c0deddb
+                -wip: test zerotier(off states) again (not all builds)
+                -wip: zerotier skeleton fboot_setup helper 032-zerotier_helper
+                -wip: lib/nft-qos/* upstream fix applied test
+                -fix: rpi4-official-opkg.sh remove cdn
+                -fix: sysupgrade faulty v/ecmd call for new macrun call
+                -fix: 45-luci-mods properly scavenge old theme
+                -fix: 45-luci-mods no stdout on luciFOOT.sh init
+                -doc: switch gitrepo main readme to minidisk (md)
+                -script: add rpi-sysup-online.sh_summary helper > 'summary' param
+                -appzip: rclone@github (via /bin/rclone-aarch64)
+                -appzip: pastebinit@files-generic
+                -busystatix: switchout test for uuencode/uudecode -5M(2compressed)
+                -firstboot: disable 61-functionsmod
+                -pkgs: add atop usbip(maybe soon)
+                -nope: clm_blobs > revert
+
+
+      3.5.7-35, -523-banip no longer supports version fix(we dont have to check anymore anyway)
+      3.5.35,   -bump firmware "fc8f0d30a439da71770aae9cd8ac0627087bcb1c" #5.10.63
+      3.5.37    -add EEE_DISABLE (list) (oneway... requires reboot for runtime toggle)
+                -opkg snapshot repos no longer use cdn due to coherancy issues
+                -no sqm-scripts-extra anymore test scripts only abandoned
+                -tune sqm lock mechanism
+                -luci-ui-menu mv nlbwmon to statistics
+                -fix sample grafana service call
+                -add shutdown|upgrade call to macrun
+                -update grafana-chroot to require CHROOT_BASEDIR
+                 (tba rename to grafana-chroot maybe)
+                -wip: native apk.ipk + default configs > too risky for now
+                 (blkid breakage etc)
+                -*wip: add nft-qos base all off config (current pkg only sometimes)
+
+
+      21.02.0   -notes: parted, v2raya, vpn-pbr, 80211xclient ipks NSUPP||altfixes/versions
+                -only 'stable>release' on 5.4 advised
+                -contains out-of-tree head firmware master equivalent@release
+                -option for gpiochip0 bug, icmpv6-cksum bug avoidance
+                -uses official opkg repos
+
+      3.5.7-6   -@toasterdev add kmod-usb-net-rtl8150 (2.5G?)
+                -#@BenjaminBeichler https://github.com/wulfy23/rpi4/issues/13
+                 handle ipaddr is cidr @ masqaddrouter
+                -preliminary build support for v2raya 70-backup/50-v2raya
+                  note: removed this until upstream initscript fix adds 13M 
+                -fix faulty case irqbalance) in 50-irqbalance
+                -bump firmware ac362357ef910d2fd2b688abef5e5fbb875d98a5
+                -firmware db is 7M(5netimg) remove as rarely used to save space
+                 (next major and 21.02.0)
+      
+      3.5.7-2   -bump firmware 24f05a6e0eadcf001159e3618759cfb51761fd0e
+
+      3.5.5-19+ -bump pbr 0.3.5-5
+
+      3.5.5-16+ -bump firmware beb94b22c0e7dfc3a62dc941a24f1230edd1eba0
+                -disable servicestate restore again (>>/servicerestore.sh)
+
+      3.5.5-5   -first 5.10 build (r17390 bgnet.c-ish icmpv6 tail coreduming)
+                -match gpu fw-hash db only
+                -@7 add workaround for eth0 crashes
+                -@9 70-backup include simple-adblock gz paths
+                    pack in a default server list /etc/simple-adblock.servers.gz
+                    firstboot@13 if ENABLEDSERVICE simple-adblock enable uci
+                    and cache
+                -@9 workaround for eth0 crashes 5.10 conditional
+                -@9 pservice remove samples and fixup existing default back to
+                   org package
+                -@9 drop config-network-device auto backup/restore on downgrade
+                -REVERTEDrebootbug @11 move 5.10 rx offload workaround pre perftweaks rc.custom
+                -add mii-tool and spi packages (next major)
+                -@15 backport policy and travelmate
+
+      3.3.3     -this is a pre 5.10 build final
+
+      3.2.13?   -add bt hcd firmware (rpi2?~untested)
+
+      3.2.13?-  -traceroute-mtr.sh
+                -opK install quick hack to skip --force etc. params
+                -updatecheck major not green bar
+                -add kmod-fs-isofs
+                -as we pretty much disable irqbalance by default
+                  include config/irqbalance with enabled so user
+                  only needs to enable service
+                  (there is no luci method)
+
+      3.2.130-9+-minor prep for possible opkg feeds from hosting provider
+                 VARTEST OPKGFEEDS_COMMUNITY_DOMAIN="rpi4.wulfy23.info/opkg"
+                -https-dns-proxy hotplug tmp workaround
+
+      3.2.130-7 -NOTE: https-dns-proxy issue tmp-forked
+                -disable openvpn and https-dns-proxy (onsys-second)
+                -some persistvar detect at persistentnlbwmon
+                -!~complete git/git-http tools> not +6>10M >tba
+
+      3.2.107-9 -update vpn-pbr to 0.3.5-2
+                -print proper packagesinstall.txt log-loc on-console
+                -disable 965-lucistatsqm due to ifname and faulty
+                 enable else... needs rewrite
+
+      3.2.107-5 -sign commits
+                -retire/park snort init.d/config setup wrapper
+                 due to mainline lua bumps and need for retesting
+                 proper testing time expired
+                -pin ntop to br-lan for now (br-guest messed it up?)
+                 also add dot tool for Network Map
+                -persistentnlbwmon check enabled before psave
+                 incaseofstalecronentry
+                -add hfsplus #kmod-fs-nfs?
+                -/etc/tvheadend in backup-list
+                -remove collectd-mod-dns due to issue and scrape enabled
+                 unless in installedpackages.txt@963
+            	-put all irq back to cpu0
+                -support PERFTWEAKS_SCRIPT=""
+                -etc/custom/everyboot to farm out some of the cumulating
+                 messy rc.custom stuff (ttyDEV, netdummynum)
+
+      3.2.100-95-use get_image_dd to remove dd err
+                -sysupgrade use mostly v and lines for extract/write
+                -fix hang on checkinternet.sh host command (maybe)
+                -handle argon faulty lookup for /cgi-bin/img/blank.png (statixfilescopy)
+                -add disks and uptime to rpi-support.sh
+                -some ntplog rearranging
+                -support SPINDOWN_TIME [wip]
+
+
+      3.2.100-63-fix/workaround cm4/400 971 appzip/custombin folder path
+                -provide fake man command + static procps tools 4models@970
+                -add luci-proto-bonding (kmod-bonding, proto-bonding)
+                -teency tidy of default wrt.ini
+                -57wip adjust opkgcheckchanges<opK@sysup for proper
+                 immediate reverse scavenge
+                -snapstate 'update(new)' at sysupgrade
+                 needs restore call @ firstboot
+                -re-honour POWERPROFILE and default to quick
+
+      3.2.100-11-prevent stale config/opkg[removals]onnoAUTORESTORE@hack
+                 sysupgrade slide old
+                -backport ROOTFSEXPAND=1
+                -sysup no AUTORESTORE also hack blank removed added prior
+                 to SAVE
+                -sysup AUTORESTORE [on] pretty print add/rem count
+
+      3.2.61-73  -add ddrescue
+                -3.2.61-72 ffwd<vpn-pbr-static-ib-ipk master packges taking
+                 too long to push fix - import from stangri-repo
+                 < vpn-policy-routing - 0.3.2-20
+                 ---
+                 > vpn-policy-routing - 0.3.5-1
+
+      3.2.61-70 -add (basic) ipv6 support to wireshark-helper
+                -add all interface support for the above [very rough likely bugs]
+
+      3.2.61-63 -fix ROOTFSEXPAND bug if disabled and full write occurs
+                -more python3 pkgs
+                -improve sysupgrade userprint on ROOTFSEXPAND activated or not
+                -show size of config backup on save
+                -971-genericappzips@/etc/custom/appzips with tarinst[broad] and stangripkgcmds [wip]
+                -demo appzips fakeinternet wireshark-helper
+
+      3.2.61-51 -add raw rpi dts/dtb to sample files
+                -show updated master packages @openwrt-info.sh
+                -rpi4.qos set lower target [for one build then off needs more testing]
+                -support ROOTFSEXPAND on upgrade [default-nobackport]
+                -add data too large for sysupgrade keep check/exit print
+
+      3.2.61-39 -sysinfo exclude daemon.err collectd common
+                -fix 400 cm4 support dtb
+
+      3.2.61-36 -tidy README+CHANGES+HARDWARE
+      3.2.69-13 -add verbose board description at login
+                 (sysinfo.sh>rpi-getrevision.sh)
+                -re-add lost-in-revert sysinfo.sh sorting/optional arp-scan
+                 changes
+                -support more RPI4CMDLINEOPTS@13-fsckparts
+                -support NET_DUMMY_NUM (rare use)@> rc.custom
+                -add-ipk: progress pv
+
+      3.2.61-31 -add rtl8111(pci) driver for dfrobot thingy
+      3.2.69-5  -initial board_name support for 4-compute-module and 400
+                 note: not required... board initializes as 4-model-b
+                -4-compute-module notify dwc not present
+                -fix fboot 17-ntp_fast dont act if non-original support once off
+                 cmdline use or original
+                -add ini edge case option for firstboot lanip/netmask
+                 add wrt.ini on /boot > /root/ to support abovefat32win users
+                 add sample to github/utilities/wrt.ini
+                -minor unfinished mods to statistics Disks
+                -fboot@73-persistcron handle no init.d/persistX no adds(aka non rpi community-ish)
+                 lots more todo here
+                -add NO_ONECLICKFLASH=1 for anyone who wishes to prevent accidental flashing
+                -fix NOUPDATECHECK html maincontent missing
+
+
+      3.2.61-30 -major files reversion <> ~3.1.50~
+      3.2.61-20 ************************************************************* buggy build
+                -failed dwc_otg and clean of shutdown.sh semi-broken reverted
+      #################********************* possibly reverted
+      3.2.1x
+                -fix luci@bootstrap-intrusion log duplicate denied page
+                -merge mainline stage2 procd process end
+                -uptime@bootstrap formatting
+      #################********************* possibly reverted
+
+      3.2.13-2  -test network config migration with argon theme [ok]
+                -retest newer argon theme/s > fail again
+                -add sshfs test size for next major build
+                -add smc usb nic driver
+
+      3.1.57-51 -youtubedl wip fix passing ini directory to dl.sh
+                 (and skip earlier alt-drive based check logic)
+                -add config-network-device revert on downgrade logic
+
+      3.1.57-39 -fix no longer catching luci login fail at loginrpt@bootstrap<error_page
+                -loginrpt sort reversed
+                -various eeprom-update HOOK ini setting files
+                -change updaterecommended well disable it... luci eeprom-update runs
+                 rpi4_eeprom.sh update (aka rpi-eeprom-update -a +hooks)
+
+      3.1.57-32 -fix passing of -R via one click flash
+                -fix vl805.sig removal in rpi-eeprom-update -r
+                -fix auto fetch at rpi-eeprom-update
+                -fix dont reflash identical eeproms at rpi4_eeprom.sh update recommended
+           
+     -r16595(75)-add [*.]router dns alias [interacts with replacement index] startup+fboot[nomasqkick]@35-masqrouter
+                 provides i.e. https://dl.router/
+                -add custom [wip]/etc/profile [tba-org-save-replace-diff-mod]
+                -add UHTTPD_HANDLER
+                -quick tmp addition of 'nowwwmods'@RPI-SUPPORT.SH
+                -servicestate)@snapstate.sh print to kmsg final actions(servicestate restore disabled)
+
+     -r16595(63)-sysinfo.sh show smb mounts and pretty print ip6 leases
+                -implement NTP_FAST@fboot 17-ntpfast backport ini > 1 2.pool.openwrt if z
+                -add locate.sh locate/updatedb installer/wrapper
+                -experimental youtubedl and editor w/semi-auth default on (beta test)
+                -some minor fixes / parser for rpi4_eeprom.sh and rpi-support.sh@luci eeprom-update logic
+
+     -r16595(51)-sysinfo.sh pretty odhcp6 lines and kerr trim
+                -add uuidgen for youtube-dl
+                -support/include /usr/bin/aria2c wrapper @fboot 523-banipng DLWRAPPER=1
+                 wip: reboot handline@persistentdata@?~>shutdown.sh
+                -rebootwrapper adjust peristent* to ignore busybox stop and call stop early on non tmpfs  
+                -add eeprom-update@rpi-support.sh > rpi4_eeprom.sh [fetch<H>|update|info|updaterecommended]
+                (optional hash@eeprom-update)
+
+     -r16595(23)-add mqqtoggle service
+                -update / reinstate onrom service-default-pdata
+                 restorefiles/service-dpata/banip/backup
+                -remove all sleep and sync from updatecheck.sh/rpisysup.sh/rpi-sysup-online.sh*
+
+     -r16595(23)-fixes to dl.sh, banner.touch@shut.sh, rebootwrap sleep7>2
+                -startup gratuitous tap opK
+                -add basic snort3 sample setup helper (and binaries for a few builds)
+                -disabled backport/force write of ashprofile(17) and lucicommands(965)
+                 speed up firstboot and less needless disk writes
+                -opkgfboot@51 start VERSION case, support alt
+                 ini-urls/proto, backport and default to http
+                 over cdn for official repos
+                -shutdown.sh touch /etc/banner
+				-add RMMOD ini option with samples@rc.custom-end
+                -add custom etc/profile NOTE: sysup no backport
+
+     -r16574(26)-add backup button and make flash red
+                -argon uci-defaults workaround
+                -argon add updatecheck.sh loggedin topbar
+                -remove most perftweaks and 20-smp
+                -add refresh on update-unavailable luci message
+                -add twicedaily for updatecheck and fix refresh drop state@etc also
+                -some 01-statecheck tidying
+                -jiggle some fboot messages bg-copy and dont try never existent utils
+
+
+
+
+
+
+
+
+
+         official
+
+               -r18715ish/20220203 nft-compat and other DEPENDS ln changes  
+               -r18700ish/20220201 nano-plus still no color
+                https://github.com/openwrt/packages/commit/85cb71d8d81af3c549406d5f42080ed58be9b9b0
+
+               -r18617ish taskset ipk available (keep custom util until more ARCHs need it or it breaks)
+                https://github.com/openwrt/openwrt/commit/6ae657e459c8c62f4f844a17098d6cc75b81c91b
+
+               -r18613ish/5.0or1(fw4).15ish (official aka no follow) fw4 switch removes iptables ip6tables
+                 https://github.com/openwrt/openwrt/commit/08d9f6e3020b4a149b2007b6ed7d684c49af9bbf
+
+
+               -r18520 busy: 1.34.1-1 > busyU: 1.35.0-1
+               -3.5.333 r18504 firewall4(ib) issues / changes not (supposed to be) default yet!?!
+               -3.5.76 r17697 seccomp ujail
+               -r1751+ masq major
+               -r17517 k 5.10.64
+               -r17495 busybump k 5.10.63
+
+               -r17353 gcc10
+               -bcm27xx-userland: factor out a -dev package 9a79fe20e81744805805abbf8ff028351e5d2f32
+
+               ~r1729x?
+               -135/136 https://github.com/openwrt/openwrt/pull/4397
+                neteth0ethtool xhci bufquirk
+
+               -r17050ish https://github.com/openwrt/openwrt/commit/b82cc8071366b8e96904a1b52af503442069b20d
+                wifi logic
+              
+               -3.2.15? https://github.com/openwrt/openwrt/commit/b118aba8cbac58a45d4882cd79e18e56c3fbdc70
+                procd no respawn stopped processes
+               -https://git.openwrt.org/?p=openwrt/openwrt.git;a=commit;h=ff2bb16730f629d54bde8ba85c75d8614741e3fd
+                cypress firmware bump
+ 
+               -@118 mmc/xhci tweaks
+               -kernel: drop the conntrack rtcache patch
+
+
+
+
+
+
+
+         tba
+                -rotate signing keys > done-ish > march/april/may 2022 next tick
+
+
+
