@@ -1,0 +1,4240 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" width="1200" height="785" onload="init(evt)" viewBox="0 0 1200 785" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id="background" y1="0" y2="1" x1="0" x2="0" >
+		<stop stop-color="#eeeeee" offset="5%" />
+		<stop stop-color="#eeeeb0" offset="95%" />
+	</linearGradient>
+</defs>
+<style type="text/css">
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type="text/ecmascript">
+<![CDATA[
+	"use strict";
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById("details").firstChild;
+		searchbtn = document.getElementById("search");
+		ignorecaseBtn = document.getElementById("ignorecase");
+		unzoombtn = document.getElementById("unzoom");
+		matchedtxt = document.getElementById("matched");
+		svg = document.getElementsByTagName("svg")[0];
+		searching = 0;
+		currentSearchTerm = null;
+	}
+
+	window.addEventListener("click", function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == "a") {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains("parent")) unzoom();
+			zoom(target);
+		}
+		else if (e.target.id == "unzoom") unzoom();
+		else if (e.target.id == "search") search_prompt();
+		else if (e.target.id == "ignorecase") toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener("mouseover", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = "Function: " + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener("mouseout", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	window.addEventListener("keydown",function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+	}, false)
+
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener("keydown",function (e) {
+		if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+		return;
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == "frames") return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes["_orig_" + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute("_orig_" + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes["_orig_"+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes["_orig_" + attr].value;
+		e.removeAttribute("_orig_"+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, "title").firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, "rect");
+		var t = find_child(e, "text");
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, "title").textContent.replace(/\([^(]*\)$/,"");
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = "";
+			return;
+		}
+
+		t.textContent = txt;
+		// Fit in full text width
+		if (/^ *$/.test(txt) || t.getSubStringLength(0, txt.length) < w)
+			return;
+
+		for (var x = txt.length - 2; x > 0; x--) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + "..";
+				return;
+			}
+		}
+		t.textContent = "";
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, "x");
+			orig_load(e, "width");
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == "text")
+					e.attributes.x.value = find_child(e.parentNode, "rect[x]").attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, "rect").attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove("hide");
+
+		var el = document.getElementById("frames").children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, "rect").attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add("parent");
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add("hide");
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add("hide");
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom() {
+		unzoombtn.classList.add("hide");
+		var el = document.getElementById("frames").children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove("parent");
+			el[i].classList.remove("hide");
+			zoom_reset(el[i]);
+			update_text(el[i]);
+		}
+		search();
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add("show");
+		} else {
+			ignorecaseBtn.classList.remove("show");
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll("#frames rect");
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], "fill")
+		}
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt("Enter a search term (regexp " +
+			    "allowed, eg: ^ext4_)"
+			    + (ignorecase ? ", ignoring case" : "")
+			    + "\nPress Ctrl-i to toggle case sensitivity", "");
+			if (term != null) {
+				currentSearchTerm = term;
+				search();
+			}
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove("show");
+			searchbtn.firstChild.nodeValue = "Search"
+			matchedtxt.classList.add("hide");
+			matchedtxt.firstChild.nodeValue = ""
+		}
+	}
+	function search(term) {
+		if (currentSearchTerm === null) return;
+		var term = currentSearchTerm;
+
+		var re = new RegExp(term, ignorecase ? 'i' : '');
+		var el = document.getElementById("frames").children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, "rect");
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, "fill");
+				rect.attributes.fill.value = "rgb(230,0,230)";
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+
+		searchbtn.classList.add("show");
+		searchbtn.firstChild.nodeValue = "Reset Search";
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove("hide");
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = "Matched: " + pct + "%";
+	}
+]]>
+</script>
+<rect x="0.0" y="0" width="1200.0" height="785.0" fill="url(#background)"  />
+<text id="title" x="600.00" y="24" >rpi-dca6325631_SNAPSHOT_20210418-0546_pagefault.fR</text>
+<text id="details" x="10.00" y="768" > </text>
+<text id="unzoom" x="10.00" y="24" class="hide">Reset Zoom</text>
+<text id="search" x="1090.00" y="24" >Search</text>
+<text id="ignorecase" x="1174.00" y="24" >ic</text>
+<text id="matched" x="1090.00" y="768" > </text>
+<g id="frames">
+<g >
+<title>sh (1 samples, 0.49%)</title><rect x="216.2" y="686" width="5.7" height="10.0" fill="rgb(230,10,20)" rx="2" ry="2" />
+<text  x="219.21" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="554" width="5.7" height="10.0" fill="rgb(248,214,20)" rx="2" ry="2" />
+<text  x="706.11" y="562" ></text>
+</g>
+<g >
+<title>[libc.so] (85 samples, 41.26%)</title><rect x="216.2" y="719" width="486.9" height="10.0" fill="rgb(222,193,27)" rx="2" ry="2" />
+<text  x="219.21" y="727" >[libc.so]</text>
+</g>
+<g >
+<title>sh (1 samples, 0.49%)</title><rect x="1167.1" y="653" width="5.7" height="10.0" fill="rgb(207,136,44)" rx="2" ry="2" />
+<text  x="1170.09" y="661" ></text>
+</g>
+<g >
+<title>[rpcd] (1 samples, 0.49%)</title><rect x="508.3" y="565" width="5.8" height="10.0" fill="rgb(232,127,1)" rx="2" ry="2" />
+<text  x="511.35" y="573" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (16 samples, 7.77%)</title><rect x="726.0" y="675" width="91.7" height="10.0" fill="rgb(209,70,7)" rx="2" ry="2" />
+<text  x="729.02" y="683" >[liblua.so..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="367" width="11.4" height="10.0" fill="rgb(230,76,41)" rx="2" ry="2" />
+<text  x="574.36" y="375" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="737.5" y="191" width="5.7" height="10.0" fill="rgb(246,40,18)" rx="2" ry="2" />
+<text  x="740.48" y="199" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="422" width="5.7" height="10.0" fill="rgb(234,196,41)" rx="2" ry="2" />
+<text  x="820.67" y="430" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="559.9" y="444" width="5.7" height="10.0" fill="rgb(229,41,40)" rx="2" ry="2" />
+<text  x="562.90" y="452" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 0.97%)</title><rect x="823.4" y="719" width="11.5" height="10.0" fill="rgb(241,150,17)" rx="2" ry="2" />
+<text  x="826.40" y="727" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (10 samples, 4.85%)</title><rect x="726.0" y="488" width="57.3" height="10.0" fill="rgb(232,97,37)" rx="2" ry="2" />
+<text  x="729.02" y="496" >[liblu..</text>
+</g>
+<g >
+<title>rrdtool (2 samples, 0.97%)</title><rect x="823.4" y="576" width="11.5" height="10.0" fill="rgb(231,139,33)" rx="2" ry="2" />
+<text  x="826.40" y="584" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="554.2" y="323" width="5.7" height="10.0" fill="rgb(206,140,0)" rx="2" ry="2" />
+<text  x="557.17" y="331" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="789.0" y="444" width="11.5" height="10.0" fill="rgb(215,28,43)" rx="2" ry="2" />
+<text  x="792.03" y="452" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="411" width="5.7" height="10.0" fill="rgb(220,215,53)" rx="2" ry="2" />
+<text  x="1124.26" y="419" ></text>
+</g>
+<g >
+<title>[libubus.so.20210215] (3 samples, 1.46%)</title><rect x="834.9" y="708" width="17.1" height="10.0" fill="rgb(207,202,32)" rx="2" ry="2" />
+<text  x="837.85" y="716" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="455" width="5.7" height="10.0" fill="rgb(215,151,34)" rx="2" ry="2" />
+<text  x="820.67" y="463" ></text>
+</g>
+<g >
+<title>uhttpd (1 samples, 0.49%)</title><rect x="605.7" y="620" width="5.8" height="10.0" fill="rgb(251,41,11)" rx="2" ry="2" />
+<text  x="608.73" y="628" ></text>
+</g>
+<g >
+<title>[libc.so] (5 samples, 2.43%)</title><rect x="227.7" y="675" width="28.6" height="10.0" fill="rgb(232,160,18)" rx="2" ry="2" />
+<text  x="230.67" y="683" >[l..</text>
+</g>
+<g >
+<title>[uhttpd] (2 samples, 0.97%)</title><rect x="1098.3" y="708" width="11.5" height="10.0" fill="rgb(240,67,3)" rx="2" ry="2" />
+<text  x="1101.35" y="716" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="811.9" y="411" width="5.8" height="10.0" fill="rgb(215,14,34)" rx="2" ry="2" />
+<text  x="814.94" y="419" ></text>
+</g>
+<g >
+<title>[libustream-ssl.so] (1 samples, 0.49%)</title><rect x="600.0" y="708" width="5.7" height="10.0" fill="rgb(224,21,31)" rx="2" ry="2" />
+<text  x="603.00" y="716" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="811.9" y="444" width="5.8" height="10.0" fill="rgb(229,146,5)" rx="2" ry="2" />
+<text  x="814.94" y="452" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="675" width="5.7" height="10.0" fill="rgb(226,200,1)" rx="2" ry="2" />
+<text  x="820.67" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="587" width="5.7" height="10.0" fill="rgb(213,162,0)" rx="2" ry="2" />
+<text  x="706.11" y="595" ></text>
+</g>
+<g >
+<title>[jsonc.so] (1 samples, 0.49%)</title><rect x="703.1" y="697" width="5.7" height="10.0" fill="rgb(227,27,43)" rx="2" ry="2" />
+<text  x="706.11" y="705" ></text>
+</g>
+<g >
+<title>[busybox] (2 samples, 0.97%)</title><rect x="216.2" y="708" width="11.5" height="10.0" fill="rgb(252,197,0)" rx="2" ry="2" />
+<text  x="219.21" y="716" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="789.0" y="477" width="11.5" height="10.0" fill="rgb(225,213,31)" rx="2" ry="2" />
+<text  x="792.03" y="485" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="400" width="17.2" height="10.0" fill="rgb(234,118,37)" rx="2" ry="2" />
+<text  x="322.32" y="408" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="521" width="5.7" height="10.0" fill="rgb(224,200,8)" rx="2" ry="2" />
+<text  x="706.11" y="529" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="334" width="11.4" height="10.0" fill="rgb(217,26,54)" rx="2" ry="2" />
+<text  x="574.36" y="342" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="777.6" y="466" width="5.7" height="10.0" fill="rgb(254,149,35)" rx="2" ry="2" />
+<text  x="780.57" y="474" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 0.97%)</title><rect x="823.4" y="664" width="11.5" height="10.0" fill="rgb(225,131,28)" rx="2" ry="2" />
+<text  x="826.40" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="653" width="5.7" height="10.0" fill="rgb(217,68,21)" rx="2" ry="2" />
+<text  x="706.11" y="661" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (16 samples, 7.77%)</title><rect x="726.0" y="686" width="91.7" height="10.0" fill="rgb(214,39,12)" rx="2" ry="2" />
+<text  x="729.02" y="694" >[liblua.so..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="367" width="5.8" height="10.0" fill="rgb(222,173,18)" rx="2" ry="2" />
+<text  x="551.45" y="375" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="697" width="11.4" height="10.0" fill="rgb(239,104,50)" rx="2" ry="2" />
+<text  x="574.36" y="705" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="367" width="5.7" height="10.0" fill="rgb(225,185,54)" rx="2" ry="2" />
+<text  x="723.29" y="375" ></text>
+</g>
+<g >
+<title>[libustream-ssl.so] (2 samples, 0.97%)</title><rect x="892.1" y="642" width="11.5" height="10.0" fill="rgb(232,196,4)" rx="2" ry="2" />
+<text  x="895.14" y="650" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="433" width="5.7" height="10.0" fill="rgb(236,122,19)" rx="2" ry="2" />
+<text  x="820.67" y="441" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="488" width="17.2" height="10.0" fill="rgb(237,143,33)" rx="2" ry="2" />
+<text  x="322.32" y="496" ></text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="1104.1" y="598" width="5.7" height="10.0" fill="rgb(227,69,51)" rx="2" ry="2" />
+<text  x="1107.08" y="606" ></text>
+</g>
+<g >
+<title>[libc.so] (29 samples, 14.08%)</title><rect x="227.7" y="697" width="166.1" height="10.0" fill="rgb(252,30,37)" rx="2" ry="2" />
+<text  x="230.67" y="705" >[libc.so]</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="598" width="5.7" height="10.0" fill="rgb(220,84,10)" rx="2" ry="2" />
+<text  x="557.17" y="606" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="675" width="5.7" height="10.0" fill="rgb(219,65,17)" rx="2" ry="2" />
+<text  x="557.17" y="683" ></text>
+</g>
+<g >
+<title>[unknown] (10 samples, 4.85%)</title><rect x="336.5" y="686" width="57.3" height="10.0" fill="rgb(252,129,28)" rx="2" ry="2" />
+<text  x="339.50" y="694" >[unkno..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="411" width="11.5" height="10.0" fill="rgb(243,15,49)" rx="2" ry="2" />
+<text  x="711.83" y="419" ></text>
+</g>
+<g >
+<title>[unknown] (2 samples, 0.97%)</title><rect x="726.0" y="125" width="11.5" height="10.0" fill="rgb(253,38,13)" rx="2" ry="2" />
+<text  x="729.02" y="133" ></text>
+</g>
+<g >
+<title>[unknown] (19 samples, 9.22%)</title><rect x="10.0" y="719" width="108.8" height="10.0" fill="rgb(247,196,25)" rx="2" ry="2" />
+<text  x="13.00" y="727" >[unknown]</text>
+</g>
+<g >
+<title>[rrdtool] (2 samples, 0.97%)</title><rect x="823.4" y="609" width="11.5" height="10.0" fill="rgb(209,135,6)" rx="2" ry="2" />
+<text  x="826.40" y="617" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="559.9" y="312" width="5.7" height="10.0" fill="rgb(211,145,11)" rx="2" ry="2" />
+<text  x="562.90" y="320" ></text>
+</g>
+<g >
+<title>[uhttpd] (2 samples, 0.97%)</title><rect x="852.0" y="664" width="11.5" height="10.0" fill="rgb(248,22,42)" rx="2" ry="2" />
+<text  x="855.04" y="672" ></text>
+</g>
+<g >
+<title>[libubus.so.20210215] (1 samples, 0.49%)</title><rect x="508.3" y="587" width="5.8" height="10.0" fill="rgb(235,203,18)" rx="2" ry="2" />
+<text  x="511.35" y="595" ></text>
+</g>
+<g >
+<title>grep (1 samples, 0.49%)</title><rect x="10.0" y="708" width="5.7" height="10.0" fill="rgb(210,39,51)" rx="2" ry="2" />
+<text  x="13.00" y="716" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="268" width="5.7" height="10.0" fill="rgb(233,81,16)" rx="2" ry="2" />
+<text  x="574.36" y="276" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="1104.1" y="587" width="5.7" height="10.0" fill="rgb(224,110,29)" rx="2" ry="2" />
+<text  x="1107.08" y="595" ></text>
+</g>
+<g >
+<title>[libuci.so] (1 samples, 0.49%)</title><rect x="508.3" y="664" width="5.8" height="10.0" fill="rgb(207,95,32)" rx="2" ry="2" />
+<text  x="511.35" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="334" width="5.7" height="10.0" fill="rgb(220,79,25)" rx="2" ry="2" />
+<text  x="723.29" y="342" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="334" width="5.8" height="10.0" fill="rgb(249,106,33)" rx="2" ry="2" />
+<text  x="551.45" y="342" ></text>
+</g>
+<g >
+<title>cgi-exec (3 samples, 1.46%)</title><rect x="834.9" y="653" width="17.1" height="10.0" fill="rgb(214,17,37)" rx="2" ry="2" />
+<text  x="837.85" y="661" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="1081.2" y="686" width="5.7" height="10.0" fill="rgb(250,36,1)" rx="2" ry="2" />
+<text  x="1084.17" y="694" ></text>
+</g>
+<g >
+<title>[libjson-c.so.5.1.0] (3 samples, 1.46%)</title><rect x="708.8" y="697" width="17.2" height="10.0" fill="rgb(223,26,28)" rx="2" ry="2" />
+<text  x="711.83" y="705" ></text>
+</g>
+<g >
+<title>[libubus.so.20210215] (1 samples, 0.49%)</title><rect x="875.0" y="675" width="5.7" height="10.0" fill="rgb(223,226,1)" rx="2" ry="2" />
+<text  x="877.95" y="683" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="1127.0" y="664" width="5.7" height="10.0" fill="rgb(228,14,35)" rx="2" ry="2" />
+<text  x="1129.99" y="672" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="605.7" y="642" width="5.8" height="10.0" fill="rgb(240,214,45)" rx="2" ry="2" />
+<text  x="608.73" y="650" ></text>
+</g>
+<g >
+<title>wpa_supplicant (1 samples, 0.49%)</title><rect x="1086.9" y="686" width="5.7" height="10.0" fill="rgb(226,153,43)" rx="2" ry="2" />
+<text  x="1089.89" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="783.3" y="444" width="5.7" height="10.0" fill="rgb(252,163,9)" rx="2" ry="2" />
+<text  x="786.30" y="452" ></text>
+</g>
+<g >
+<title>[nixio.so] (1 samples, 0.49%)</title><rect x="817.7" y="686" width="5.7" height="10.0" fill="rgb(222,154,47)" rx="2" ry="2" />
+<text  x="820.67" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="642" width="5.7" height="10.0" fill="rgb(244,211,15)" rx="2" ry="2" />
+<text  x="557.17" y="650" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="754.7" y="323" width="5.7" height="10.0" fill="rgb(237,41,48)" rx="2" ry="2" />
+<text  x="757.66" y="331" ></text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="611.5" y="664" width="5.7" height="10.0" fill="rgb(254,71,20)" rx="2" ry="2" />
+<text  x="614.46" y="672" ></text>
+</g>
+<g >
+<title>[lua5.1] (2 samples, 0.97%)</title><rect x="789.0" y="499" width="11.5" height="10.0" fill="rgb(210,138,47)" rx="2" ry="2" />
+<text  x="792.03" y="507" ></text>
+</g>
+<g >
+<title>[lua5.1] (3 samples, 1.46%)</title><rect x="319.3" y="378" width="17.2" height="10.0" fill="rgb(249,53,5)" rx="2" ry="2" />
+<text  x="322.32" y="386" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="754.7" y="356" width="5.7" height="10.0" fill="rgb(238,132,19)" rx="2" ry="2" />
+<text  x="757.66" y="364" ></text>
+</g>
+<g >
+<title>[libwolfssl.so.4.7.0.66253b90] (2 samples, 0.97%)</title><rect x="852.0" y="719" width="11.5" height="10.0" fill="rgb(231,182,18)" rx="2" ry="2" />
+<text  x="855.04" y="727" ></text>
+</g>
+<g >
+<title>grep (1 samples, 0.49%)</title><rect x="118.8" y="719" width="5.8" height="10.0" fill="rgb(213,78,11)" rx="2" ry="2" />
+<text  x="121.83" y="727" ></text>
+</g>
+<g >
+<title>[rrdtool] (3 samples, 1.46%)</title><rect x="491.2" y="675" width="17.1" height="10.0" fill="rgb(249,111,47)" rx="2" ry="2" />
+<text  x="494.17" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="554" width="5.8" height="10.0" fill="rgb(248,157,27)" rx="2" ry="2" />
+<text  x="551.45" y="562" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="554.2" y="312" width="5.7" height="10.0" fill="rgb(207,129,3)" rx="2" ry="2" />
+<text  x="557.17" y="320" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="708" width="11.4" height="10.0" fill="rgb(238,202,24)" rx="2" ry="2" />
+<text  x="574.36" y="716" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="257" width="5.8" height="10.0" fill="rgb(235,57,22)" rx="2" ry="2" />
+<text  x="551.45" y="265" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="257" width="5.7" height="10.0" fill="rgb(224,146,6)" rx="2" ry="2" />
+<text  x="723.29" y="265" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="444" width="11.5" height="10.0" fill="rgb(215,129,41)" rx="2" ry="2" />
+<text  x="711.83" y="452" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="378" width="5.7" height="10.0" fill="rgb(250,70,38)" rx="2" ry="2" />
+<text  x="557.17" y="386" ></text>
+</g>
+<g >
+<title>[lua5.1] (2 samples, 0.97%)</title><rect x="726.0" y="213" width="11.5" height="10.0" fill="rgb(252,43,18)" rx="2" ry="2" />
+<text  x="729.02" y="221" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="521" width="5.8" height="10.0" fill="rgb(206,157,52)" rx="2" ry="2" />
+<text  x="551.45" y="529" ></text>
+</g>
+<g >
+<title>[uhttpd] (2 samples, 0.97%)</title><rect x="880.7" y="675" width="11.4" height="10.0" fill="rgb(211,116,49)" rx="2" ry="2" />
+<text  x="883.68" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="521" width="5.7" height="10.0" fill="rgb(251,159,7)" rx="2" ry="2" />
+<text  x="723.29" y="529" ></text>
+</g>
+<g >
+<title>[unknown] (2 samples, 0.97%)</title><rect x="880.7" y="653" width="11.4" height="10.0" fill="rgb(215,209,48)" rx="2" ry="2" />
+<text  x="883.68" y="661" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="631" width="11.5" height="10.0" fill="rgb(244,182,11)" rx="2" ry="2" />
+<text  x="711.83" y="639" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="1121.3" y="290" width="5.7" height="10.0" fill="rgb(238,183,53)" rx="2" ry="2" />
+<text  x="1124.26" y="298" ></text>
+</g>
+<g >
+<title>[lua5.1] (2 samples, 0.97%)</title><rect x="789.0" y="488" width="11.5" height="10.0" fill="rgb(212,59,37)" rx="2" ry="2" />
+<text  x="792.03" y="496" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="224" width="5.7" height="10.0" fill="rgb(246,56,32)" rx="2" ry="2" />
+<text  x="723.29" y="232" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="743.2" y="224" width="5.7" height="10.0" fill="rgb(233,143,35)" rx="2" ry="2" />
+<text  x="746.20" y="232" ></text>
+</g>
+<g >
+<title>[lua5.1] (3 samples, 1.46%)</title><rect x="319.3" y="389" width="17.2" height="10.0" fill="rgb(241,216,44)" rx="2" ry="2" />
+<text  x="322.32" y="397" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="726.0" y="268" width="17.2" height="10.0" fill="rgb(227,74,51)" rx="2" ry="2" />
+<text  x="729.02" y="276" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="806.2" y="367" width="5.7" height="10.0" fill="rgb(213,45,14)" rx="2" ry="2" />
+<text  x="809.21" y="375" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="559.9" y="576" width="11.5" height="10.0" fill="rgb(212,64,12)" rx="2" ry="2" />
+<text  x="562.90" y="584" ></text>
+</g>
+<g >
+<title>[libustream-ssl.so] (2 samples, 0.97%)</title><rect x="852.0" y="697" width="11.5" height="10.0" fill="rgb(242,175,13)" rx="2" ry="2" />
+<text  x="855.04" y="705" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="565.6" y="455" width="5.8" height="10.0" fill="rgb(227,22,5)" rx="2" ry="2" />
+<text  x="568.63" y="463" ></text>
+</g>
+<g >
+<title>[uhttpd] (2 samples, 0.97%)</title><rect x="1098.3" y="664" width="11.5" height="10.0" fill="rgb(227,97,10)" rx="2" ry="2" />
+<text  x="1101.35" y="672" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 0.97%)</title><rect x="766.1" y="334" width="11.5" height="10.0" fill="rgb(228,178,48)" rx="2" ry="2" />
+<text  x="769.12" y="342" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="620" width="17.2" height="10.0" fill="rgb(239,186,36)" rx="2" ry="2" />
+<text  x="322.32" y="628" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="600.0" y="642" width="5.7" height="10.0" fill="rgb(241,108,23)" rx="2" ry="2" />
+<text  x="603.00" y="650" ></text>
+</g>
+<g >
+<title>[lua5.1] (3 samples, 1.46%)</title><rect x="319.3" y="312" width="17.2" height="10.0" fill="rgb(216,170,35)" rx="2" ry="2" />
+<text  x="322.32" y="320" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="191" width="5.7" height="10.0" fill="rgb(243,41,3)" rx="2" ry="2" />
+<text  x="574.36" y="199" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="510" width="5.7" height="10.0" fill="rgb(225,25,4)" rx="2" ry="2" />
+<text  x="557.17" y="518" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="760.4" y="389" width="5.7" height="10.0" fill="rgb(236,223,35)" rx="2" ry="2" />
+<text  x="763.39" y="397" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="577.1" y="257" width="5.7" height="10.0" fill="rgb(229,76,14)" rx="2" ry="2" />
+<text  x="580.09" y="265" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="806.2" y="477" width="11.5" height="10.0" fill="rgb(247,156,46)" rx="2" ry="2" />
+<text  x="809.21" y="485" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="817.7" y="389" width="5.7" height="10.0" fill="rgb(245,207,10)" rx="2" ry="2" />
+<text  x="820.67" y="397" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="554" width="11.4" height="10.0" fill="rgb(225,82,22)" rx="2" ry="2" />
+<text  x="574.36" y="562" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="559.9" y="411" width="5.7" height="10.0" fill="rgb(242,217,35)" rx="2" ry="2" />
+<text  x="562.90" y="419" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="227.7" y="664" width="5.7" height="10.0" fill="rgb(233,100,3)" rx="2" ry="2" />
+<text  x="230.67" y="672" ></text>
+</g>
+<g >
+<title>[libubus.so.20210215] (1 samples, 0.49%)</title><rect x="508.3" y="609" width="5.8" height="10.0" fill="rgb(216,92,33)" rx="2" ry="2" />
+<text  x="511.35" y="617" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="760.4" y="411" width="5.7" height="10.0" fill="rgb(215,26,6)" rx="2" ry="2" />
+<text  x="763.39" y="419" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (16 samples, 7.77%)</title><rect x="726.0" y="642" width="91.7" height="10.0" fill="rgb(216,105,41)" rx="2" ry="2" />
+<text  x="729.02" y="650" >[liblua.so..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="444" width="5.7" height="10.0" fill="rgb(239,124,13)" rx="2" ry="2" />
+<text  x="1124.26" y="452" ></text>
+</g>
+<g >
+<title>uci (1 samples, 0.49%)</title><rect x="370.9" y="675" width="5.7" height="10.0" fill="rgb(226,165,48)" rx="2" ry="2" />
+<text  x="373.87" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="587" width="11.4" height="10.0" fill="rgb(221,59,9)" rx="2" ry="2" />
+<text  x="574.36" y="595" ></text>
+</g>
+<g >
+<title>[libustream-ssl.so] (1 samples, 0.49%)</title><rect x="600.0" y="697" width="5.7" height="10.0" fill="rgb(231,204,51)" rx="2" ry="2" />
+<text  x="603.00" y="705" ></text>
+</g>
+<g >
+<title>rrdtool (3 samples, 1.46%)</title><rect x="491.2" y="631" width="17.1" height="10.0" fill="rgb(244,171,13)" rx="2" ry="2" />
+<text  x="494.17" y="639" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="499" width="5.7" height="10.0" fill="rgb(230,195,21)" rx="2" ry="2" />
+<text  x="557.17" y="507" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="353.7" y="675" width="5.7" height="10.0" fill="rgb(226,135,29)" rx="2" ry="2" />
+<text  x="356.69" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="631" width="5.7" height="10.0" fill="rgb(220,116,49)" rx="2" ry="2" />
+<text  x="1124.26" y="639" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="777.6" y="378" width="5.7" height="10.0" fill="rgb(222,106,1)" rx="2" ry="2" />
+<text  x="780.57" y="386" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="766.1" y="378" width="11.5" height="10.0" fill="rgb(211,196,34)" rx="2" ry="2" />
+<text  x="769.12" y="386" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="609" width="17.2" height="10.0" fill="rgb(248,28,15)" rx="2" ry="2" />
+<text  x="322.32" y="617" ></text>
+</g>
+<g >
+<title>[jsonc.so] (1 samples, 0.49%)</title><rect x="548.4" y="664" width="5.8" height="10.0" fill="rgb(253,47,42)" rx="2" ry="2" />
+<text  x="551.45" y="672" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="817.7" y="367" width="5.7" height="10.0" fill="rgb(220,226,6)" rx="2" ry="2" />
+<text  x="820.67" y="375" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="642" width="5.7" height="10.0" fill="rgb(215,134,10)" rx="2" ry="2" />
+<text  x="820.67" y="650" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="81" width="5.7" height="10.0" fill="rgb(213,202,50)" rx="2" ry="2" />
+<text  x="574.36" y="89" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="477" width="5.7" height="10.0" fill="rgb(207,44,16)" rx="2" ry="2" />
+<text  x="1124.26" y="485" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="760.4" y="301" width="5.7" height="10.0" fill="rgb(226,207,40)" rx="2" ry="2" />
+<text  x="763.39" y="309" ></text>
+</g>
+<g >
+<title>[lua5.1] (2 samples, 0.97%)</title><rect x="789.0" y="422" width="11.5" height="10.0" fill="rgb(254,123,20)" rx="2" ry="2" />
+<text  x="792.03" y="430" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="800.5" y="455" width="5.7" height="10.0" fill="rgb(217,201,30)" rx="2" ry="2" />
+<text  x="803.49" y="463" ></text>
+</g>
+<g >
+<title>date (1 samples, 0.49%)</title><rect x="227.7" y="642" width="5.7" height="10.0" fill="rgb(228,117,34)" rx="2" ry="2" />
+<text  x="230.67" y="650" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="521" width="11.4" height="10.0" fill="rgb(231,69,5)" rx="2" ry="2" />
+<text  x="574.36" y="529" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (2 samples, 0.97%)</title><rect x="892.1" y="620" width="11.5" height="10.0" fill="rgb(211,156,11)" rx="2" ry="2" />
+<text  x="895.14" y="628" ></text>
+</g>
+<g >
+<title>rrdtool (2 samples, 0.97%)</title><rect x="359.4" y="675" width="11.5" height="10.0" fill="rgb(218,38,33)" rx="2" ry="2" />
+<text  x="362.42" y="683" ></text>
+</g>
+<g >
+<title>[nixio.so] (2 samples, 0.97%)</title><rect x="806.2" y="631" width="11.5" height="10.0" fill="rgb(233,49,13)" rx="2" ry="2" />
+<text  x="809.21" y="639" ></text>
+</g>
+<g >
+<title>[rrdtool] (2 samples, 0.97%)</title><rect x="823.4" y="620" width="11.5" height="10.0" fill="rgb(220,164,37)" rx="2" ry="2" />
+<text  x="826.40" y="628" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 0.97%)</title><rect x="863.5" y="653" width="11.5" height="10.0" fill="rgb(250,113,5)" rx="2" ry="2" />
+<text  x="866.50" y="661" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="576" width="11.4" height="10.0" fill="rgb(248,175,52)" rx="2" ry="2" />
+<text  x="574.36" y="584" ></text>
+</g>
+<g >
+<title>[libubus.so.20210215] (1 samples, 0.49%)</title><rect x="508.3" y="598" width="5.8" height="10.0" fill="rgb(219,14,35)" rx="2" ry="2" />
+<text  x="511.35" y="606" ></text>
+</g>
+<g >
+<title>[libjson-c.so.5.1.0] (1 samples, 0.49%)</title><rect x="720.3" y="565" width="5.7" height="10.0" fill="rgb(222,46,12)" rx="2" ry="2" />
+<text  x="723.29" y="573" ></text>
+</g>
+<g >
+<title>[libuci.so] (1 samples, 0.49%)</title><rect x="508.3" y="686" width="5.8" height="10.0" fill="rgb(253,158,35)" rx="2" ry="2" />
+<text  x="511.35" y="694" ></text>
+</g>
+<g >
+<title>[libc.so] (16 samples, 7.77%)</title><rect x="227.7" y="686" width="91.6" height="10.0" fill="rgb(205,115,39)" rx="2" ry="2" />
+<text  x="230.67" y="694" >[libc.so]</text>
+</g>
+<g >
+<title>[libubox.so.20210302] (2 samples, 0.97%)</title><rect x="852.0" y="675" width="11.5" height="10.0" fill="rgb(219,200,17)" rx="2" ry="2" />
+<text  x="855.04" y="683" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.49%)</title><rect x="1098.3" y="631" width="5.8" height="10.0" fill="rgb(216,149,33)" rx="2" ry="2" />
+<text  x="1101.35" y="639" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (14 samples, 6.80%)</title><rect x="726.0" y="598" width="80.2" height="10.0" fill="rgb(208,57,32)" rx="2" ry="2" />
+<text  x="729.02" y="606" >[liblua.s..</text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="966.6" y="697" width="5.7" height="10.0" fill="rgb(209,129,15)" rx="2" ry="2" />
+<text  x="969.60" y="705" ></text>
+</g>
+<g >
+<title>grep (2 samples, 0.97%)</title><rect x="1069.7" y="686" width="11.5" height="10.0" fill="rgb(236,221,6)" rx="2" ry="2" />
+<text  x="1072.71" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="466" width="5.7" height="10.0" fill="rgb(240,94,33)" rx="2" ry="2" />
+<text  x="1124.26" y="474" ></text>
+</g>
+<g >
+<title>[libc.so] (4 samples, 1.94%)</title><rect x="1138.4" y="653" width="23.0" height="10.0" fill="rgb(241,211,4)" rx="2" ry="2" />
+<text  x="1141.45" y="661" >[..</text>
+</g>
+<g >
+<title>uhttpd (2 samples, 0.97%)</title><rect x="852.0" y="631" width="11.5" height="10.0" fill="rgb(223,79,22)" rx="2" ry="2" />
+<text  x="855.04" y="639" ></text>
+</g>
+<g >
+<title>sh (1 samples, 0.49%)</title><rect x="210.5" y="708" width="5.7" height="10.0" fill="rgb(237,156,21)" rx="2" ry="2" />
+<text  x="213.49" y="716" ></text>
+</g>
+<g >
+<title>wpa_supplicant (1 samples, 0.49%)</title><rect x="250.6" y="653" width="5.7" height="10.0" fill="rgb(219,208,44)" rx="2" ry="2" />
+<text  x="253.58" y="661" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="323" width="17.2" height="10.0" fill="rgb(218,38,28)" rx="2" ry="2" />
+<text  x="322.32" y="331" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="806.2" y="466" width="11.5" height="10.0" fill="rgb(216,158,48)" rx="2" ry="2" />
+<text  x="809.21" y="474" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="577.1" y="246" width="5.7" height="10.0" fill="rgb(215,105,8)" rx="2" ry="2" />
+<text  x="580.09" y="254" ></text>
+</g>
+<g >
+<title>[rpcd] (1 samples, 0.49%)</title><rect x="875.0" y="708" width="5.7" height="10.0" fill="rgb(226,91,23)" rx="2" ry="2" />
+<text  x="877.95" y="716" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="811.9" y="356" width="5.8" height="10.0" fill="rgb(234,3,12)" rx="2" ry="2" />
+<text  x="814.94" y="364" ></text>
+</g>
+<g >
+<title>[unknown] (9 samples, 4.37%)</title><rect x="915.0" y="719" width="51.6" height="10.0" fill="rgb(232,185,39)" rx="2" ry="2" />
+<text  x="918.05" y="727" >[unkn..</text>
+</g>
+<g >
+<title>[libc.so] (3 samples, 1.46%)</title><rect x="319.3" y="301" width="17.2" height="10.0" fill="rgb(250,33,32)" rx="2" ry="2" />
+<text  x="322.32" y="309" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.49%)</title><rect x="611.5" y="642" width="5.7" height="10.0" fill="rgb(230,209,9)" rx="2" ry="2" />
+<text  x="614.46" y="650" ></text>
+</g>
+<g >
+<title>[rpcd] (1 samples, 0.49%)</title><rect x="875.0" y="697" width="5.7" height="10.0" fill="rgb(216,49,30)" rx="2" ry="2" />
+<text  x="877.95" y="705" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.49%)</title><rect x="605.7" y="664" width="5.8" height="10.0" fill="rgb(243,1,5)" rx="2" ry="2" />
+<text  x="608.73" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="345" width="17.2" height="10.0" fill="rgb(222,165,52)" rx="2" ry="2" />
+<text  x="322.32" y="353" ></text>
+</g>
+<g >
+<title>uci (1 samples, 0.49%)</title><rect x="1172.8" y="653" width="5.7" height="10.0" fill="rgb(231,184,4)" rx="2" ry="2" />
+<text  x="1175.82" y="661" ></text>
+</g>
+<g >
+<title>sh (6 samples, 2.91%)</title><rect x="1023.9" y="719" width="34.4" height="10.0" fill="rgb(222,105,47)" rx="2" ry="2" />
+<text  x="1026.88" y="727" >sh</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="559.9" y="521" width="11.5" height="10.0" fill="rgb(236,131,35)" rx="2" ry="2" />
+<text  x="562.90" y="529" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="510" width="5.7" height="10.0" fill="rgb(244,216,0)" rx="2" ry="2" />
+<text  x="820.67" y="518" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="806.2" y="356" width="5.7" height="10.0" fill="rgb(229,41,30)" rx="2" ry="2" />
+<text  x="809.21" y="364" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="754.7" y="334" width="5.7" height="10.0" fill="rgb(237,61,6)" rx="2" ry="2" />
+<text  x="757.66" y="342" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="559.9" y="587" width="11.5" height="10.0" fill="rgb(253,219,0)" rx="2" ry="2" />
+<text  x="562.90" y="595" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="576" width="5.8" height="10.0" fill="rgb(237,225,22)" rx="2" ry="2" />
+<text  x="551.45" y="584" ></text>
+</g>
+<g >
+<title>hostapd (1 samples, 0.49%)</title><rect x="1012.4" y="719" width="5.8" height="10.0" fill="rgb(241,24,43)" rx="2" ry="2" />
+<text  x="1015.43" y="727" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="777.6" y="400" width="5.7" height="10.0" fill="rgb(241,167,5)" rx="2" ry="2" />
+<text  x="780.57" y="408" ></text>
+</g>
+<g >
+<title>hostapd (1 samples, 0.49%)</title><rect x="1149.9" y="642" width="5.7" height="10.0" fill="rgb(236,204,54)" rx="2" ry="2" />
+<text  x="1152.90" y="650" ></text>
+</g>
+<g >
+<title>wpa_supplicant (1 samples, 0.49%)</title><rect x="1058.3" y="719" width="5.7" height="10.0" fill="rgb(250,185,34)" rx="2" ry="2" />
+<text  x="1061.25" y="727" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 0.97%)</title><rect x="708.8" y="389" width="11.5" height="10.0" fill="rgb(230,125,11)" rx="2" ry="2" />
+<text  x="711.83" y="397" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="559.9" y="400" width="5.7" height="10.0" fill="rgb(212,38,29)" rx="2" ry="2" />
+<text  x="562.90" y="408" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="246" width="5.8" height="10.0" fill="rgb(237,170,40)" rx="2" ry="2" />
+<text  x="551.45" y="254" ></text>
+</g>
+<g >
+<title>[rrdtool] (3 samples, 1.46%)</title><rect x="582.8" y="675" width="17.2" height="10.0" fill="rgb(235,183,11)" rx="2" ry="2" />
+<text  x="585.82" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="246" width="5.7" height="10.0" fill="rgb(214,39,35)" rx="2" ry="2" />
+<text  x="723.29" y="254" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="559.9" y="554" width="11.5" height="10.0" fill="rgb(254,117,23)" rx="2" ry="2" />
+<text  x="562.90" y="562" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="754.7" y="367" width="5.7" height="10.0" fill="rgb(206,217,38)" rx="2" ry="2" />
+<text  x="757.66" y="375" ></text>
+</g>
+<g >
+<title>[jsonc.so] (1 samples, 0.49%)</title><rect x="548.4" y="642" width="5.8" height="10.0" fill="rgb(231,167,11)" rx="2" ry="2" />
+<text  x="551.45" y="650" ></text>
+</g>
+<g >
+<title>sh (4 samples, 1.94%)</title><rect x="938.0" y="708" width="22.9" height="10.0" fill="rgb(219,159,13)" rx="2" ry="2" />
+<text  x="940.96" y="716" >sh</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="499" width="5.7" height="10.0" fill="rgb(218,61,13)" rx="2" ry="2" />
+<text  x="820.67" y="507" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="743.2" y="301" width="5.7" height="10.0" fill="rgb(219,133,34)" rx="2" ry="2" />
+<text  x="746.20" y="309" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="422" width="5.7" height="10.0" fill="rgb(225,225,37)" rx="2" ry="2" />
+<text  x="557.17" y="430" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="532" width="17.2" height="10.0" fill="rgb(254,56,15)" rx="2" ry="2" />
+<text  x="322.32" y="540" ></text>
+</g>
+<g >
+<title>grep (2 samples, 0.97%)</title><rect x="1138.4" y="642" width="11.5" height="10.0" fill="rgb(205,50,42)" rx="2" ry="2" />
+<text  x="1141.45" y="650" ></text>
+</g>
+<g >
+<title>[unknown] (5 samples, 2.43%)</title><rect x="1064.0" y="697" width="28.6" height="10.0" fill="rgb(246,205,36)" rx="2" ry="2" />
+<text  x="1066.98" y="705" >[u..</text>
+</g>
+<g >
+<title>[rrdtool] (17 samples, 8.25%)</title><rect x="393.8" y="642" width="97.4" height="10.0" fill="rgb(209,30,16)" rx="2" ry="2" />
+<text  x="396.79" y="650" >[rrdtool]</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="726.0" y="191" width="11.5" height="10.0" fill="rgb(220,74,42)" rx="2" ry="2" />
+<text  x="729.02" y="199" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="760.4" y="345" width="5.7" height="10.0" fill="rgb(213,52,38)" rx="2" ry="2" />
+<text  x="763.39" y="353" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="748.9" y="290" width="5.8" height="10.0" fill="rgb(244,120,10)" rx="2" ry="2" />
+<text  x="751.93" y="298" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="737.5" y="158" width="5.7" height="10.0" fill="rgb(214,194,18)" rx="2" ry="2" />
+<text  x="740.48" y="166" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="800.5" y="422" width="5.7" height="10.0" fill="rgb(205,89,15)" rx="2" ry="2" />
+<text  x="803.49" y="430" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="565.6" y="389" width="5.8" height="10.0" fill="rgb(212,100,24)" rx="2" ry="2" />
+<text  x="568.63" y="397" ></text>
+</g>
+<g >
+<title>uhttpd (1 samples, 0.49%)</title><rect x="1132.7" y="576" width="5.7" height="10.0" fill="rgb(223,34,4)" rx="2" ry="2" />
+<text  x="1135.72" y="584" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (9 samples, 4.37%)</title><rect x="726.0" y="433" width="51.6" height="10.0" fill="rgb(241,90,27)" rx="2" ry="2" />
+<text  x="729.02" y="441" >[libl..</text>
+</g>
+<g >
+<title>sh (1 samples, 0.49%)</title><rect x="221.9" y="697" width="5.8" height="10.0" fill="rgb(227,193,26)" rx="2" ry="2" />
+<text  x="224.94" y="705" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="571.4" y="37" width="5.7" height="10.0" fill="rgb(213,39,28)" rx="2" ry="2" />
+<text  x="574.36" y="45" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="356" width="5.8" height="10.0" fill="rgb(227,37,34)" rx="2" ry="2" />
+<text  x="551.45" y="364" ></text>
+</g>
+<g >
+<title>sh (1 samples, 0.49%)</title><rect x="1184.3" y="653" width="5.7" height="10.0" fill="rgb(219,54,25)" rx="2" ry="2" />
+<text  x="1187.27" y="661" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="356" width="5.7" height="10.0" fill="rgb(232,228,3)" rx="2" ry="2" />
+<text  x="723.29" y="364" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="565" width="17.2" height="10.0" fill="rgb(214,69,35)" rx="2" ry="2" />
+<text  x="322.32" y="573" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="777.6" y="367" width="5.7" height="10.0" fill="rgb(230,219,52)" rx="2" ry="2" />
+<text  x="780.57" y="375" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (20 samples, 9.71%)</title><rect x="393.8" y="686" width="114.5" height="10.0" fill="rgb(227,50,30)" rx="2" ry="2" />
+<text  x="396.79" y="694" >[librrd.so.0.0..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="455" width="5.7" height="10.0" fill="rgb(218,189,25)" rx="2" ry="2" />
+<text  x="557.17" y="463" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="737.5" y="235" width="5.7" height="10.0" fill="rgb(221,191,14)" rx="2" ry="2" />
+<text  x="740.48" y="243" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="783.3" y="466" width="5.7" height="10.0" fill="rgb(231,104,26)" rx="2" ry="2" />
+<text  x="786.30" y="474" ></text>
+</g>
+<g >
+<title>[uhttpd] (2 samples, 0.97%)</title><rect x="892.1" y="609" width="11.5" height="10.0" fill="rgb(215,61,40)" rx="2" ry="2" />
+<text  x="895.14" y="617" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="576" width="5.7" height="10.0" fill="rgb(248,122,17)" rx="2" ry="2" />
+<text  x="706.11" y="584" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="598" width="5.7" height="10.0" fill="rgb(244,41,15)" rx="2" ry="2" />
+<text  x="820.67" y="606" ></text>
+</g>
+<g >
+<title>[libuci.so] (1 samples, 0.49%)</title><rect x="508.3" y="653" width="5.8" height="10.0" fill="rgb(216,228,44)" rx="2" ry="2" />
+<text  x="511.35" y="661" ></text>
+</g>
+<g >
+<title>[cgi-io] (3 samples, 1.46%)</title><rect x="834.9" y="686" width="17.1" height="10.0" fill="rgb(242,60,2)" rx="2" ry="2" />
+<text  x="837.85" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="686" width="5.7" height="10.0" fill="rgb(228,218,33)" rx="2" ry="2" />
+<text  x="1124.26" y="694" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="611.5" y="609" width="5.7" height="10.0" fill="rgb(238,116,15)" rx="2" ry="2" />
+<text  x="614.46" y="617" ></text>
+</g>
+<g >
+<title>cgi-exec (1 samples, 0.49%)</title><rect x="989.5" y="719" width="5.7" height="10.0" fill="rgb(205,10,15)" rx="2" ry="2" />
+<text  x="992.51" y="727" ></text>
+</g>
+<g >
+<title>[libustream-ssl.so] (1 samples, 0.49%)</title><rect x="1098.3" y="642" width="5.8" height="10.0" fill="rgb(239,142,0)" rx="2" ry="2" />
+<text  x="1101.35" y="650" ></text>
+</g>
+<g >
+<title>[unknown] (2 samples, 0.97%)</title><rect x="766.1" y="323" width="11.5" height="10.0" fill="rgb(215,70,7)" rx="2" ry="2" />
+<text  x="769.12" y="331" ></text>
+</g>
+<g >
+<title>[jsonc.so] (1 samples, 0.49%)</title><rect x="548.4" y="598" width="5.8" height="10.0" fill="rgb(219,182,54)" rx="2" ry="2" />
+<text  x="551.45" y="606" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="433" width="5.7" height="10.0" fill="rgb(219,140,1)" rx="2" ry="2" />
+<text  x="557.17" y="441" ></text>
+</g>
+<g >
+<title>[libubus.so.20210215] (1 samples, 0.49%)</title><rect x="875.0" y="653" width="5.7" height="10.0" fill="rgb(233,181,25)" rx="2" ry="2" />
+<text  x="877.95" y="661" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="559.9" y="466" width="5.7" height="10.0" fill="rgb(239,98,24)" rx="2" ry="2" />
+<text  x="562.90" y="474" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="543" width="17.2" height="10.0" fill="rgb(216,189,34)" rx="2" ry="2" />
+<text  x="322.32" y="551" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="720.3" y="180" width="5.7" height="10.0" fill="rgb(219,213,0)" rx="2" ry="2" />
+<text  x="723.29" y="188" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="789.0" y="466" width="11.5" height="10.0" fill="rgb(253,202,39)" rx="2" ry="2" />
+<text  x="792.03" y="474" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (2 samples, 0.97%)</title><rect x="903.6" y="620" width="11.4" height="10.0" fill="rgb(236,53,46)" rx="2" ry="2" />
+<text  x="906.59" y="628" ></text>
+</g>
+<g >
+<title>[unknown] (3 samples, 1.46%)</title><rect x="834.9" y="664" width="17.1" height="10.0" fill="rgb(205,12,35)" rx="2" ry="2" />
+<text  x="837.85" y="672" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="720.3" y="169" width="5.7" height="10.0" fill="rgb(254,124,21)" rx="2" ry="2" />
+<text  x="723.29" y="177" ></text>
+</g>
+<g >
+<title>[lua5.1] (2 samples, 0.97%)</title><rect x="708.8" y="477" width="11.5" height="10.0" fill="rgb(220,25,28)" rx="2" ry="2" />
+<text  x="711.83" y="485" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="554.2" y="411" width="5.7" height="10.0" fill="rgb(238,87,48)" rx="2" ry="2" />
+<text  x="557.17" y="419" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="675" width="5.7" height="10.0" fill="rgb(217,25,48)" rx="2" ry="2" />
+<text  x="1124.26" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (9 samples, 4.37%)</title><rect x="726.0" y="455" width="51.6" height="10.0" fill="rgb(215,197,5)" rx="2" ry="2" />
+<text  x="729.02" y="463" >[libl..</text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="806.2" y="257" width="5.7" height="10.0" fill="rgb(254,125,34)" rx="2" ry="2" />
+<text  x="809.21" y="265" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="356" width="11.4" height="10.0" fill="rgb(206,87,44)" rx="2" ry="2" />
+<text  x="574.36" y="364" ></text>
+</g>
+<g >
+<title>[libjson-c.so.5.1.0] (1 samples, 0.49%)</title><rect x="720.3" y="620" width="5.7" height="10.0" fill="rgb(233,116,18)" rx="2" ry="2" />
+<text  x="723.29" y="628" ></text>
+</g>
+<g >
+<title>el0_svc (4 samples, 1.94%)</title><rect x="1138.4" y="664" width="23.0" height="10.0" fill="rgb(242,30,23)" rx="2" ry="2" />
+<text  x="1141.45" y="672" >e..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="301" width="5.7" height="10.0" fill="rgb(254,69,53)" rx="2" ry="2" />
+<text  x="723.29" y="309" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="653" width="5.7" height="10.0" fill="rgb(218,189,25)" rx="2" ry="2" />
+<text  x="1124.26" y="661" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="444" width="5.8" height="10.0" fill="rgb(229,31,47)" rx="2" ry="2" />
+<text  x="551.45" y="452" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="664" width="17.2" height="10.0" fill="rgb(220,167,40)" rx="2" ry="2" />
+<text  x="322.32" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="554" width="11.5" height="10.0" fill="rgb(244,29,19)" rx="2" ry="2" />
+<text  x="711.83" y="562" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (14 samples, 6.80%)</title><rect x="726.0" y="543" width="80.2" height="10.0" fill="rgb(211,64,23)" rx="2" ry="2" />
+<text  x="729.02" y="551" >[liblua.s..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="444" width="5.7" height="10.0" fill="rgb(229,204,39)" rx="2" ry="2" />
+<text  x="723.29" y="452" ></text>
+</g>
+<g >
+<title>[lua5.1] (2 samples, 0.97%)</title><rect x="726.0" y="147" width="11.5" height="10.0" fill="rgb(222,197,41)" rx="2" ry="2" />
+<text  x="729.02" y="155" ></text>
+</g>
+<g >
+<title>[rrdtool] (17 samples, 8.25%)</title><rect x="393.8" y="631" width="97.4" height="10.0" fill="rgb(248,150,9)" rx="2" ry="2" />
+<text  x="396.79" y="639" >[rrdtool]</text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="703.1" y="411" width="5.7" height="10.0" fill="rgb(219,49,37)" rx="2" ry="2" />
+<text  x="706.11" y="419" ></text>
+</g>
+<g >
+<title>[libc.so] (5 samples, 2.43%)</title><rect x="1064.0" y="719" width="28.6" height="10.0" fill="rgb(216,88,12)" rx="2" ry="2" />
+<text  x="1066.98" y="727" >[l..</text>
+</g>
+<g >
+<title>[rpcd] (1 samples, 0.49%)</title><rect x="508.3" y="620" width="5.8" height="10.0" fill="rgb(227,69,37)" rx="2" ry="2" />
+<text  x="511.35" y="628" ></text>
+</g>
+<g >
+<title>[unknown] (2 samples, 0.97%)</title><rect x="708.8" y="378" width="11.5" height="10.0" fill="rgb(219,35,0)" rx="2" ry="2" />
+<text  x="711.83" y="386" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (4 samples, 1.94%)</title><rect x="726.0" y="356" width="22.9" height="10.0" fill="rgb(214,89,40)" rx="2" ry="2" />
+<text  x="729.02" y="364" >[..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="521" width="11.5" height="10.0" fill="rgb(246,153,41)" rx="2" ry="2" />
+<text  x="711.83" y="529" ></text>
+</g>
+<g >
+<title>[libc.so] (5 samples, 2.43%)</title><rect x="1064.0" y="708" width="28.6" height="10.0" fill="rgb(246,124,46)" rx="2" ry="2" />
+<text  x="1066.98" y="716" >[l..</text>
+</g>
+<g >
+<title>mkdir (1 samples, 0.49%)</title><rect x="668.7" y="697" width="5.8" height="10.0" fill="rgb(223,90,51)" rx="2" ry="2" />
+<text  x="671.74" y="705" ></text>
+</g>
+<g >
+<title>[rrdtool] (2 samples, 0.97%)</title><rect x="863.5" y="631" width="11.5" height="10.0" fill="rgb(239,210,1)" rx="2" ry="2" />
+<text  x="866.50" y="639" ></text>
+</g>
+<g >
+<title>[unknown] (2 samples, 0.97%)</title><rect x="892.1" y="587" width="11.5" height="10.0" fill="rgb(240,179,22)" rx="2" ry="2" />
+<text  x="895.14" y="595" ></text>
+</g>
+<g >
+<title>[uhttpd] (4 samples, 1.94%)</title><rect x="892.1" y="686" width="22.9" height="10.0" fill="rgb(231,180,20)" rx="2" ry="2" />
+<text  x="895.14" y="694" >[..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="806.2" y="411" width="5.7" height="10.0" fill="rgb(242,182,22)" rx="2" ry="2" />
+<text  x="809.21" y="419" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="760.4" y="334" width="5.7" height="10.0" fill="rgb(245,119,5)" rx="2" ry="2" />
+<text  x="763.39" y="342" ></text>
+</g>
+<g >
+<title>[lua5.1] (2 samples, 0.97%)</title><rect x="766.1" y="345" width="11.5" height="10.0" fill="rgb(219,191,46)" rx="2" ry="2" />
+<text  x="769.12" y="353" ></text>
+</g>
+<g >
+<title>do_notify_resume (1 samples, 0.49%)</title><rect x="1178.5" y="719" width="5.8" height="10.0" fill="rgb(234,179,30)" rx="2" ry="2" />
+<text  x="1181.54" y="727" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="737.5" y="169" width="5.7" height="10.0" fill="rgb(245,63,40)" rx="2" ry="2" />
+<text  x="740.48" y="177" ></text>
+</g>
+<g >
+<title>[busybox] (1 samples, 0.49%)</title><rect x="1178.5" y="675" width="5.8" height="10.0" fill="rgb(230,193,5)" rx="2" ry="2" />
+<text  x="1181.54" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="477" width="5.7" height="10.0" fill="rgb(233,172,27)" rx="2" ry="2" />
+<text  x="723.29" y="485" ></text>
+</g>
+<g >
+<title>grep (3 samples, 1.46%)</title><rect x="995.2" y="719" width="17.2" height="10.0" fill="rgb(223,82,18)" rx="2" ry="2" />
+<text  x="998.24" y="727" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="587" width="11.5" height="10.0" fill="rgb(249,101,29)" rx="2" ry="2" />
+<text  x="711.83" y="595" ></text>
+</g>
+<g >
+<title>[libc.so] (3 samples, 1.46%)</title><rect x="491.2" y="653" width="17.1" height="10.0" fill="rgb(238,78,17)" rx="2" ry="2" />
+<text  x="494.17" y="661" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="477" width="5.8" height="10.0" fill="rgb(231,40,30)" rx="2" ry="2" />
+<text  x="551.45" y="485" ></text>
+</g>
+<g >
+<title>[lua5.1] (2 samples, 0.97%)</title><rect x="708.8" y="466" width="11.5" height="10.0" fill="rgb(230,68,24)" rx="2" ry="2" />
+<text  x="711.83" y="474" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="559.9" y="367" width="5.7" height="10.0" fill="rgb(248,219,35)" rx="2" ry="2" />
+<text  x="562.90" y="375" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="806.2" y="587" width="11.5" height="10.0" fill="rgb(232,18,7)" rx="2" ry="2" />
+<text  x="809.21" y="595" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="444" width="11.4" height="10.0" fill="rgb(210,11,29)" rx="2" ry="2" />
+<text  x="574.36" y="452" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (14 samples, 6.80%)</title><rect x="726.0" y="532" width="80.2" height="10.0" fill="rgb(208,102,15)" rx="2" ry="2" />
+<text  x="729.02" y="540" >[liblua.s..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="510" width="17.2" height="10.0" fill="rgb(250,154,33)" rx="2" ry="2" />
+<text  x="322.32" y="518" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="620" width="5.7" height="10.0" fill="rgb(249,80,29)" rx="2" ry="2" />
+<text  x="557.17" y="628" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="554" width="5.7" height="10.0" fill="rgb(232,66,50)" rx="2" ry="2" />
+<text  x="1124.26" y="562" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="806.2" y="334" width="5.7" height="10.0" fill="rgb(225,78,24)" rx="2" ry="2" />
+<text  x="809.21" y="342" ></text>
+</g>
+<g >
+<title>[jsonc.so] (1 samples, 0.49%)</title><rect x="548.4" y="653" width="5.8" height="10.0" fill="rgb(242,73,26)" rx="2" ry="2" />
+<text  x="551.45" y="661" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="257" width="5.7" height="10.0" fill="rgb(216,41,30)" rx="2" ry="2" />
+<text  x="1124.26" y="265" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="279" width="5.7" height="10.0" fill="rgb(254,94,9)" rx="2" ry="2" />
+<text  x="574.36" y="287" ></text>
+</g>
+<g >
+<title>hostapd (3 samples, 1.46%)</title><rect x="336.5" y="675" width="17.2" height="10.0" fill="rgb(240,85,51)" rx="2" ry="2" />
+<text  x="339.50" y="683" ></text>
+</g>
+<g >
+<title>[uhttpd] (6 samples, 2.91%)</title><rect x="880.7" y="719" width="34.3" height="10.0" fill="rgb(248,194,42)" rx="2" ry="2" />
+<text  x="883.68" y="727" >[u..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="726.0" y="235" width="11.5" height="10.0" fill="rgb(221,215,37)" rx="2" ry="2" />
+<text  x="729.02" y="243" ></text>
+</g>
+<g >
+<title>__arch_clear_user (7 samples, 3.40%)</title><rect x="1138.4" y="730" width="40.1" height="10.0" fill="rgb(246,94,29)" rx="2" ry="2" />
+<text  x="1141.45" y="738" >__a..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="806.2" y="521" width="11.5" height="10.0" fill="rgb(239,216,33)" rx="2" ry="2" />
+<text  x="809.21" y="529" ></text>
+</g>
+<g >
+<title>[libjson-c.so.5.1.0] (1 samples, 0.49%)</title><rect x="720.3" y="609" width="5.7" height="10.0" fill="rgb(212,80,45)" rx="2" ry="2" />
+<text  x="723.29" y="617" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (3 samples, 1.46%)</title><rect x="582.8" y="697" width="17.2" height="10.0" fill="rgb(238,13,25)" rx="2" ry="2" />
+<text  x="585.82" y="705" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="609" width="5.7" height="10.0" fill="rgb(253,44,23)" rx="2" ry="2" />
+<text  x="557.17" y="617" ></text>
+</g>
+<g >
+<title>luci (3 samples, 1.46%)</title><rect x="319.3" y="279" width="17.2" height="10.0" fill="rgb(250,71,6)" rx="2" ry="2" />
+<text  x="322.32" y="287" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="521" width="5.7" height="10.0" fill="rgb(228,176,21)" rx="2" ry="2" />
+<text  x="1124.26" y="529" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 0.97%)</title><rect x="823.4" y="708" width="11.5" height="10.0" fill="rgb(205,116,40)" rx="2" ry="2" />
+<text  x="826.40" y="716" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="499" width="17.2" height="10.0" fill="rgb(228,169,14)" rx="2" ry="2" />
+<text  x="322.32" y="507" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.49%)</title><rect x="1098.3" y="620" width="5.8" height="10.0" fill="rgb(214,168,30)" rx="2" ry="2" />
+<text  x="1101.35" y="628" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="477" width="11.4" height="10.0" fill="rgb(229,161,25)" rx="2" ry="2" />
+<text  x="574.36" y="485" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="806.2" y="554" width="11.5" height="10.0" fill="rgb(207,102,52)" rx="2" ry="2" />
+<text  x="809.21" y="562" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="559.9" y="334" width="5.7" height="10.0" fill="rgb(251,177,29)" rx="2" ry="2" />
+<text  x="562.90" y="342" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="754.7" y="400" width="5.7" height="10.0" fill="rgb(213,160,21)" rx="2" ry="2" />
+<text  x="757.66" y="408" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="577.1" y="301" width="5.7" height="10.0" fill="rgb(227,7,8)" rx="2" ry="2" />
+<text  x="580.09" y="309" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="726.0" y="202" width="11.5" height="10.0" fill="rgb(246,156,38)" rx="2" ry="2" />
+<text  x="729.02" y="210" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (14 samples, 6.80%)</title><rect x="726.0" y="565" width="80.2" height="10.0" fill="rgb(217,86,34)" rx="2" ry="2" />
+<text  x="729.02" y="573" >[liblua.s..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="631" width="11.4" height="10.0" fill="rgb(209,24,24)" rx="2" ry="2" />
+<text  x="574.36" y="639" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="577.1" y="213" width="5.7" height="10.0" fill="rgb(243,143,27)" rx="2" ry="2" />
+<text  x="580.09" y="221" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="290" width="5.7" height="10.0" fill="rgb(243,15,47)" rx="2" ry="2" />
+<text  x="574.36" y="298" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="114" width="5.7" height="10.0" fill="rgb(217,219,37)" rx="2" ry="2" />
+<text  x="574.36" y="122" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="587" width="5.7" height="10.0" fill="rgb(238,209,5)" rx="2" ry="2" />
+<text  x="1124.26" y="595" ></text>
+</g>
+<g >
+<title>[uhttpd] (2 samples, 0.97%)</title><rect x="903.6" y="642" width="11.4" height="10.0" fill="rgb(236,202,32)" rx="2" ry="2" />
+<text  x="906.59" y="650" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="411" width="11.4" height="10.0" fill="rgb(218,202,41)" rx="2" ry="2" />
+<text  x="574.36" y="419" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="726.0" y="279" width="17.2" height="10.0" fill="rgb(217,117,24)" rx="2" ry="2" />
+<text  x="729.02" y="287" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (3 samples, 1.46%)</title><rect x="582.8" y="708" width="17.2" height="10.0" fill="rgb(210,194,50)" rx="2" ry="2" />
+<text  x="585.82" y="716" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="367" width="5.7" height="10.0" fill="rgb(246,165,42)" rx="2" ry="2" />
+<text  x="1124.26" y="375" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="444" width="5.7" height="10.0" fill="rgb(240,114,11)" rx="2" ry="2" />
+<text  x="706.11" y="452" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="559.9" y="664" width="11.5" height="10.0" fill="rgb(213,16,29)" rx="2" ry="2" />
+<text  x="562.90" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="389" width="5.7" height="10.0" fill="rgb(244,191,25)" rx="2" ry="2" />
+<text  x="557.17" y="397" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="748.9" y="356" width="5.8" height="10.0" fill="rgb(213,186,20)" rx="2" ry="2" />
+<text  x="751.93" y="364" ></text>
+</g>
+<g >
+<title>dnsmasq (1 samples, 0.49%)</title><rect x="1161.4" y="653" width="5.7" height="10.0" fill="rgb(213,159,40)" rx="2" ry="2" />
+<text  x="1164.36" y="661" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="532" width="5.7" height="10.0" fill="rgb(242,84,36)" rx="2" ry="2" />
+<text  x="820.67" y="540" ></text>
+</g>
+<g >
+<title>[unknown] (2 samples, 0.97%)</title><rect x="903.6" y="576" width="11.4" height="10.0" fill="rgb(251,173,5)" rx="2" ry="2" />
+<text  x="906.59" y="584" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (2 samples, 0.97%)</title><rect x="1098.3" y="730" width="11.5" height="10.0" fill="rgb(251,159,28)" rx="2" ry="2" />
+<text  x="1101.35" y="738" ></text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="1132.7" y="653" width="5.7" height="10.0" fill="rgb(247,195,15)" rx="2" ry="2" />
+<text  x="1135.72" y="661" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.49%)</title><rect x="605.7" y="675" width="5.8" height="10.0" fill="rgb(227,167,28)" rx="2" ry="2" />
+<text  x="608.73" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="334" width="5.7" height="10.0" fill="rgb(234,193,29)" rx="2" ry="2" />
+<text  x="1124.26" y="342" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="748.9" y="312" width="5.8" height="10.0" fill="rgb(221,155,11)" rx="2" ry="2" />
+<text  x="751.93" y="320" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="565" width="5.7" height="10.0" fill="rgb(231,113,19)" rx="2" ry="2" />
+<text  x="820.67" y="573" ></text>
+</g>
+<g >
+<title>[libjson-c.so.5.1.0] (1 samples, 0.49%)</title><rect x="720.3" y="631" width="5.7" height="10.0" fill="rgb(252,168,19)" rx="2" ry="2" />
+<text  x="723.29" y="639" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="664" width="11.5" height="10.0" fill="rgb(221,205,44)" rx="2" ry="2" />
+<text  x="711.83" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="726.0" y="290" width="17.2" height="10.0" fill="rgb(243,48,22)" rx="2" ry="2" />
+<text  x="729.02" y="298" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="966.6" y="708" width="5.7" height="10.0" fill="rgb(252,78,32)" rx="2" ry="2" />
+<text  x="969.60" y="716" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="600.0" y="631" width="5.7" height="10.0" fill="rgb(214,3,24)" rx="2" ry="2" />
+<text  x="603.00" y="639" ></text>
+</g>
+<g >
+<title>uhttpd (1 samples, 0.49%)</title><rect x="1127.0" y="653" width="5.7" height="10.0" fill="rgb(234,48,15)" rx="2" ry="2" />
+<text  x="1129.99" y="661" ></text>
+</g>
+<g >
+<title>[jsonc.so] (2 samples, 0.97%)</title><rect x="708.8" y="686" width="11.5" height="10.0" fill="rgb(208,101,44)" rx="2" ry="2" />
+<text  x="711.83" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="631" width="5.7" height="10.0" fill="rgb(252,220,46)" rx="2" ry="2" />
+<text  x="706.11" y="639" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 0.97%)</title><rect x="863.5" y="686" width="11.5" height="10.0" fill="rgb(225,128,32)" rx="2" ry="2" />
+<text  x="866.50" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="664" width="11.4" height="10.0" fill="rgb(234,122,27)" rx="2" ry="2" />
+<text  x="574.36" y="672" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="703.1" y="378" width="5.7" height="10.0" fill="rgb(216,201,45)" rx="2" ry="2" />
+<text  x="706.11" y="386" ></text>
+</g>
+<g >
+<title>[uhttpd] (4 samples, 1.94%)</title><rect x="892.1" y="675" width="22.9" height="10.0" fill="rgb(226,160,1)" rx="2" ry="2" />
+<text  x="895.14" y="683" >[..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="543" width="5.7" height="10.0" fill="rgb(230,53,9)" rx="2" ry="2" />
+<text  x="820.67" y="551" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="411" width="5.7" height="10.0" fill="rgb(224,19,54)" rx="2" ry="2" />
+<text  x="723.29" y="419" ></text>
+</g>
+<g >
+<title>all (206 samples, 100%)</title><rect x="10.0" y="741" width="1180.0" height="10.0" fill="rgb(217,140,9)" rx="2" ry="2" />
+<text  x="13.00" y="749" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="411" width="5.8" height="10.0" fill="rgb(220,2,24)" rx="2" ry="2" />
+<text  x="551.45" y="419" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="559.9" y="290" width="5.7" height="10.0" fill="rgb(241,211,33)" rx="2" ry="2" />
+<text  x="562.90" y="298" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="748.9" y="389" width="5.8" height="10.0" fill="rgb(211,141,10)" rx="2" ry="2" />
+<text  x="751.93" y="397" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="598" width="17.2" height="10.0" fill="rgb(225,124,52)" rx="2" ry="2" />
+<text  x="322.32" y="606" ></text>
+</g>
+<g >
+<title>__arm64_sys_execve (3 samples, 1.46%)</title><rect x="1161.4" y="697" width="17.1" height="10.0" fill="rgb(237,64,19)" rx="2" ry="2" />
+<text  x="1164.36" y="705" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="766.1" y="389" width="11.5" height="10.0" fill="rgb(225,125,47)" rx="2" ry="2" />
+<text  x="769.12" y="397" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="488" width="5.7" height="10.0" fill="rgb(239,28,10)" rx="2" ry="2" />
+<text  x="557.17" y="496" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="800.5" y="400" width="5.7" height="10.0" fill="rgb(217,191,9)" rx="2" ry="2" />
+<text  x="803.49" y="408" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="806.2" y="444" width="5.7" height="10.0" fill="rgb(235,218,45)" rx="2" ry="2" />
+<text  x="809.21" y="452" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="1018.2" y="719" width="5.7" height="10.0" fill="rgb(207,26,24)" rx="2" ry="2" />
+<text  x="1021.16" y="727" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="748.9" y="378" width="5.8" height="10.0" fill="rgb(215,125,27)" rx="2" ry="2" />
+<text  x="751.93" y="386" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 0.97%)</title><rect x="863.5" y="675" width="11.5" height="10.0" fill="rgb(207,44,7)" rx="2" ry="2" />
+<text  x="866.50" y="683" ></text>
+</g>
+<g >
+<title>grep (7 samples, 3.40%)</title><rect x="622.9" y="697" width="40.1" height="10.0" fill="rgb(214,170,25)" rx="2" ry="2" />
+<text  x="625.91" y="705" >grep</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="766.1" y="400" width="11.5" height="10.0" fill="rgb(245,216,6)" rx="2" ry="2" />
+<text  x="769.12" y="408" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="806.2" y="301" width="5.7" height="10.0" fill="rgb(212,152,17)" rx="2" ry="2" />
+<text  x="809.21" y="309" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="548.4" y="224" width="5.8" height="10.0" fill="rgb(222,71,11)" rx="2" ry="2" />
+<text  x="551.45" y="232" ></text>
+</g>
+<g >
+<title>[uhttpd] (2 samples, 0.97%)</title><rect x="1098.3" y="697" width="11.5" height="10.0" fill="rgb(219,63,45)" rx="2" ry="2" />
+<text  x="1101.35" y="705" ></text>
+</g>
+<g >
+<title>date (1 samples, 0.49%)</title><rect x="1064.0" y="686" width="5.7" height="10.0" fill="rgb(232,23,53)" rx="2" ry="2" />
+<text  x="1066.98" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="760.4" y="378" width="5.7" height="10.0" fill="rgb(249,226,40)" rx="2" ry="2" />
+<text  x="763.39" y="386" ></text>
+</g>
+<g >
+<title>[uhttpd] (2 samples, 0.97%)</title><rect x="903.6" y="598" width="11.4" height="10.0" fill="rgb(208,227,12)" rx="2" ry="2" />
+<text  x="906.59" y="606" ></text>
+</g>
+<g >
+<title>grep (2 samples, 0.97%)</title><rect x="915.0" y="708" width="11.5" height="10.0" fill="rgb(236,165,38)" rx="2" ry="2" />
+<text  x="918.05" y="716" ></text>
+</g>
+<g >
+<title>[unknown] (2 samples, 0.97%)</title><rect x="789.0" y="400" width="11.5" height="10.0" fill="rgb(215,7,0)" rx="2" ry="2" />
+<text  x="792.03" y="408" ></text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="1132.7" y="686" width="5.7" height="10.0" fill="rgb(246,89,3)" rx="2" ry="2" />
+<text  x="1135.72" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (14 samples, 6.80%)</title><rect x="726.0" y="620" width="80.2" height="10.0" fill="rgb(231,71,17)" rx="2" ry="2" />
+<text  x="729.02" y="628" >[liblua.s..</text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="737.5" y="136" width="5.7" height="10.0" fill="rgb(223,196,27)" rx="2" ry="2" />
+<text  x="740.48" y="144" ></text>
+</g>
+<g >
+<title>[libubus.so.20210215] (1 samples, 0.49%)</title><rect x="875.0" y="664" width="5.7" height="10.0" fill="rgb(219,171,35)" rx="2" ry="2" />
+<text  x="877.95" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="532" width="5.7" height="10.0" fill="rgb(231,13,15)" rx="2" ry="2" />
+<text  x="557.17" y="540" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="235" width="5.7" height="10.0" fill="rgb(235,84,8)" rx="2" ry="2" />
+<text  x="574.36" y="243" ></text>
+</g>
+<g >
+<title>rrdtool (2 samples, 0.97%)</title><rect x="863.5" y="598" width="11.5" height="10.0" fill="rgb(222,14,44)" rx="2" ry="2" />
+<text  x="866.50" y="606" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="422" width="17.2" height="10.0" fill="rgb(216,156,8)" rx="2" ry="2" />
+<text  x="322.32" y="430" ></text>
+</g>
+<g >
+<title>setup_rt_frame (1 samples, 0.49%)</title><rect x="1184.3" y="719" width="5.7" height="10.0" fill="rgb(237,199,18)" rx="2" ry="2" />
+<text  x="1187.27" y="727" ></text>
+</g>
+<g >
+<title>[libjson-c.so.5.1.0] (4 samples, 1.94%)</title><rect x="703.1" y="708" width="22.9" height="10.0" fill="rgb(212,59,48)" rx="2" ry="2" />
+<text  x="706.11" y="716" >[..</text>
+</g>
+<g >
+<title>sh (5 samples, 2.43%)</title><rect x="674.5" y="697" width="28.6" height="10.0" fill="rgb(241,196,28)" rx="2" ry="2" />
+<text  x="677.47" y="705" >sh</text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="554.2" y="334" width="5.7" height="10.0" fill="rgb(231,75,20)" rx="2" ry="2" />
+<text  x="557.17" y="342" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="743.2" y="257" width="5.7" height="10.0" fill="rgb(214,127,3)" rx="2" ry="2" />
+<text  x="746.20" y="265" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="777.6" y="433" width="5.7" height="10.0" fill="rgb(234,131,35)" rx="2" ry="2" />
+<text  x="780.57" y="441" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="1132.7" y="587" width="5.7" height="10.0" fill="rgb(220,168,53)" rx="2" ry="2" />
+<text  x="1135.72" y="595" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 0.97%)</title><rect x="823.4" y="598" width="11.5" height="10.0" fill="rgb(247,110,5)" rx="2" ry="2" />
+<text  x="826.40" y="606" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="642" width="5.7" height="10.0" fill="rgb(217,183,27)" rx="2" ry="2" />
+<text  x="706.11" y="650" ></text>
+</g>
+<g >
+<title>[lua5.1] (2 samples, 0.97%)</title><rect x="708.8" y="400" width="11.5" height="10.0" fill="rgb(217,227,36)" rx="2" ry="2" />
+<text  x="711.83" y="408" ></text>
+</g>
+<g >
+<title>[jsonc.so] (1 samples, 0.49%)</title><rect x="720.3" y="554" width="5.7" height="10.0" fill="rgb(227,203,37)" rx="2" ry="2" />
+<text  x="723.29" y="562" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="754.7" y="301" width="5.7" height="10.0" fill="rgb(208,184,43)" rx="2" ry="2" />
+<text  x="757.66" y="309" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (14 samples, 6.80%)</title><rect x="726.0" y="609" width="80.2" height="10.0" fill="rgb(205,189,32)" rx="2" ry="2" />
+<text  x="729.02" y="617" >[liblua.s..</text>
+</g>
+<g >
+<title>sh (18 samples, 8.74%)</title><rect x="15.7" y="708" width="103.1" height="10.0" fill="rgb(218,111,22)" rx="2" ry="2" />
+<text  x="18.73" y="716" >sh</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="726.0" y="312" width="17.2" height="10.0" fill="rgb(218,73,32)" rx="2" ry="2" />
+<text  x="729.02" y="320" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="565.6" y="411" width="5.8" height="10.0" fill="rgb(246,31,32)" rx="2" ry="2" />
+<text  x="568.63" y="419" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="455" width="17.2" height="10.0" fill="rgb(251,152,41)" rx="2" ry="2" />
+<text  x="322.32" y="463" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="202" width="5.7" height="10.0" fill="rgb(233,203,17)" rx="2" ry="2" />
+<text  x="574.36" y="210" ></text>
+</g>
+<g >
+<title>dnsmasq (1 samples, 0.49%)</title><rect x="617.2" y="697" width="5.7" height="10.0" fill="rgb(208,121,45)" rx="2" ry="2" />
+<text  x="620.18" y="705" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 0.97%)</title><rect x="1109.8" y="664" width="11.5" height="10.0" fill="rgb(228,221,45)" rx="2" ry="2" />
+<text  x="1112.81" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="565" width="5.7" height="10.0" fill="rgb(224,184,9)" rx="2" ry="2" />
+<text  x="557.17" y="573" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="611.5" y="620" width="5.7" height="10.0" fill="rgb(210,81,53)" rx="2" ry="2" />
+<text  x="614.46" y="628" ></text>
+</g>
+<g >
+<title>uhttpd (1 samples, 0.49%)</title><rect x="1098.3" y="576" width="5.8" height="10.0" fill="rgb(229,187,43)" rx="2" ry="2" />
+<text  x="1101.35" y="584" ></text>
+</g>
+<g >
+<title>grep (1 samples, 0.49%)</title><rect x="187.6" y="697" width="5.7" height="10.0" fill="rgb(222,127,35)" rx="2" ry="2" />
+<text  x="190.57" y="705" ></text>
+</g>
+<g >
+<title>[libjson-c.so.5.1.0] (1 samples, 0.49%)</title><rect x="720.3" y="664" width="5.7" height="10.0" fill="rgb(222,96,1)" rx="2" ry="2" />
+<text  x="723.29" y="672" ></text>
+</g>
+<g >
+<title>lua (1 samples, 0.49%)</title><rect x="811.9" y="334" width="5.8" height="10.0" fill="rgb(219,220,36)" rx="2" ry="2" />
+<text  x="814.94" y="342" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="777.6" y="422" width="5.7" height="10.0" fill="rgb(242,80,7)" rx="2" ry="2" />
+<text  x="780.57" y="430" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="466" width="5.7" height="10.0" fill="rgb(239,81,38)" rx="2" ry="2" />
+<text  x="706.11" y="474" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="488" width="5.7" height="10.0" fill="rgb(250,15,7)" rx="2" ry="2" />
+<text  x="820.67" y="496" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="1184.3" y="675" width="5.7" height="10.0" fill="rgb(239,134,54)" rx="2" ry="2" />
+<text  x="1187.27" y="683" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="605.7" y="631" width="5.8" height="10.0" fill="rgb(210,1,52)" rx="2" ry="2" />
+<text  x="608.73" y="639" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="543" width="5.7" height="10.0" fill="rgb(244,42,49)" rx="2" ry="2" />
+<text  x="557.17" y="551" ></text>
+</g>
+<g >
+<title>search_binary_handler.part.52 (4 samples, 1.94%)</title><rect x="1138.4" y="708" width="23.0" height="10.0" fill="rgb(245,10,51)" rx="2" ry="2" />
+<text  x="1141.45" y="716" >s..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="748.9" y="334" width="5.8" height="10.0" fill="rgb(242,102,27)" rx="2" ry="2" />
+<text  x="751.93" y="342" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="433" width="17.2" height="10.0" fill="rgb(233,44,41)" rx="2" ry="2" />
+<text  x="322.32" y="441" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="356" width="5.7" height="10.0" fill="rgb(218,44,11)" rx="2" ry="2" />
+<text  x="1124.26" y="364" ></text>
+</g>
+<g >
+<title>[wpad] (1 samples, 0.49%)</title><rect x="966.6" y="719" width="5.7" height="10.0" fill="rgb(233,11,24)" rx="2" ry="2" />
+<text  x="969.60" y="727" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="577.1" y="224" width="5.7" height="10.0" fill="rgb(218,173,31)" rx="2" ry="2" />
+<text  x="580.09" y="232" ></text>
+</g>
+<g >
+<title>[lua5.1] (2 samples, 0.97%)</title><rect x="766.1" y="422" width="11.5" height="10.0" fill="rgb(237,99,7)" rx="2" ry="2" />
+<text  x="769.12" y="430" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="571.4" y="70" width="5.7" height="10.0" fill="rgb(224,119,39)" rx="2" ry="2" />
+<text  x="574.36" y="78" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="213" width="5.7" height="10.0" fill="rgb(221,63,24)" rx="2" ry="2" />
+<text  x="574.36" y="221" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="577.1" y="312" width="5.7" height="10.0" fill="rgb(245,165,38)" rx="2" ry="2" />
+<text  x="580.09" y="320" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="777.6" y="455" width="5.7" height="10.0" fill="rgb(221,110,11)" rx="2" ry="2" />
+<text  x="780.57" y="463" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="748.9" y="367" width="5.8" height="10.0" fill="rgb(226,190,32)" rx="2" ry="2" />
+<text  x="751.93" y="375" ></text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="1132.7" y="719" width="5.7" height="10.0" fill="rgb(222,83,5)" rx="2" ry="2" />
+<text  x="1135.72" y="727" ></text>
+</g>
+<g >
+<title>[parser.so] (1 samples, 0.49%)</title><rect x="1121.3" y="642" width="5.7" height="10.0" fill="rgb(217,188,13)" rx="2" ry="2" />
+<text  x="1124.26" y="650" ></text>
+</g>
+<g >
+<title>uhttpd (1 samples, 0.49%)</title><rect x="1104.1" y="565" width="5.7" height="10.0" fill="rgb(253,129,37)" rx="2" ry="2" />
+<text  x="1107.08" y="573" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="466" width="11.4" height="10.0" fill="rgb(222,56,32)" rx="2" ry="2" />
+<text  x="574.36" y="474" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="559.9" y="323" width="5.7" height="10.0" fill="rgb(234,95,20)" rx="2" ry="2" />
+<text  x="562.90" y="331" ></text>
+</g>
+<g >
+<title>sh (1 samples, 0.49%)</title><rect x="296.4" y="664" width="5.7" height="10.0" fill="rgb(226,59,1)" rx="2" ry="2" />
+<text  x="299.41" y="672" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="817.7" y="378" width="5.7" height="10.0" fill="rgb(242,157,23)" rx="2" ry="2" />
+<text  x="820.67" y="386" ></text>
+</g>
+<g >
+<title>luci (2 samples, 0.97%)</title><rect x="789.0" y="389" width="11.5" height="10.0" fill="rgb(211,118,39)" rx="2" ry="2" />
+<text  x="792.03" y="397" ></text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="605.7" y="653" width="5.8" height="10.0" fill="rgb(230,212,8)" rx="2" ry="2" />
+<text  x="608.73" y="661" ></text>
+</g>
+<g >
+<title>el0_svc (3 samples, 1.46%)</title><rect x="1161.4" y="675" width="17.1" height="10.0" fill="rgb(208,110,20)" rx="2" ry="2" />
+<text  x="1164.36" y="683" ></text>
+</g>
+<g >
+<title>[uhttpd] (4 samples, 1.94%)</title><rect x="892.1" y="653" width="22.9" height="10.0" fill="rgb(229,77,50)" rx="2" ry="2" />
+<text  x="895.14" y="661" >[..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="800.5" y="488" width="5.7" height="10.0" fill="rgb(207,89,23)" rx="2" ry="2" />
+<text  x="803.49" y="496" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="576" width="5.7" height="10.0" fill="rgb(205,4,6)" rx="2" ry="2" />
+<text  x="1124.26" y="584" ></text>
+</g>
+<g >
+<title>[unknown] (15 samples, 7.28%)</title><rect x="617.2" y="708" width="85.9" height="10.0" fill="rgb(225,160,36)" rx="2" ry="2" />
+<text  x="620.18" y="716" >[unknown]</text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="777.6" y="477" width="5.7" height="10.0" fill="rgb(212,54,1)" rx="2" ry="2" />
+<text  x="780.57" y="485" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="548.4" y="235" width="5.8" height="10.0" fill="rgb(208,27,30)" rx="2" ry="2" />
+<text  x="551.45" y="243" ></text>
+</g>
+<g >
+<title>[ipset] (1 samples, 0.49%)</title><rect x="1092.6" y="719" width="5.7" height="10.0" fill="rgb(213,205,47)" rx="2" ry="2" />
+<text  x="1095.62" y="727" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="653" width="5.7" height="10.0" fill="rgb(225,205,53)" rx="2" ry="2" />
+<text  x="557.17" y="661" ></text>
+</g>
+<g >
+<title>[unknown] (2 samples, 0.97%)</title><rect x="852.0" y="642" width="11.5" height="10.0" fill="rgb(230,206,50)" rx="2" ry="2" />
+<text  x="855.04" y="650" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="777.6" y="389" width="5.7" height="10.0" fill="rgb(222,39,19)" rx="2" ry="2" />
+<text  x="780.57" y="397" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="806.2" y="576" width="11.5" height="10.0" fill="rgb(217,73,0)" rx="2" ry="2" />
+<text  x="809.21" y="584" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="806.2" y="235" width="5.7" height="10.0" fill="rgb(235,42,24)" rx="2" ry="2" />
+<text  x="809.21" y="243" ></text>
+</g>
+<g >
+<title>[libuci.so] (1 samples, 0.49%)</title><rect x="508.3" y="631" width="5.8" height="10.0" fill="rgb(249,88,45)" rx="2" ry="2" />
+<text  x="511.35" y="639" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="559.9" y="356" width="5.7" height="10.0" fill="rgb(205,66,30)" rx="2" ry="2" />
+<text  x="562.90" y="364" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (17 samples, 8.25%)</title><rect x="393.8" y="664" width="97.4" height="10.0" fill="rgb(224,86,49)" rx="2" ry="2" />
+<text  x="396.79" y="672" >[librrd.so...</text>
+</g>
+<g >
+<title>[libwolfssl.so.4.7.0.66253b90] (2 samples, 0.97%)</title><rect x="605.7" y="708" width="11.5" height="10.0" fill="rgb(241,221,19)" rx="2" ry="2" />
+<text  x="608.73" y="716" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="737.5" y="213" width="5.7" height="10.0" fill="rgb(252,169,33)" rx="2" ry="2" />
+<text  x="740.48" y="221" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="246" width="5.7" height="10.0" fill="rgb(252,210,26)" rx="2" ry="2" />
+<text  x="1124.26" y="254" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="565.6" y="378" width="5.8" height="10.0" fill="rgb(234,134,32)" rx="2" ry="2" />
+<text  x="568.63" y="386" ></text>
+</g>
+<g >
+<title>[jsonc.so] (1 samples, 0.49%)</title><rect x="548.4" y="620" width="5.8" height="10.0" fill="rgb(241,164,34)" rx="2" ry="2" />
+<text  x="551.45" y="628" ></text>
+</g>
+<g >
+<title>[rpcd] (1 samples, 0.49%)</title><rect x="875.0" y="631" width="5.7" height="10.0" fill="rgb(205,117,33)" rx="2" ry="2" />
+<text  x="877.95" y="639" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="559.9" y="631" width="11.5" height="10.0" fill="rgb(217,79,34)" rx="2" ry="2" />
+<text  x="562.90" y="639" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="675" width="5.7" height="10.0" fill="rgb(208,199,12)" rx="2" ry="2" />
+<text  x="706.11" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="345" width="5.7" height="10.0" fill="rgb(211,192,28)" rx="2" ry="2" />
+<text  x="557.17" y="353" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (4 samples, 1.94%)</title><rect x="726.0" y="367" width="22.9" height="10.0" fill="rgb(251,19,50)" rx="2" ry="2" />
+<text  x="729.02" y="375" >[..</text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="783.3" y="477" width="5.7" height="10.0" fill="rgb(214,56,28)" rx="2" ry="2" />
+<text  x="786.30" y="485" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="783.3" y="488" width="5.7" height="10.0" fill="rgb(211,12,44)" rx="2" ry="2" />
+<text  x="786.30" y="496" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="576" width="11.5" height="10.0" fill="rgb(243,100,3)" rx="2" ry="2" />
+<text  x="711.83" y="584" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="653" width="5.7" height="10.0" fill="rgb(209,169,43)" rx="2" ry="2" />
+<text  x="820.67" y="661" ></text>
+</g>
+<g >
+<title>[busybox] (5 samples, 2.43%)</title><rect x="187.6" y="719" width="28.6" height="10.0" fill="rgb(225,115,0)" rx="2" ry="2" />
+<text  x="190.57" y="727" >[b..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="466" width="5.7" height="10.0" fill="rgb(208,159,16)" rx="2" ry="2" />
+<text  x="723.29" y="474" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="466" width="5.8" height="10.0" fill="rgb(207,132,0)" rx="2" ry="2" />
+<text  x="551.45" y="474" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="620" width="5.7" height="10.0" fill="rgb(234,176,31)" rx="2" ry="2" />
+<text  x="820.67" y="628" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="800.5" y="499" width="5.7" height="10.0" fill="rgb(254,40,14)" rx="2" ry="2" />
+<text  x="803.49" y="507" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (7 samples, 3.40%)</title><rect x="726.0" y="422" width="40.1" height="10.0" fill="rgb(234,223,44)" rx="2" ry="2" />
+<text  x="729.02" y="430" >[li..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="559.9" y="477" width="11.5" height="10.0" fill="rgb(229,165,14)" rx="2" ry="2" />
+<text  x="562.90" y="485" ></text>
+</g>
+<g >
+<title>[libc.so] (3 samples, 1.46%)</title><rect x="582.8" y="653" width="17.2" height="10.0" fill="rgb(234,112,49)" rx="2" ry="2" />
+<text  x="585.82" y="661" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="312" width="5.7" height="10.0" fill="rgb(231,130,16)" rx="2" ry="2" />
+<text  x="574.36" y="320" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="783.3" y="378" width="5.7" height="10.0" fill="rgb(239,9,34)" rx="2" ry="2" />
+<text  x="786.30" y="386" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (4 samples, 1.94%)</title><rect x="726.0" y="334" width="22.9" height="10.0" fill="rgb(230,104,10)" rx="2" ry="2" />
+<text  x="729.02" y="342" >[..</text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="1132.7" y="675" width="5.7" height="10.0" fill="rgb(209,55,47)" rx="2" ry="2" />
+<text  x="1135.72" y="683" ></text>
+</g>
+<g >
+<title>[libjson-c.so.5.1.0] (4 samples, 1.94%)</title><rect x="703.1" y="719" width="22.9" height="10.0" fill="rgb(228,88,31)" rx="2" ry="2" />
+<text  x="706.11" y="727" >[..</text>
+</g>
+<g >
+<title>do_notify_resume (1 samples, 0.49%)</title><rect x="1184.3" y="708" width="5.7" height="10.0" fill="rgb(227,225,8)" rx="2" ry="2" />
+<text  x="1187.27" y="716" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="548.4" y="213" width="5.8" height="10.0" fill="rgb(244,19,28)" rx="2" ry="2" />
+<text  x="551.45" y="221" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="737.5" y="202" width="5.7" height="10.0" fill="rgb(227,217,11)" rx="2" ry="2" />
+<text  x="740.48" y="210" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="1098.3" y="587" width="5.8" height="10.0" fill="rgb(241,82,10)" rx="2" ry="2" />
+<text  x="1101.35" y="595" ></text>
+</g>
+<g >
+<title>lua (1 samples, 0.49%)</title><rect x="743.2" y="213" width="5.7" height="10.0" fill="rgb(218,29,25)" rx="2" ry="2" />
+<text  x="746.20" y="221" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (6 samples, 2.91%)</title><rect x="726.0" y="411" width="34.4" height="10.0" fill="rgb(224,213,9)" rx="2" ry="2" />
+<text  x="729.02" y="419" >[l..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="565.6" y="444" width="5.8" height="10.0" fill="rgb(212,200,34)" rx="2" ry="2" />
+<text  x="568.63" y="452" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="548.4" y="202" width="5.8" height="10.0" fill="rgb(250,198,53)" rx="2" ry="2" />
+<text  x="551.45" y="210" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="609" width="5.7" height="10.0" fill="rgb(242,137,8)" rx="2" ry="2" />
+<text  x="820.67" y="617" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (16 samples, 7.77%)</title><rect x="726.0" y="653" width="91.7" height="10.0" fill="rgb(236,51,33)" rx="2" ry="2" />
+<text  x="729.02" y="661" >[liblua.so..</text>
+</g>
+<g >
+<title>[jsonc.so] (2 samples, 0.97%)</title><rect x="548.4" y="686" width="11.5" height="10.0" fill="rgb(205,29,54)" rx="2" ry="2" />
+<text  x="551.45" y="694" ></text>
+</g>
+<g >
+<title>luci (2 samples, 0.97%)</title><rect x="726.0" y="114" width="11.5" height="10.0" fill="rgb(210,35,10)" rx="2" ry="2" />
+<text  x="729.02" y="122" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="686" width="5.7" height="10.0" fill="rgb(218,145,17)" rx="2" ry="2" />
+<text  x="706.11" y="694" ></text>
+</g>
+<g >
+<title>basename (1 samples, 0.49%)</title><rect x="972.3" y="719" width="5.8" height="10.0" fill="rgb(223,212,34)" rx="2" ry="2" />
+<text  x="975.33" y="727" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="565" width="11.5" height="10.0" fill="rgb(243,211,14)" rx="2" ry="2" />
+<text  x="711.83" y="573" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="806.2" y="323" width="5.7" height="10.0" fill="rgb(244,142,54)" rx="2" ry="2" />
+<text  x="809.21" y="331" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="455" width="5.7" height="10.0" fill="rgb(219,134,8)" rx="2" ry="2" />
+<text  x="723.29" y="463" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="455" width="5.8" height="10.0" fill="rgb(210,192,17)" rx="2" ry="2" />
+<text  x="551.45" y="463" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="554.2" y="301" width="5.7" height="10.0" fill="rgb(225,118,43)" rx="2" ry="2" />
+<text  x="557.17" y="309" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="559.9" y="598" width="11.5" height="10.0" fill="rgb(239,93,48)" rx="2" ry="2" />
+<text  x="562.90" y="606" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="760.4" y="312" width="5.7" height="10.0" fill="rgb(210,224,34)" rx="2" ry="2" />
+<text  x="763.39" y="320" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="719" width="5.7" height="10.0" fill="rgb(220,224,15)" rx="2" ry="2" />
+<text  x="1124.26" y="727" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="1121.3" y="224" width="5.7" height="10.0" fill="rgb(245,12,38)" rx="2" ry="2" />
+<text  x="1124.26" y="232" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="103" width="5.7" height="10.0" fill="rgb(217,142,42)" rx="2" ry="2" />
+<text  x="574.36" y="111" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="806.2" y="543" width="11.5" height="10.0" fill="rgb(225,211,41)" rx="2" ry="2" />
+<text  x="809.21" y="551" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="356" width="5.7" height="10.0" fill="rgb(211,39,46)" rx="2" ry="2" />
+<text  x="557.17" y="364" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.49%)</title><rect x="508.3" y="576" width="5.8" height="10.0" fill="rgb(227,213,45)" rx="2" ry="2" />
+<text  x="511.35" y="584" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="664" width="5.7" height="10.0" fill="rgb(249,152,12)" rx="2" ry="2" />
+<text  x="1124.26" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="543" width="5.7" height="10.0" fill="rgb(215,24,28)" rx="2" ry="2" />
+<text  x="1124.26" y="551" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="754.7" y="378" width="5.7" height="10.0" fill="rgb(214,92,51)" rx="2" ry="2" />
+<text  x="757.66" y="386" ></text>
+</g>
+<g >
+<title>luci (2 samples, 0.97%)</title><rect x="766.1" y="312" width="11.5" height="10.0" fill="rgb(244,112,0)" rx="2" ry="2" />
+<text  x="769.12" y="320" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="422" width="5.8" height="10.0" fill="rgb(213,91,52)" rx="2" ry="2" />
+<text  x="551.45" y="430" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="532" width="11.5" height="10.0" fill="rgb(218,149,31)" rx="2" ry="2" />
+<text  x="711.83" y="540" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="433" width="11.4" height="10.0" fill="rgb(217,4,39)" rx="2" ry="2" />
+<text  x="574.36" y="441" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="422" width="5.7" height="10.0" fill="rgb(220,90,45)" rx="2" ry="2" />
+<text  x="723.29" y="430" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="737.5" y="246" width="5.7" height="10.0" fill="rgb(224,47,14)" rx="2" ry="2" />
+<text  x="740.48" y="254" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (5 samples, 2.43%)</title><rect x="726.0" y="400" width="28.7" height="10.0" fill="rgb(240,55,36)" rx="2" ry="2" />
+<text  x="729.02" y="408" >[l..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="653" width="17.2" height="10.0" fill="rgb(209,202,42)" rx="2" ry="2" />
+<text  x="322.32" y="661" ></text>
+</g>
+<g >
+<title>[libjson-c.so.5.1.0] (2 samples, 0.97%)</title><rect x="559.9" y="686" width="11.5" height="10.0" fill="rgb(218,25,31)" rx="2" ry="2" />
+<text  x="562.90" y="694" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="703.1" y="389" width="5.7" height="10.0" fill="rgb(227,217,41)" rx="2" ry="2" />
+<text  x="706.11" y="397" ></text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="1132.7" y="708" width="5.7" height="10.0" fill="rgb(231,54,45)" rx="2" ry="2" />
+<text  x="1135.72" y="716" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="565" width="5.7" height="10.0" fill="rgb(232,55,39)" rx="2" ry="2" />
+<text  x="1124.26" y="573" ></text>
+</g>
+<g >
+<title>[libjson-c.so.5.1.0] (4 samples, 1.94%)</title><rect x="548.4" y="697" width="23.0" height="10.0" fill="rgb(238,120,1)" rx="2" ry="2" />
+<text  x="551.45" y="705" >[..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="806.2" y="532" width="11.5" height="10.0" fill="rgb(247,89,20)" rx="2" ry="2" />
+<text  x="809.21" y="540" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (14 samples, 6.80%)</title><rect x="726.0" y="587" width="80.2" height="10.0" fill="rgb(236,133,43)" rx="2" ry="2" />
+<text  x="729.02" y="595" >[liblua.s..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="726.0" y="180" width="11.5" height="10.0" fill="rgb(245,145,13)" rx="2" ry="2" />
+<text  x="729.02" y="188" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="455" width="11.4" height="10.0" fill="rgb(212,68,4)" rx="2" ry="2" />
+<text  x="574.36" y="463" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (14 samples, 6.80%)</title><rect x="726.0" y="521" width="80.2" height="10.0" fill="rgb(215,78,30)" rx="2" ry="2" />
+<text  x="729.02" y="529" >[liblua.s..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="766.1" y="356" width="11.5" height="10.0" fill="rgb(225,227,26)" rx="2" ry="2" />
+<text  x="769.12" y="364" ></text>
+</g>
+<g >
+<title>[cgi-io] (3 samples, 1.46%)</title><rect x="834.9" y="697" width="17.1" height="10.0" fill="rgb(225,176,11)" rx="2" ry="2" />
+<text  x="837.85" y="705" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="92" width="5.7" height="10.0" fill="rgb(246,209,51)" rx="2" ry="2" />
+<text  x="574.36" y="100" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="811.9" y="345" width="5.8" height="10.0" fill="rgb(220,196,45)" rx="2" ry="2" />
+<text  x="814.94" y="353" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="743.2" y="290" width="5.7" height="10.0" fill="rgb(239,64,10)" rx="2" ry="2" />
+<text  x="746.20" y="298" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="726.0" y="169" width="11.5" height="10.0" fill="rgb(209,159,20)" rx="2" ry="2" />
+<text  x="729.02" y="177" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="433" width="5.8" height="10.0" fill="rgb(253,51,18)" rx="2" ry="2" />
+<text  x="551.45" y="441" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="433" width="5.7" height="10.0" fill="rgb(212,130,27)" rx="2" ry="2" />
+<text  x="723.29" y="441" ></text>
+</g>
+<g >
+<title>[unknown] (4 samples, 1.94%)</title><rect x="187.6" y="708" width="22.9" height="10.0" fill="rgb(232,203,9)" rx="2" ry="2" />
+<text  x="190.57" y="716" >[..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="422" width="11.4" height="10.0" fill="rgb(225,185,4)" rx="2" ry="2" />
+<text  x="574.36" y="430" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (14 samples, 6.80%)</title><rect x="726.0" y="554" width="80.2" height="10.0" fill="rgb(217,171,50)" rx="2" ry="2" />
+<text  x="729.02" y="562" >[liblua.s..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="543" width="11.5" height="10.0" fill="rgb(238,222,4)" rx="2" ry="2" />
+<text  x="711.83" y="551" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="235" width="5.7" height="10.0" fill="rgb(241,195,19)" rx="2" ry="2" />
+<text  x="1124.26" y="243" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="125" width="5.7" height="10.0" fill="rgb(241,199,17)" rx="2" ry="2" />
+<text  x="574.36" y="133" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="532" width="5.7" height="10.0" fill="rgb(230,155,49)" rx="2" ry="2" />
+<text  x="1124.26" y="540" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="743.2" y="279" width="5.7" height="10.0" fill="rgb(206,102,24)" rx="2" ry="2" />
+<text  x="746.20" y="287" ></text>
+</g>
+<g >
+<title>uhttpd (1 samples, 0.49%)</title><rect x="611.5" y="598" width="5.7" height="10.0" fill="rgb(228,156,13)" rx="2" ry="2" />
+<text  x="614.46" y="606" ></text>
+</g>
+<g >
+<title>[rrdtool] (2 samples, 0.97%)</title><rect x="863.5" y="642" width="11.5" height="10.0" fill="rgb(235,194,23)" rx="2" ry="2" />
+<text  x="866.50" y="650" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="783.3" y="400" width="5.7" height="10.0" fill="rgb(235,171,33)" rx="2" ry="2" />
+<text  x="786.30" y="408" ></text>
+</g>
+<g >
+<title>[nixio.so] (2 samples, 0.97%)</title><rect x="806.2" y="620" width="11.5" height="10.0" fill="rgb(210,183,10)" rx="2" ry="2" />
+<text  x="809.21" y="628" ></text>
+</g>
+<g >
+<title>[libubus.so.20210215] (3 samples, 1.46%)</title><rect x="834.9" y="719" width="17.1" height="10.0" fill="rgb(205,3,1)" rx="2" ry="2" />
+<text  x="837.85" y="727" ></text>
+</g>
+<g >
+<title>[libuci.so] (1 samples, 0.49%)</title><rect x="508.3" y="697" width="5.8" height="10.0" fill="rgb(229,91,19)" rx="2" ry="2" />
+<text  x="511.35" y="705" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="806.2" y="565" width="11.5" height="10.0" fill="rgb(233,151,41)" rx="2" ry="2" />
+<text  x="809.21" y="573" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="559.9" y="345" width="5.7" height="10.0" fill="rgb(211,61,18)" rx="2" ry="2" />
+<text  x="562.90" y="353" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="720.3" y="279" width="5.7" height="10.0" fill="rgb(244,46,49)" rx="2" ry="2" />
+<text  x="723.29" y="287" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="760.4" y="323" width="5.7" height="10.0" fill="rgb(241,7,25)" rx="2" ry="2" />
+<text  x="763.39" y="331" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="1127.0" y="675" width="5.7" height="10.0" fill="rgb(225,39,45)" rx="2" ry="2" />
+<text  x="1129.99" y="683" ></text>
+</g>
+<g >
+<title>[uhttpd] (2 samples, 0.97%)</title><rect x="1109.8" y="675" width="11.5" height="10.0" fill="rgb(205,141,51)" rx="2" ry="2" />
+<text  x="1112.81" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="312" width="5.7" height="10.0" fill="rgb(241,60,0)" rx="2" ry="2" />
+<text  x="1124.26" y="320" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="653" width="11.5" height="10.0" fill="rgb(205,152,46)" rx="2" ry="2" />
+<text  x="711.83" y="661" ></text>
+</g>
+<g >
+<title>uhttpd (2 samples, 0.97%)</title><rect x="1109.8" y="642" width="11.5" height="10.0" fill="rgb(238,225,18)" rx="2" ry="2" />
+<text  x="1112.81" y="650" ></text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="1098.3" y="609" width="5.8" height="10.0" fill="rgb(233,208,15)" rx="2" ry="2" />
+<text  x="1101.35" y="617" ></text>
+</g>
+<g >
+<title>[libuci.so] (1 samples, 0.49%)</title><rect x="508.3" y="675" width="5.8" height="10.0" fill="rgb(229,171,53)" rx="2" ry="2" />
+<text  x="511.35" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="521" width="5.7" height="10.0" fill="rgb(210,161,29)" rx="2" ry="2" />
+<text  x="820.67" y="529" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="587" width="5.7" height="10.0" fill="rgb(228,132,3)" rx="2" ry="2" />
+<text  x="820.67" y="595" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="559.9" y="510" width="11.5" height="10.0" fill="rgb(254,176,1)" rx="2" ry="2" />
+<text  x="562.90" y="518" ></text>
+</g>
+<g >
+<title>__do_execve_file (3 samples, 1.46%)</title><rect x="1161.4" y="708" width="17.1" height="10.0" fill="rgb(229,141,41)" rx="2" ry="2" />
+<text  x="1164.36" y="716" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="559.9" y="389" width="5.7" height="10.0" fill="rgb(251,206,52)" rx="2" ry="2" />
+<text  x="562.90" y="397" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="455" width="5.7" height="10.0" fill="rgb(208,80,53)" rx="2" ry="2" />
+<text  x="706.11" y="463" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="806.2" y="433" width="5.7" height="10.0" fill="rgb(207,128,34)" rx="2" ry="2" />
+<text  x="809.21" y="441" ></text>
+</g>
+<g >
+<title>rpcd (1 samples, 0.49%)</title><rect x="508.3" y="532" width="5.8" height="10.0" fill="rgb(250,7,2)" rx="2" ry="2" />
+<text  x="511.35" y="540" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="754.7" y="290" width="5.7" height="10.0" fill="rgb(252,187,46)" rx="2" ry="2" />
+<text  x="757.66" y="298" ></text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="1132.7" y="664" width="5.7" height="10.0" fill="rgb(216,80,1)" rx="2" ry="2" />
+<text  x="1135.72" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (4 samples, 1.94%)</title><rect x="726.0" y="389" width="22.9" height="10.0" fill="rgb(217,227,42)" rx="2" ry="2" />
+<text  x="729.02" y="397" >[..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="422" width="5.7" height="10.0" fill="rgb(221,220,53)" rx="2" ry="2" />
+<text  x="706.11" y="430" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="345" width="5.7" height="10.0" fill="rgb(207,70,27)" rx="2" ry="2" />
+<text  x="1124.26" y="353" ></text>
+</g>
+<g >
+<title>[libwolfssl.so.4.7.0.66253b90] (2 samples, 0.97%)</title><rect x="1109.8" y="730" width="11.5" height="10.0" fill="rgb(251,71,5)" rx="2" ry="2" />
+<text  x="1112.81" y="738" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="508.3" y="554" width="5.8" height="10.0" fill="rgb(233,6,14)" rx="2" ry="2" />
+<text  x="511.35" y="562" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="720.3" y="268" width="5.7" height="10.0" fill="rgb(215,148,17)" rx="2" ry="2" />
+<text  x="723.29" y="276" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="559.9" y="499" width="11.5" height="10.0" fill="rgb(238,131,23)" rx="2" ry="2" />
+<text  x="562.90" y="507" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="559.9" y="653" width="11.5" height="10.0" fill="rgb(205,57,40)" rx="2" ry="2" />
+<text  x="562.90" y="661" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="554" width="5.7" height="10.0" fill="rgb(212,187,10)" rx="2" ry="2" />
+<text  x="820.67" y="562" ></text>
+</g>
+<g >
+<title>[libjson-c.so.5.1.0] (1 samples, 0.49%)</title><rect x="720.3" y="642" width="5.7" height="10.0" fill="rgb(242,168,36)" rx="2" ry="2" />
+<text  x="723.29" y="650" ></text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="1132.7" y="609" width="5.7" height="10.0" fill="rgb(206,207,44)" rx="2" ry="2" />
+<text  x="1135.72" y="617" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="1092.6" y="708" width="5.7" height="10.0" fill="rgb(248,145,52)" rx="2" ry="2" />
+<text  x="1095.62" y="716" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 0.97%)</title><rect x="892.1" y="598" width="11.5" height="10.0" fill="rgb(224,171,37)" rx="2" ry="2" />
+<text  x="895.14" y="606" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 0.97%)</title><rect x="863.5" y="620" width="11.5" height="10.0" fill="rgb(234,146,50)" rx="2" ry="2" />
+<text  x="866.50" y="628" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="800.5" y="433" width="5.7" height="10.0" fill="rgb(221,136,54)" rx="2" ry="2" />
+<text  x="803.49" y="441" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="806.2" y="422" width="5.7" height="10.0" fill="rgb(238,36,1)" rx="2" ry="2" />
+<text  x="809.21" y="430" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="748.9" y="279" width="5.8" height="10.0" fill="rgb(209,164,45)" rx="2" ry="2" />
+<text  x="751.93" y="287" ></text>
+</g>
+<g >
+<title>[unknown] (4 samples, 1.94%)</title><rect x="233.4" y="664" width="22.9" height="10.0" fill="rgb(219,55,33)" rx="2" ry="2" />
+<text  x="236.40" y="672" >[..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="323" width="5.7" height="10.0" fill="rgb(237,215,28)" rx="2" ry="2" />
+<text  x="1124.26" y="331" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (2 samples, 0.97%)</title><rect x="1109.8" y="697" width="11.5" height="10.0" fill="rgb(229,131,3)" rx="2" ry="2" />
+<text  x="1112.81" y="705" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="246" width="5.7" height="10.0" fill="rgb(244,206,35)" rx="2" ry="2" />
+<text  x="574.36" y="254" ></text>
+</g>
+<g >
+<title>[parser.so] (1 samples, 0.49%)</title><rect x="1121.3" y="730" width="5.7" height="10.0" fill="rgb(251,39,5)" rx="2" ry="2" />
+<text  x="1124.26" y="738" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="466" width="17.2" height="10.0" fill="rgb(246,179,43)" rx="2" ry="2" />
+<text  x="322.32" y="474" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="875.0" y="620" width="5.7" height="10.0" fill="rgb(212,124,22)" rx="2" ry="2" />
+<text  x="877.95" y="628" ></text>
+</g>
+<g >
+<title>qrencode (1 samples, 0.49%)</title><rect x="285.0" y="664" width="5.7" height="10.0" fill="rgb(229,162,45)" rx="2" ry="2" />
+<text  x="287.95" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="653" width="11.4" height="10.0" fill="rgb(222,161,33)" rx="2" ry="2" />
+<text  x="574.36" y="661" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="576" width="5.7" height="10.0" fill="rgb(240,199,43)" rx="2" ry="2" />
+<text  x="557.17" y="584" ></text>
+</g>
+<g >
+<title>setup_rt_frame (1 samples, 0.49%)</title><rect x="1178.5" y="730" width="5.8" height="10.0" fill="rgb(230,103,40)" rx="2" ry="2" />
+<text  x="1181.54" y="738" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="559.9" y="301" width="5.7" height="10.0" fill="rgb(245,50,4)" rx="2" ry="2" />
+<text  x="562.90" y="309" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="720.3" y="202" width="5.7" height="10.0" fill="rgb(247,41,45)" rx="2" ry="2" />
+<text  x="723.29" y="210" ></text>
+</g>
+<g >
+<title>[libc.so] (17 samples, 8.25%)</title><rect x="393.8" y="620" width="97.4" height="10.0" fill="rgb(253,53,40)" rx="2" ry="2" />
+<text  x="396.79" y="628" >[libc.so]</text>
+</g>
+<g >
+<title>[libc.so] (3 samples, 1.46%)</title><rect x="1161.4" y="664" width="17.1" height="10.0" fill="rgb(220,11,13)" rx="2" ry="2" />
+<text  x="1164.36" y="672" ></text>
+</g>
+<g >
+<title>[uhttpd] (2 samples, 0.97%)</title><rect x="1127.0" y="730" width="11.4" height="10.0" fill="rgb(243,7,16)" rx="2" ry="2" />
+<text  x="1129.99" y="738" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="433" width="5.7" height="10.0" fill="rgb(227,225,51)" rx="2" ry="2" />
+<text  x="706.11" y="441" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="477" width="17.2" height="10.0" fill="rgb(217,152,50)" rx="2" ry="2" />
+<text  x="322.32" y="485" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="587" width="5.7" height="10.0" fill="rgb(209,0,34)" rx="2" ry="2" />
+<text  x="557.17" y="595" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="1098.3" y="598" width="5.8" height="10.0" fill="rgb(241,184,49)" rx="2" ry="2" />
+<text  x="1101.35" y="606" ></text>
+</g>
+<g >
+<title>grep (1 samples, 0.49%)</title><rect x="233.4" y="653" width="5.7" height="10.0" fill="rgb(244,102,26)" rx="2" ry="2" />
+<text  x="236.40" y="661" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="499" width="11.4" height="10.0" fill="rgb(236,132,27)" rx="2" ry="2" />
+<text  x="574.36" y="507" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="800.5" y="411" width="5.7" height="10.0" fill="rgb(229,190,48)" rx="2" ry="2" />
+<text  x="803.49" y="419" ></text>
+</g>
+<g >
+<title>[libipset.so.13.1.0] (1 samples, 0.49%)</title><rect x="1092.6" y="730" width="5.7" height="10.0" fill="rgb(240,45,44)" rx="2" ry="2" />
+<text  x="1095.62" y="738" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="378" width="5.8" height="10.0" fill="rgb(247,67,17)" rx="2" ry="2" />
+<text  x="551.45" y="386" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="378" width="5.7" height="10.0" fill="rgb(210,91,44)" rx="2" ry="2" />
+<text  x="723.29" y="386" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="180" width="5.7" height="10.0" fill="rgb(228,164,21)" rx="2" ry="2" />
+<text  x="574.36" y="188" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="521" width="5.7" height="10.0" fill="rgb(216,10,36)" rx="2" ry="2" />
+<text  x="557.17" y="529" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="224" width="5.7" height="10.0" fill="rgb(220,76,47)" rx="2" ry="2" />
+<text  x="574.36" y="232" ></text>
+</g>
+<g >
+<title>[libz.so.1.2.11] (2 samples, 0.97%)</title><rect x="823.4" y="697" width="11.5" height="10.0" fill="rgb(211,102,36)" rx="2" ry="2" />
+<text  x="826.40" y="705" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="609" width="5.7" height="10.0" fill="rgb(245,18,2)" rx="2" ry="2" />
+<text  x="1124.26" y="617" ></text>
+</g>
+<g >
+<title>rpcd (1 samples, 0.49%)</title><rect x="875.0" y="598" width="5.7" height="10.0" fill="rgb(229,35,25)" rx="2" ry="2" />
+<text  x="877.95" y="606" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="631" width="17.2" height="10.0" fill="rgb(222,102,35)" rx="2" ry="2" />
+<text  x="322.32" y="639" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="510" width="11.4" height="10.0" fill="rgb(223,44,18)" rx="2" ry="2" />
+<text  x="574.36" y="518" ></text>
+</g>
+<g >
+<title>luci (2 samples, 0.97%)</title><rect x="708.8" y="367" width="11.5" height="10.0" fill="rgb(243,85,16)" rx="2" ry="2" />
+<text  x="711.83" y="375" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="806.2" y="609" width="11.5" height="10.0" fill="rgb(214,129,13)" rx="2" ry="2" />
+<text  x="809.21" y="617" ></text>
+</g>
+<g >
+<title>[libuci.so] (1 samples, 0.49%)</title><rect x="508.3" y="642" width="5.8" height="10.0" fill="rgb(225,42,21)" rx="2" ry="2" />
+<text  x="511.35" y="650" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 0.97%)</title><rect x="726.0" y="136" width="11.5" height="10.0" fill="rgb(214,19,36)" rx="2" ry="2" />
+<text  x="729.02" y="144" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="554" width="5.7" height="10.0" fill="rgb(206,78,27)" rx="2" ry="2" />
+<text  x="557.17" y="562" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="444" width="17.2" height="10.0" fill="rgb(216,220,6)" rx="2" ry="2" />
+<text  x="322.32" y="452" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="227.7" y="653" width="5.7" height="10.0" fill="rgb(232,213,18)" rx="2" ry="2" />
+<text  x="230.67" y="661" ></text>
+</g>
+<g >
+<title>[libc.so] (3 samples, 1.46%)</title><rect x="834.9" y="675" width="17.1" height="10.0" fill="rgb(217,192,12)" rx="2" ry="2" />
+<text  x="837.85" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="748.9" y="323" width="5.8" height="10.0" fill="rgb(235,174,19)" rx="2" ry="2" />
+<text  x="751.93" y="331" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="806.2" y="268" width="5.7" height="10.0" fill="rgb(212,32,14)" rx="2" ry="2" />
+<text  x="809.21" y="276" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 0.97%)</title><rect x="823.4" y="642" width="11.5" height="10.0" fill="rgb(208,119,3)" rx="2" ry="2" />
+<text  x="826.40" y="650" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="565.6" y="466" width="5.8" height="10.0" fill="rgb(253,121,28)" rx="2" ry="2" />
+<text  x="568.63" y="474" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="620" width="5.7" height="10.0" fill="rgb(208,10,35)" rx="2" ry="2" />
+<text  x="1124.26" y="628" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="257" width="5.7" height="10.0" fill="rgb(223,54,19)" rx="2" ry="2" />
+<text  x="574.36" y="265" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="279" width="5.7" height="10.0" fill="rgb(213,211,33)" rx="2" ry="2" />
+<text  x="1124.26" y="287" ></text>
+</g>
+<g >
+<title>[unknown] (6 samples, 2.91%)</title><rect x="514.1" y="697" width="34.3" height="10.0" fill="rgb(217,187,51)" rx="2" ry="2" />
+<text  x="517.08" y="705" >[u..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="1178.5" y="697" width="5.8" height="10.0" fill="rgb(221,94,49)" rx="2" ry="2" />
+<text  x="1181.54" y="705" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="169" width="5.7" height="10.0" fill="rgb(237,57,23)" rx="2" ry="2" />
+<text  x="574.36" y="177" ></text>
+</g>
+<g >
+<title>[libjson-c.so.5.1.0] (4 samples, 1.94%)</title><rect x="548.4" y="708" width="23.0" height="10.0" fill="rgb(232,119,31)" rx="2" ry="2" />
+<text  x="551.45" y="716" >[..</text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (3 samples, 1.46%)</title><rect x="582.8" y="686" width="17.2" height="10.0" fill="rgb(205,70,49)" rx="2" ry="2" />
+<text  x="585.82" y="694" ></text>
+</g>
+<g >
+<title>[busybox] (1 samples, 0.49%)</title><rect x="1184.3" y="664" width="5.7" height="10.0" fill="rgb(247,164,5)" rx="2" ry="2" />
+<text  x="1187.27" y="672" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.49%)</title><rect x="1104.1" y="609" width="5.7" height="10.0" fill="rgb(239,30,48)" rx="2" ry="2" />
+<text  x="1107.08" y="617" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="378" width="11.4" height="10.0" fill="rgb(221,96,26)" rx="2" ry="2" />
+<text  x="574.36" y="386" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="748.9" y="345" width="5.8" height="10.0" fill="rgb(243,196,16)" rx="2" ry="2" />
+<text  x="751.93" y="353" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 0.97%)</title><rect x="880.7" y="664" width="11.4" height="10.0" fill="rgb(227,215,13)" rx="2" ry="2" />
+<text  x="883.68" y="672" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="565.6" y="367" width="5.8" height="10.0" fill="rgb(247,160,0)" rx="2" ry="2" />
+<text  x="568.63" y="375" ></text>
+</g>
+<g >
+<title>uhttpd (1 samples, 0.49%)</title><rect x="600.0" y="620" width="5.7" height="10.0" fill="rgb(244,204,37)" rx="2" ry="2" />
+<text  x="603.00" y="628" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="499" width="5.8" height="10.0" fill="rgb(231,76,24)" rx="2" ry="2" />
+<text  x="551.45" y="507" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 0.97%)</title><rect x="903.6" y="587" width="11.4" height="10.0" fill="rgb(239,10,30)" rx="2" ry="2" />
+<text  x="906.59" y="595" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="499" width="5.7" height="10.0" fill="rgb(220,23,24)" rx="2" ry="2" />
+<text  x="723.29" y="507" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="609" width="11.5" height="10.0" fill="rgb(231,212,14)" rx="2" ry="2" />
+<text  x="711.83" y="617" ></text>
+</g>
+<g >
+<title>setup_sigframe (1 samples, 0.49%)</title><rect x="1184.3" y="730" width="5.7" height="10.0" fill="rgb(237,158,11)" rx="2" ry="2" />
+<text  x="1187.27" y="738" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="777.6" y="444" width="5.7" height="10.0" fill="rgb(253,60,17)" rx="2" ry="2" />
+<text  x="780.57" y="452" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="571.4" y="48" width="5.7" height="10.0" fill="rgb(250,222,50)" rx="2" ry="2" />
+<text  x="574.36" y="56" ></text>
+</g>
+<g >
+<title>[uhttpd] (6 samples, 2.91%)</title><rect x="880.7" y="708" width="34.3" height="10.0" fill="rgb(221,197,20)" rx="2" ry="2" />
+<text  x="883.68" y="716" >[u..</text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 0.97%)</title><rect x="823.4" y="631" width="11.5" height="10.0" fill="rgb(218,34,20)" rx="2" ry="2" />
+<text  x="826.40" y="639" ></text>
+</g>
+<g >
+<title>sh (1 samples, 0.49%)</title><rect x="1155.6" y="642" width="5.8" height="10.0" fill="rgb(246,13,12)" rx="2" ry="2" />
+<text  x="1158.63" y="650" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="620" width="11.5" height="10.0" fill="rgb(217,192,52)" rx="2" ry="2" />
+<text  x="711.83" y="628" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (2 samples, 0.97%)</title><rect x="903.6" y="609" width="11.4" height="10.0" fill="rgb(251,153,32)" rx="2" ry="2" />
+<text  x="906.59" y="617" ></text>
+</g>
+<g >
+<title>[jsonc.so] (1 samples, 0.49%)</title><rect x="548.4" y="587" width="5.8" height="10.0" fill="rgb(226,74,30)" rx="2" ry="2" />
+<text  x="551.45" y="595" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="510" width="5.7" height="10.0" fill="rgb(223,207,38)" rx="2" ry="2" />
+<text  x="723.29" y="518" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="510" width="5.8" height="10.0" fill="rgb(247,135,52)" rx="2" ry="2" />
+<text  x="551.45" y="518" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="598" width="5.7" height="10.0" fill="rgb(233,24,36)" rx="2" ry="2" />
+<text  x="706.11" y="606" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="576" width="5.7" height="10.0" fill="rgb(216,178,10)" rx="2" ry="2" />
+<text  x="820.67" y="584" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 0.97%)</title><rect x="863.5" y="708" width="11.5" height="10.0" fill="rgb(243,71,29)" rx="2" ry="2" />
+<text  x="866.50" y="716" ></text>
+</g>
+<g >
+<title>[jsonc.so] (1 samples, 0.49%)</title><rect x="548.4" y="675" width="5.8" height="10.0" fill="rgb(209,30,2)" rx="2" ry="2" />
+<text  x="551.45" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="565.6" y="433" width="5.8" height="10.0" fill="rgb(249,9,33)" rx="2" ry="2" />
+<text  x="568.63" y="441" ></text>
+</g>
+<g >
+<title>work_pending (1 samples, 0.49%)</title><rect x="1184.3" y="697" width="5.7" height="10.0" fill="rgb(210,200,25)" rx="2" ry="2" />
+<text  x="1187.27" y="705" ></text>
+</g>
+<g >
+<title>sh (1 samples, 0.49%)</title><rect x="537.0" y="686" width="5.7" height="10.0" fill="rgb(205,214,29)" rx="2" ry="2" />
+<text  x="539.99" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="726.0" y="246" width="11.5" height="10.0" fill="rgb(233,151,10)" rx="2" ry="2" />
+<text  x="729.02" y="254" ></text>
+</g>
+<g >
+<title>[uhttpd] (4 samples, 1.94%)</title><rect x="892.1" y="664" width="22.9" height="10.0" fill="rgb(247,161,8)" rx="2" ry="2" />
+<text  x="895.14" y="672" >[..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="664" width="5.7" height="10.0" fill="rgb(205,228,7)" rx="2" ry="2" />
+<text  x="557.17" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (4 samples, 1.94%)</title><rect x="726.0" y="323" width="22.9" height="10.0" fill="rgb(224,181,32)" rx="2" ry="2" />
+<text  x="729.02" y="331" >[..</text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (17 samples, 8.25%)</title><rect x="393.8" y="653" width="97.4" height="10.0" fill="rgb(222,10,37)" rx="2" ry="2" />
+<text  x="396.79" y="661" >[librrd.so...</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="806.2" y="488" width="11.5" height="10.0" fill="rgb(225,208,2)" rx="2" ry="2" />
+<text  x="809.21" y="496" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="577.1" y="268" width="5.7" height="10.0" fill="rgb(223,186,47)" rx="2" ry="2" />
+<text  x="580.09" y="276" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="777.6" y="411" width="5.7" height="10.0" fill="rgb(226,23,28)" rx="2" ry="2" />
+<text  x="780.57" y="419" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="508.3" y="543" width="5.8" height="10.0" fill="rgb(230,200,4)" rx="2" ry="2" />
+<text  x="511.35" y="551" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (14 samples, 6.80%)</title><rect x="726.0" y="576" width="80.2" height="10.0" fill="rgb(233,89,24)" rx="2" ry="2" />
+<text  x="729.02" y="584" >[liblua.s..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="488" width="5.7" height="10.0" fill="rgb(212,65,24)" rx="2" ry="2" />
+<text  x="1124.26" y="496" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 0.97%)</title><rect x="863.5" y="697" width="11.5" height="10.0" fill="rgb(227,51,6)" rx="2" ry="2" />
+<text  x="866.50" y="705" ></text>
+</g>
+<g >
+<title>work_pending (1 samples, 0.49%)</title><rect x="1178.5" y="708" width="5.8" height="10.0" fill="rgb(249,200,7)" rx="2" ry="2" />
+<text  x="1181.54" y="716" ></text>
+</g>
+<g >
+<title>wpa_supplicant (3 samples, 1.46%)</title><rect x="376.6" y="675" width="17.2" height="10.0" fill="rgb(206,121,11)" rx="2" ry="2" />
+<text  x="379.60" y="683" ></text>
+</g>
+<g >
+<title>hostapd (2 samples, 0.97%)</title><rect x="267.8" y="664" width="11.4" height="10.0" fill="rgb(207,104,14)" rx="2" ry="2" />
+<text  x="270.77" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="598" width="11.4" height="10.0" fill="rgb(248,20,21)" rx="2" ry="2" />
+<text  x="574.36" y="606" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="817.7" y="477" width="5.7" height="10.0" fill="rgb(226,33,32)" rx="2" ry="2" />
+<text  x="820.67" y="485" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="766.1" y="367" width="11.5" height="10.0" fill="rgb(230,89,2)" rx="2" ry="2" />
+<text  x="769.12" y="375" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="400" width="5.7" height="10.0" fill="rgb(221,55,53)" rx="2" ry="2" />
+<text  x="1124.26" y="408" ></text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="1127.0" y="686" width="5.7" height="10.0" fill="rgb(251,194,53)" rx="2" ry="2" />
+<text  x="1129.99" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="499" width="5.7" height="10.0" fill="rgb(212,163,48)" rx="2" ry="2" />
+<text  x="706.11" y="507" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="268" width="5.8" height="10.0" fill="rgb(249,80,4)" rx="2" ry="2" />
+<text  x="551.45" y="276" ></text>
+</g>
+<g >
+<title>__do_execve_file (4 samples, 1.94%)</title><rect x="1138.4" y="697" width="23.0" height="10.0" fill="rgb(205,87,6)" rx="2" ry="2" />
+<text  x="1141.45" y="705" >_..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="737.5" y="180" width="5.7" height="10.0" fill="rgb(220,107,18)" rx="2" ry="2" />
+<text  x="740.48" y="188" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="737.5" y="224" width="5.7" height="10.0" fill="rgb(241,161,1)" rx="2" ry="2" />
+<text  x="740.48" y="232" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="565.6" y="422" width="5.8" height="10.0" fill="rgb(208,133,49)" rx="2" ry="2" />
+<text  x="568.63" y="430" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="811.9" y="389" width="5.8" height="10.0" fill="rgb(209,226,8)" rx="2" ry="2" />
+<text  x="814.94" y="397" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.49%)</title><rect x="600.0" y="686" width="5.7" height="10.0" fill="rgb(236,165,6)" rx="2" ry="2" />
+<text  x="603.00" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (17 samples, 8.25%)</title><rect x="726.0" y="719" width="97.4" height="10.0" fill="rgb(208,83,10)" rx="2" ry="2" />
+<text  x="729.02" y="727" >[liblua.so...</text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 0.97%)</title><rect x="823.4" y="686" width="11.5" height="10.0" fill="rgb(206,72,46)" rx="2" ry="2" />
+<text  x="826.40" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (16 samples, 7.77%)</title><rect x="726.0" y="664" width="91.7" height="10.0" fill="rgb(240,177,10)" rx="2" ry="2" />
+<text  x="729.02" y="672" >[liblua.so..</text>
+</g>
+<g >
+<title>[libustream-ssl.so] (2 samples, 0.97%)</title><rect x="1109.8" y="708" width="11.5" height="10.0" fill="rgb(233,150,23)" rx="2" ry="2" />
+<text  x="1112.81" y="716" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 0.97%)</title><rect x="789.0" y="411" width="11.5" height="10.0" fill="rgb(251,192,46)" rx="2" ry="2" />
+<text  x="792.03" y="419" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="488" width="11.5" height="10.0" fill="rgb(215,33,15)" rx="2" ry="2" />
+<text  x="711.83" y="496" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="726.0" y="257" width="17.2" height="10.0" fill="rgb(247,197,45)" rx="2" ry="2" />
+<text  x="729.02" y="265" ></text>
+</g>
+<g >
+<title>[libustream-ssl.so] (1 samples, 0.49%)</title><rect x="1132.7" y="642" width="5.7" height="10.0" fill="rgb(223,34,18)" rx="2" ry="2" />
+<text  x="1135.72" y="650" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="571.4" y="136" width="5.7" height="10.0" fill="rgb(238,9,21)" rx="2" ry="2" />
+<text  x="574.36" y="144" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="806.2" y="378" width="5.7" height="10.0" fill="rgb(228,97,3)" rx="2" ry="2" />
+<text  x="809.21" y="386" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="510" width="5.7" height="10.0" fill="rgb(212,152,16)" rx="2" ry="2" />
+<text  x="706.11" y="518" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 0.97%)</title><rect x="823.4" y="675" width="11.5" height="10.0" fill="rgb(233,89,36)" rx="2" ry="2" />
+<text  x="826.40" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="411" width="17.2" height="10.0" fill="rgb(214,62,13)" rx="2" ry="2" />
+<text  x="322.32" y="419" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (2 samples, 0.97%)</title><rect x="892.1" y="631" width="11.5" height="10.0" fill="rgb(250,5,45)" rx="2" ry="2" />
+<text  x="895.14" y="639" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="389" width="5.7" height="10.0" fill="rgb(252,129,28)" rx="2" ry="2" />
+<text  x="1124.26" y="397" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="367" width="5.7" height="10.0" fill="rgb(244,123,54)" rx="2" ry="2" />
+<text  x="557.17" y="375" ></text>
+</g>
+<g >
+<title>[unknown] (2 samples, 0.97%)</title><rect x="823.4" y="587" width="11.5" height="10.0" fill="rgb(251,51,39)" rx="2" ry="2" />
+<text  x="826.40" y="595" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (4 samples, 1.94%)</title><rect x="726.0" y="345" width="22.9" height="10.0" fill="rgb(246,5,38)" rx="2" ry="2" />
+<text  x="729.02" y="353" >[..</text>
+</g>
+<g >
+<title>grep (2 samples, 0.97%)</title><rect x="256.3" y="664" width="11.5" height="10.0" fill="rgb(232,137,36)" rx="2" ry="2" />
+<text  x="259.31" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="811.9" y="400" width="5.8" height="10.0" fill="rgb(230,14,34)" rx="2" ry="2" />
+<text  x="814.94" y="408" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="1132.7" y="598" width="5.7" height="10.0" fill="rgb(252,186,28)" rx="2" ry="2" />
+<text  x="1135.72" y="606" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="664" width="5.7" height="10.0" fill="rgb(227,212,24)" rx="2" ry="2" />
+<text  x="820.67" y="672" ></text>
+</g>
+<g >
+<title>[unknown] (17 samples, 8.25%)</title><rect x="393.8" y="609" width="97.4" height="10.0" fill="rgb(207,201,25)" rx="2" ry="2" />
+<text  x="396.79" y="617" >[unknown]</text>
+</g>
+<g >
+<title>hostapd (1 samples, 0.49%)</title><rect x="663.0" y="697" width="5.7" height="10.0" fill="rgb(207,87,44)" rx="2" ry="2" />
+<text  x="666.01" y="705" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="559.9" y="455" width="5.7" height="10.0" fill="rgb(216,59,32)" rx="2" ry="2" />
+<text  x="562.90" y="463" ></text>
+</g>
+<g >
+<title>[libjson-c.so.5.1.0] (1 samples, 0.49%)</title><rect x="720.3" y="675" width="5.7" height="10.0" fill="rgb(215,197,16)" rx="2" ry="2" />
+<text  x="723.29" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="631" width="5.7" height="10.0" fill="rgb(252,66,28)" rx="2" ry="2" />
+<text  x="820.67" y="639" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="789.0" y="455" width="11.5" height="10.0" fill="rgb(225,106,34)" rx="2" ry="2" />
+<text  x="792.03" y="463" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="783.3" y="433" width="5.7" height="10.0" fill="rgb(224,120,13)" rx="2" ry="2" />
+<text  x="786.30" y="441" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 0.97%)</title><rect x="823.4" y="653" width="11.5" height="10.0" fill="rgb(239,139,7)" rx="2" ry="2" />
+<text  x="826.40" y="661" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="565" width="5.7" height="10.0" fill="rgb(212,11,49)" rx="2" ry="2" />
+<text  x="706.11" y="573" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="664" width="5.7" height="10.0" fill="rgb(207,21,37)" rx="2" ry="2" />
+<text  x="706.11" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="323" width="5.7" height="10.0" fill="rgb(229,219,52)" rx="2" ry="2" />
+<text  x="723.29" y="331" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="875.0" y="609" width="5.7" height="10.0" fill="rgb(212,17,40)" rx="2" ry="2" />
+<text  x="877.95" y="617" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="559.9" y="620" width="11.5" height="10.0" fill="rgb(254,158,37)" rx="2" ry="2" />
+<text  x="562.90" y="628" ></text>
+</g>
+<g >
+<title>sh (3 samples, 1.46%)</title><rect x="193.3" y="697" width="17.2" height="10.0" fill="rgb(219,22,48)" rx="2" ry="2" />
+<text  x="196.30" y="705" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="817.7" y="466" width="5.7" height="10.0" fill="rgb(239,42,34)" rx="2" ry="2" />
+<text  x="820.67" y="474" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="323" width="5.8" height="10.0" fill="rgb(239,208,15)" rx="2" ry="2" />
+<text  x="551.45" y="331" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="548.4" y="301" width="5.8" height="10.0" fill="rgb(225,74,52)" rx="2" ry="2" />
+<text  x="551.45" y="309" ></text>
+</g>
+<g >
+<title>[libustream-ssl.so] (2 samples, 0.97%)</title><rect x="1109.8" y="719" width="11.5" height="10.0" fill="rgb(244,86,27)" rx="2" ry="2" />
+<text  x="1112.81" y="727" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="532" width="5.7" height="10.0" fill="rgb(247,76,42)" rx="2" ry="2" />
+<text  x="706.11" y="540" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="571.4" y="59" width="5.7" height="10.0" fill="rgb(224,85,47)" rx="2" ry="2" />
+<text  x="574.36" y="67" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.49%)</title><rect x="875.0" y="642" width="5.7" height="10.0" fill="rgb(233,34,18)" rx="2" ry="2" />
+<text  x="877.95" y="650" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (9 samples, 4.37%)</title><rect x="726.0" y="466" width="51.6" height="10.0" fill="rgb(220,126,22)" rx="2" ry="2" />
+<text  x="729.02" y="474" >[libl..</text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="800.5" y="510" width="5.7" height="10.0" fill="rgb(239,175,8)" rx="2" ry="2" />
+<text  x="803.49" y="518" ></text>
+</g>
+<g >
+<title>[rrdtool] (3 samples, 1.46%)</title><rect x="582.8" y="664" width="17.2" height="10.0" fill="rgb(212,55,8)" rx="2" ry="2" />
+<text  x="585.82" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="345" width="11.4" height="10.0" fill="rgb(254,0,51)" rx="2" ry="2" />
+<text  x="574.36" y="353" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.49%)</title><rect x="1132.7" y="620" width="5.7" height="10.0" fill="rgb(224,197,15)" rx="2" ry="2" />
+<text  x="1135.72" y="628" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="559.9" y="609" width="11.5" height="10.0" fill="rgb(238,5,54)" rx="2" ry="2" />
+<text  x="562.90" y="617" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="444" width="5.7" height="10.0" fill="rgb(236,28,19)" rx="2" ry="2" />
+<text  x="820.67" y="452" ></text>
+</g>
+<g >
+<title>rrdtool (17 samples, 8.25%)</title><rect x="393.8" y="598" width="97.4" height="10.0" fill="rgb(214,46,49)" rx="2" ry="2" />
+<text  x="396.79" y="606" >rrdtool</text>
+</g>
+<g >
+<title>[unknown] (2 samples, 0.97%)</title><rect x="863.5" y="609" width="11.5" height="10.0" fill="rgb(241,162,33)" rx="2" ry="2" />
+<text  x="866.50" y="617" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="559.9" y="422" width="5.7" height="10.0" fill="rgb(238,19,22)" rx="2" ry="2" />
+<text  x="562.90" y="430" ></text>
+</g>
+<g >
+<title>cat (2 samples, 0.97%)</title><rect x="978.1" y="719" width="11.4" height="10.0" fill="rgb(244,164,48)" rx="2" ry="2" />
+<text  x="981.06" y="727" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="571.4" y="147" width="5.7" height="10.0" fill="rgb(208,25,5)" rx="2" ry="2" />
+<text  x="574.36" y="155" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="760.4" y="356" width="5.7" height="10.0" fill="rgb(250,187,37)" rx="2" ry="2" />
+<text  x="763.39" y="364" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="743.2" y="268" width="5.7" height="10.0" fill="rgb(239,98,19)" rx="2" ry="2" />
+<text  x="746.20" y="276" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="323" width="11.4" height="10.0" fill="rgb(238,163,33)" rx="2" ry="2" />
+<text  x="574.36" y="331" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="312" width="5.7" height="10.0" fill="rgb(232,42,23)" rx="2" ry="2" />
+<text  x="723.29" y="320" ></text>
+</g>
+<g >
+<title>[jsonc.so] (2 samples, 0.97%)</title><rect x="559.9" y="675" width="11.5" height="10.0" fill="rgb(232,38,35)" rx="2" ry="2" />
+<text  x="562.90" y="683" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="743.2" y="312" width="5.7" height="10.0" fill="rgb(253,117,47)" rx="2" ry="2" />
+<text  x="746.20" y="320" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="726.0" y="158" width="11.5" height="10.0" fill="rgb(239,134,15)" rx="2" ry="2" />
+<text  x="729.02" y="166" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="1121.3" y="191" width="5.7" height="10.0" fill="rgb(206,191,33)" rx="2" ry="2" />
+<text  x="1124.26" y="199" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="783.3" y="422" width="5.7" height="10.0" fill="rgb(210,119,1)" rx="2" ry="2" />
+<text  x="786.30" y="430" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (2 samples, 0.97%)</title><rect x="1109.8" y="686" width="11.5" height="10.0" fill="rgb(242,162,47)" rx="2" ry="2" />
+<text  x="1112.81" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="576" width="17.2" height="10.0" fill="rgb(205,68,0)" rx="2" ry="2" />
+<text  x="322.32" y="584" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (17 samples, 8.25%)</title><rect x="393.8" y="675" width="97.4" height="10.0" fill="rgb(232,177,54)" rx="2" ry="2" />
+<text  x="396.79" y="683" >[librrd.so...</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="559.9" y="433" width="5.7" height="10.0" fill="rgb(227,49,49)" rx="2" ry="2" />
+<text  x="562.90" y="441" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="466" width="5.7" height="10.0" fill="rgb(246,110,3)" rx="2" ry="2" />
+<text  x="557.17" y="474" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="811.9" y="367" width="5.8" height="10.0" fill="rgb(217,137,39)" rx="2" ry="2" />
+<text  x="814.94" y="375" ></text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="600.0" y="675" width="5.7" height="10.0" fill="rgb(251,172,53)" rx="2" ry="2" />
+<text  x="603.00" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="783.3" y="455" width="5.7" height="10.0" fill="rgb(239,224,31)" rx="2" ry="2" />
+<text  x="786.30" y="463" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="789.0" y="433" width="11.5" height="10.0" fill="rgb(230,29,12)" rx="2" ry="2" />
+<text  x="792.03" y="441" ></text>
+</g>
+<g >
+<title>ipset (1 samples, 0.49%)</title><rect x="531.3" y="686" width="5.7" height="10.0" fill="rgb(233,62,21)" rx="2" ry="2" />
+<text  x="534.26" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="543" width="5.7" height="10.0" fill="rgb(231,116,24)" rx="2" ry="2" />
+<text  x="706.11" y="551" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="345" width="5.8" height="10.0" fill="rgb(217,63,23)" rx="2" ry="2" />
+<text  x="551.45" y="353" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="811.9" y="433" width="5.8" height="10.0" fill="rgb(227,22,23)" rx="2" ry="2" />
+<text  x="814.94" y="441" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="708" width="5.7" height="10.0" fill="rgb(243,200,52)" rx="2" ry="2" />
+<text  x="1124.26" y="716" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="345" width="5.7" height="10.0" fill="rgb(226,47,50)" rx="2" ry="2" />
+<text  x="723.29" y="353" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="806.2" y="345" width="5.7" height="10.0" fill="rgb(252,81,53)" rx="2" ry="2" />
+<text  x="809.21" y="353" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="783.3" y="389" width="5.7" height="10.0" fill="rgb(230,169,40)" rx="2" ry="2" />
+<text  x="786.30" y="397" ></text>
+</g>
+<g >
+<title>wpa_supplicant (1 samples, 0.49%)</title><rect x="542.7" y="686" width="5.7" height="10.0" fill="rgb(252,222,22)" rx="2" ry="2" />
+<text  x="545.72" y="694" ></text>
+</g>
+<g >
+<title>[libjson-c.so.5.1.0] (1 samples, 0.49%)</title><rect x="720.3" y="587" width="5.7" height="10.0" fill="rgb(252,66,33)" rx="2" ry="2" />
+<text  x="723.29" y="595" ></text>
+</g>
+<g >
+<title>[libgcc_s.so.1] (5 samples, 2.43%)</title><rect x="1064.0" y="730" width="28.6" height="10.0" fill="rgb(240,182,52)" rx="2" ry="2" />
+<text  x="1066.98" y="738" >[l..</text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="577.1" y="202" width="5.7" height="10.0" fill="rgb(214,179,37)" rx="2" ry="2" />
+<text  x="580.09" y="210" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="743.2" y="235" width="5.7" height="10.0" fill="rgb(225,43,10)" rx="2" ry="2" />
+<text  x="746.20" y="243" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="760.4" y="400" width="5.7" height="10.0" fill="rgb(208,15,10)" rx="2" ry="2" />
+<text  x="763.39" y="408" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="455" width="11.5" height="10.0" fill="rgb(218,149,46)" rx="2" ry="2" />
+<text  x="711.83" y="463" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="565" width="5.8" height="10.0" fill="rgb(208,145,39)" rx="2" ry="2" />
+<text  x="551.45" y="573" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="559.9" y="488" width="11.5" height="10.0" fill="rgb(230,129,3)" rx="2" ry="2" />
+<text  x="562.90" y="496" ></text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="611.5" y="653" width="5.7" height="10.0" fill="rgb(244,36,25)" rx="2" ry="2" />
+<text  x="614.46" y="661" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="1178.5" y="686" width="5.8" height="10.0" fill="rgb(238,205,48)" rx="2" ry="2" />
+<text  x="1181.54" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="356" width="17.2" height="10.0" fill="rgb(221,209,22)" rx="2" ry="2" />
+<text  x="322.32" y="364" ></text>
+</g>
+<g >
+<title>[libc.so] (56 samples, 27.18%)</title><rect x="227.7" y="708" width="320.7" height="10.0" fill="rgb(246,14,49)" rx="2" ry="2" />
+<text  x="230.67" y="716" >[libc.so]</text>
+</g>
+<g >
+<title>updatecheck.sh (1 samples, 0.49%)</title><rect x="960.9" y="708" width="5.7" height="10.0" fill="rgb(210,196,29)" rx="2" ry="2" />
+<text  x="963.87" y="716" ></text>
+</g>
+<g >
+<title>load_elf_binary (4 samples, 1.94%)</title><rect x="1138.4" y="719" width="23.0" height="10.0" fill="rgb(210,123,35)" rx="2" ry="2" />
+<text  x="1141.45" y="727" >l..</text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="1132.7" y="697" width="5.7" height="10.0" fill="rgb(229,43,9)" rx="2" ry="2" />
+<text  x="1135.72" y="705" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (4 samples, 1.94%)</title><rect x="726.0" y="378" width="22.9" height="10.0" fill="rgb(209,26,42)" rx="2" ry="2" />
+<text  x="729.02" y="386" >[..</text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="279.2" y="664" width="5.8" height="10.0" fill="rgb(252,159,16)" rx="2" ry="2" />
+<text  x="282.22" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="697" width="5.7" height="10.0" fill="rgb(217,37,34)" rx="2" ry="2" />
+<text  x="1124.26" y="705" ></text>
+</g>
+<g >
+<title>ipset (1 samples, 0.49%)</title><rect x="1092.6" y="686" width="5.7" height="10.0" fill="rgb(252,226,49)" rx="2" ry="2" />
+<text  x="1095.62" y="694" ></text>
+</g>
+<g >
+<title>[busybox] (31 samples, 15.05%)</title><rect x="10.0" y="730" width="177.6" height="10.0" fill="rgb(224,155,19)" rx="2" ry="2" />
+<text  x="13.00" y="738" >[busybox]</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="235" width="5.7" height="10.0" fill="rgb(254,33,22)" rx="2" ry="2" />
+<text  x="723.29" y="243" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="433" width="5.7" height="10.0" fill="rgb(254,135,29)" rx="2" ry="2" />
+<text  x="1124.26" y="441" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="806.2" y="312" width="5.7" height="10.0" fill="rgb(243,117,53)" rx="2" ry="2" />
+<text  x="809.21" y="320" ></text>
+</g>
+<g >
+<title>[jsonc.so] (1 samples, 0.49%)</title><rect x="548.4" y="609" width="5.8" height="10.0" fill="rgb(227,54,52)" rx="2" ry="2" />
+<text  x="551.45" y="617" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="532" width="5.8" height="10.0" fill="rgb(226,192,34)" rx="2" ry="2" />
+<text  x="551.45" y="540" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="703.1" y="477" width="5.7" height="10.0" fill="rgb(237,51,11)" rx="2" ry="2" />
+<text  x="706.11" y="485" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="703.1" y="488" width="5.7" height="10.0" fill="rgb(236,72,22)" rx="2" ry="2" />
+<text  x="706.11" y="496" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="543" width="11.4" height="10.0" fill="rgb(245,169,44)" rx="2" ry="2" />
+<text  x="574.36" y="551" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="422" width="11.5" height="10.0" fill="rgb(232,28,32)" rx="2" ry="2" />
+<text  x="711.83" y="430" ></text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="611.5" y="631" width="5.7" height="10.0" fill="rgb(225,85,30)" rx="2" ry="2" />
+<text  x="614.46" y="639" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="532" width="5.7" height="10.0" fill="rgb(234,62,48)" rx="2" ry="2" />
+<text  x="723.29" y="540" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="811.9" y="422" width="5.8" height="10.0" fill="rgb(253,110,48)" rx="2" ry="2" />
+<text  x="814.94" y="430" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="213" width="5.7" height="10.0" fill="rgb(242,70,52)" rx="2" ry="2" />
+<text  x="723.29" y="221" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="800.5" y="477" width="5.7" height="10.0" fill="rgb(216,187,38)" rx="2" ry="2" />
+<text  x="803.49" y="485" ></text>
+</g>
+<g >
+<title>[jsonc.so] (1 samples, 0.49%)</title><rect x="548.4" y="631" width="5.8" height="10.0" fill="rgb(232,159,46)" rx="2" ry="2" />
+<text  x="551.45" y="639" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.49%)</title><rect x="1132.7" y="631" width="5.7" height="10.0" fill="rgb(234,77,33)" rx="2" ry="2" />
+<text  x="1135.72" y="639" ></text>
+</g>
+<g >
+<title>[unknown] (2 samples, 0.97%)</title><rect x="1109.8" y="653" width="11.5" height="10.0" fill="rgb(210,55,19)" rx="2" ry="2" />
+<text  x="1112.81" y="661" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="1184.3" y="686" width="5.7" height="10.0" fill="rgb(210,15,5)" rx="2" ry="2" />
+<text  x="1187.27" y="694" ></text>
+</g>
+<g >
+<title>[uhttpd] (2 samples, 0.97%)</title><rect x="1098.3" y="653" width="11.5" height="10.0" fill="rgb(239,157,48)" rx="2" ry="2" />
+<text  x="1101.35" y="661" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="703.1" y="400" width="5.7" height="10.0" fill="rgb(242,112,31)" rx="2" ry="2" />
+<text  x="706.11" y="408" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="455" width="5.7" height="10.0" fill="rgb(237,60,39)" rx="2" ry="2" />
+<text  x="1124.26" y="463" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="806.2" y="224" width="5.7" height="10.0" fill="rgb(232,29,41)" rx="2" ry="2" />
+<text  x="809.21" y="232" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (20 samples, 9.71%)</title><rect x="393.8" y="697" width="114.5" height="10.0" fill="rgb(236,130,7)" rx="2" ry="2" />
+<text  x="396.79" y="705" >[librrd.so.0.0..</text>
+</g>
+<g >
+<title>[libjson-c.so.5.1.0] (1 samples, 0.49%)</title><rect x="720.3" y="598" width="5.7" height="10.0" fill="rgb(235,95,10)" rx="2" ry="2" />
+<text  x="723.29" y="606" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="565" width="11.4" height="10.0" fill="rgb(247,34,18)" rx="2" ry="2" />
+<text  x="574.36" y="573" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (14 samples, 6.80%)</title><rect x="726.0" y="631" width="80.2" height="10.0" fill="rgb(212,142,2)" rx="2" ry="2" />
+<text  x="729.02" y="639" >[liblua.s..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="806.2" y="246" width="5.7" height="10.0" fill="rgb(241,185,43)" rx="2" ry="2" />
+<text  x="809.21" y="254" ></text>
+</g>
+<g >
+<title>[rpcd] (1 samples, 0.49%)</title><rect x="875.0" y="686" width="5.7" height="10.0" fill="rgb(211,225,10)" rx="2" ry="2" />
+<text  x="877.95" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="565.6" y="400" width="5.8" height="10.0" fill="rgb(210,114,0)" rx="2" ry="2" />
+<text  x="568.63" y="408" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="543" width="5.8" height="10.0" fill="rgb(205,76,48)" rx="2" ry="2" />
+<text  x="551.45" y="551" ></text>
+</g>
+<g >
+<title>[libustream-ssl.so] (2 samples, 0.97%)</title><rect x="605.7" y="697" width="11.5" height="10.0" fill="rgb(219,80,31)" rx="2" ry="2" />
+<text  x="608.73" y="705" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="543" width="5.7" height="10.0" fill="rgb(246,199,22)" rx="2" ry="2" />
+<text  x="723.29" y="551" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="800.5" y="444" width="5.7" height="10.0" fill="rgb(227,92,20)" rx="2" ry="2" />
+<text  x="803.49" y="452" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="532" width="11.4" height="10.0" fill="rgb(244,81,32)" rx="2" ry="2" />
+<text  x="574.36" y="540" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="433" width="11.5" height="10.0" fill="rgb(220,176,33)" rx="2" ry="2" />
+<text  x="711.83" y="441" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="1121.3" y="301" width="5.7" height="10.0" fill="rgb(242,223,5)" rx="2" ry="2" />
+<text  x="1124.26" y="309" ></text>
+</g>
+<g >
+<title>[lua5.1] (2 samples, 0.97%)</title><rect x="726.0" y="224" width="11.5" height="10.0" fill="rgb(206,37,35)" rx="2" ry="2" />
+<text  x="729.02" y="232" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="817.7" y="411" width="5.7" height="10.0" fill="rgb(213,38,33)" rx="2" ry="2" />
+<text  x="820.67" y="419" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="806.2" y="455" width="11.5" height="10.0" fill="rgb(213,77,16)" rx="2" ry="2" />
+<text  x="809.21" y="463" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="422" width="5.7" height="10.0" fill="rgb(250,57,49)" rx="2" ry="2" />
+<text  x="1124.26" y="430" ></text>
+</g>
+<g >
+<title>[unknown] (3 samples, 1.46%)</title><rect x="491.2" y="642" width="17.1" height="10.0" fill="rgb(243,120,31)" rx="2" ry="2" />
+<text  x="494.17" y="650" ></text>
+</g>
+<g >
+<title>[libustream-ssl.so] (2 samples, 0.97%)</title><rect x="903.6" y="631" width="11.4" height="10.0" fill="rgb(236,97,23)" rx="2" ry="2" />
+<text  x="906.59" y="639" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="268" width="5.7" height="10.0" fill="rgb(210,154,3)" rx="2" ry="2" />
+<text  x="1124.26" y="276" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="158" width="5.7" height="10.0" fill="rgb(231,50,7)" rx="2" ry="2" />
+<text  x="574.36" y="166" ></text>
+</g>
+<g >
+<title>[libustream-ssl.so] (1 samples, 0.49%)</title><rect x="1127.0" y="719" width="5.7" height="10.0" fill="rgb(245,170,13)" rx="2" ry="2" />
+<text  x="1129.99" y="727" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="806.2" y="279" width="5.7" height="10.0" fill="rgb(241,109,36)" rx="2" ry="2" />
+<text  x="809.21" y="287" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="400" width="5.8" height="10.0" fill="rgb(233,106,52)" rx="2" ry="2" />
+<text  x="551.45" y="408" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="559.9" y="543" width="11.5" height="10.0" fill="rgb(251,227,41)" rx="2" ry="2" />
+<text  x="562.90" y="551" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="400" width="5.7" height="10.0" fill="rgb(232,2,10)" rx="2" ry="2" />
+<text  x="723.29" y="408" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.49%)</title><rect x="600.0" y="664" width="5.7" height="10.0" fill="rgb(213,59,21)" rx="2" ry="2" />
+<text  x="603.00" y="672" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="1092.6" y="697" width="5.7" height="10.0" fill="rgb(221,208,27)" rx="2" ry="2" />
+<text  x="1095.62" y="705" ></text>
+</g>
+<g >
+<title>[uhttpd] (2 samples, 0.97%)</title><rect x="1098.3" y="719" width="11.5" height="10.0" fill="rgb(220,135,41)" rx="2" ry="2" />
+<text  x="1101.35" y="727" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="806.2" y="598" width="11.5" height="10.0" fill="rgb(247,222,24)" rx="2" ry="2" />
+<text  x="809.21" y="606" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="559.9" y="378" width="5.7" height="10.0" fill="rgb(223,131,32)" rx="2" ry="2" />
+<text  x="562.90" y="386" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="675" width="11.4" height="10.0" fill="rgb(209,143,40)" rx="2" ry="2" />
+<text  x="574.36" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="642" width="17.2" height="10.0" fill="rgb(212,58,28)" rx="2" ry="2" />
+<text  x="322.32" y="650" ></text>
+</g>
+<g >
+<title>[unknown] (3 samples, 1.46%)</title><rect x="582.8" y="642" width="17.2" height="10.0" fill="rgb(215,168,45)" rx="2" ry="2" />
+<text  x="585.82" y="650" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="389" width="5.7" height="10.0" fill="rgb(205,122,39)" rx="2" ry="2" />
+<text  x="723.29" y="397" ></text>
+</g>
+<g >
+<title>[rpcd] (1 samples, 0.49%)</title><rect x="875.0" y="719" width="5.7" height="10.0" fill="rgb(245,109,21)" rx="2" ry="2" />
+<text  x="877.95" y="727" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 0.97%)</title><rect x="863.5" y="664" width="11.5" height="10.0" fill="rgb(209,227,16)" rx="2" ry="2" />
+<text  x="866.50" y="672" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="1121.3" y="213" width="5.7" height="10.0" fill="rgb(233,72,47)" rx="2" ry="2" />
+<text  x="1124.26" y="221" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="389" width="5.8" height="10.0" fill="rgb(218,43,42)" rx="2" ry="2" />
+<text  x="551.45" y="397" ></text>
+</g>
+<g >
+<title>hostapd (1 samples, 0.49%)</title><rect x="966.6" y="686" width="5.7" height="10.0" fill="rgb(238,175,38)" rx="2" ry="2" />
+<text  x="969.60" y="694" ></text>
+</g>
+<g >
+<title>uhttpd (2 samples, 0.97%)</title><rect x="903.6" y="565" width="11.4" height="10.0" fill="rgb(230,35,31)" rx="2" ry="2" />
+<text  x="906.59" y="573" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="548.4" y="312" width="5.8" height="10.0" fill="rgb(245,117,26)" rx="2" ry="2" />
+<text  x="551.45" y="320" ></text>
+</g>
+<g >
+<title>[libc.so] (153 samples, 74.27%)</title><rect x="187.6" y="730" width="876.4" height="10.0" fill="rgb(205,1,51)" rx="2" ry="2" />
+<text  x="190.57" y="738" >[libc.so]</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="686" width="11.4" height="10.0" fill="rgb(218,163,48)" rx="2" ry="2" />
+<text  x="574.36" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="806.2" y="290" width="5.7" height="10.0" fill="rgb(212,186,52)" rx="2" ry="2" />
+<text  x="809.21" y="298" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="800.5" y="466" width="5.7" height="10.0" fill="rgb(218,156,52)" rx="2" ry="2" />
+<text  x="803.49" y="474" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="598" width="5.7" height="10.0" fill="rgb(220,181,43)" rx="2" ry="2" />
+<text  x="1124.26" y="606" ></text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="600.0" y="653" width="5.7" height="10.0" fill="rgb(205,38,11)" rx="2" ry="2" />
+<text  x="603.00" y="661" ></text>
+</g>
+<g >
+<title>[unknown] (11 samples, 5.34%)</title><rect x="256.3" y="675" width="63.0" height="10.0" fill="rgb(245,117,46)" rx="2" ry="2" />
+<text  x="259.31" y="683" >[unkno..</text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.49%)</title><rect x="1127.0" y="708" width="5.7" height="10.0" fill="rgb(233,194,49)" rx="2" ry="2" />
+<text  x="1129.99" y="716" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (11 samples, 5.34%)</title><rect x="726.0" y="499" width="63.0" height="10.0" fill="rgb(221,174,48)" rx="2" ry="2" />
+<text  x="729.02" y="507" >[liblu..</text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="1104.1" y="642" width="5.7" height="10.0" fill="rgb(215,38,3)" rx="2" ry="2" />
+<text  x="1107.08" y="650" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="720.3" y="191" width="5.7" height="10.0" fill="rgb(254,20,19)" rx="2" ry="2" />
+<text  x="723.29" y="199" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="488" width="11.4" height="10.0" fill="rgb(211,59,21)" rx="2" ry="2" />
+<text  x="574.36" y="496" ></text>
+</g>
+<g >
+<title>rrdtool (1 samples, 0.49%)</title><rect x="290.7" y="664" width="5.7" height="10.0" fill="rgb(210,160,29)" rx="2" ry="2" />
+<text  x="293.68" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="754.7" y="345" width="5.7" height="10.0" fill="rgb(245,99,2)" rx="2" ry="2" />
+<text  x="757.66" y="353" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="817.7" y="400" width="5.7" height="10.0" fill="rgb(223,101,15)" rx="2" ry="2" />
+<text  x="820.67" y="408" ></text>
+</g>
+<g >
+<title>luci (1 samples, 0.49%)</title><rect x="565.6" y="356" width="5.8" height="10.0" fill="rgb(213,223,16)" rx="2" ry="2" />
+<text  x="568.63" y="364" ></text>
+</g>
+<g >
+<title>sh (2 samples, 0.97%)</title><rect x="239.1" y="653" width="11.5" height="10.0" fill="rgb(236,32,10)" rx="2" ry="2" />
+<text  x="242.13" y="661" ></text>
+</g>
+<g >
+<title>[libustream-ssl.so] (2 samples, 0.97%)</title><rect x="605.7" y="686" width="11.5" height="10.0" fill="rgb(251,4,6)" rx="2" ry="2" />
+<text  x="608.73" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="609" width="5.7" height="10.0" fill="rgb(254,81,9)" rx="2" ry="2" />
+<text  x="706.11" y="617" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="334" width="17.2" height="10.0" fill="rgb(215,133,17)" rx="2" ry="2" />
+<text  x="322.32" y="342" ></text>
+</g>
+<g >
+<title>hostapd (2 samples, 0.97%)</title><rect x="926.5" y="708" width="11.5" height="10.0" fill="rgb(244,129,45)" rx="2" ry="2" />
+<text  x="929.50" y="716" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="559.9" y="532" width="11.5" height="10.0" fill="rgb(208,148,40)" rx="2" ry="2" />
+<text  x="562.90" y="540" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.49%)</title><rect x="1104.1" y="620" width="5.7" height="10.0" fill="rgb(206,13,47)" rx="2" ry="2" />
+<text  x="1107.08" y="628" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="400" width="11.4" height="10.0" fill="rgb(227,39,1)" rx="2" ry="2" />
+<text  x="574.36" y="408" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="703.1" y="620" width="5.7" height="10.0" fill="rgb(247,224,18)" rx="2" ry="2" />
+<text  x="706.11" y="628" ></text>
+</g>
+<g >
+<title>[uhttpd] (2 samples, 0.97%)</title><rect x="1098.3" y="686" width="11.5" height="10.0" fill="rgb(241,98,5)" rx="2" ry="2" />
+<text  x="1101.35" y="694" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="743.2" y="246" width="5.7" height="10.0" fill="rgb(254,208,30)" rx="2" ry="2" />
+<text  x="746.20" y="254" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 0.97%)</title><rect x="852.0" y="653" width="11.5" height="10.0" fill="rgb(253,72,26)" rx="2" ry="2" />
+<text  x="855.04" y="661" ></text>
+</g>
+<g >
+<title>sh (11 samples, 5.34%)</title><rect x="124.6" y="719" width="63.0" height="10.0" fill="rgb(205,71,36)" rx="2" ry="2" />
+<text  x="127.56" y="727" >sh</text>
+</g>
+<g >
+<title>uhttpd (2 samples, 0.97%)</title><rect x="880.7" y="642" width="11.4" height="10.0" fill="rgb(246,213,11)" rx="2" ry="2" />
+<text  x="883.68" y="650" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="598" width="11.5" height="10.0" fill="rgb(227,208,27)" rx="2" ry="2" />
+<text  x="711.83" y="606" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="783.3" y="411" width="5.7" height="10.0" fill="rgb(227,76,38)" rx="2" ry="2" />
+<text  x="786.30" y="419" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="488" width="5.7" height="10.0" fill="rgb(248,37,8)" rx="2" ry="2" />
+<text  x="723.29" y="496" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="488" width="5.8" height="10.0" fill="rgb(250,107,43)" rx="2" ry="2" />
+<text  x="551.45" y="496" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="559.9" y="565" width="11.5" height="10.0" fill="rgb(236,80,33)" rx="2" ry="2" />
+<text  x="562.90" y="573" ></text>
+</g>
+<g >
+<title>[libustream-ssl.so] (1 samples, 0.49%)</title><rect x="1104.1" y="631" width="5.7" height="10.0" fill="rgb(245,155,6)" rx="2" ry="2" />
+<text  x="1107.08" y="639" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (2 samples, 0.97%)</title><rect x="852.0" y="686" width="11.5" height="10.0" fill="rgb(250,142,46)" rx="2" ry="2" />
+<text  x="855.04" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="726.0" y="301" width="17.2" height="10.0" fill="rgb(217,67,41)" rx="2" ry="2" />
+<text  x="729.02" y="309" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="389" width="11.4" height="10.0" fill="rgb(226,84,9)" rx="2" ry="2" />
+<text  x="574.36" y="397" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="737.5" y="147" width="5.7" height="10.0" fill="rgb(248,204,50)" rx="2" ry="2" />
+<text  x="740.48" y="155" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="748.9" y="301" width="5.8" height="10.0" fill="rgb(236,228,50)" rx="2" ry="2" />
+<text  x="751.93" y="309" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (13 samples, 6.31%)</title><rect x="726.0" y="510" width="74.5" height="10.0" fill="rgb(252,10,42)" rx="2" ry="2" />
+<text  x="729.02" y="518" >[liblua...</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (17 samples, 8.25%)</title><rect x="726.0" y="697" width="97.4" height="10.0" fill="rgb(253,120,26)" rx="2" ry="2" />
+<text  x="729.02" y="705" >[liblua.so...</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="675" width="11.5" height="10.0" fill="rgb(213,212,29)" rx="2" ry="2" />
+<text  x="711.83" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="367" width="17.2" height="10.0" fill="rgb(231,146,2)" rx="2" ry="2" />
+<text  x="322.32" y="375" ></text>
+</g>
+<g >
+<title>[uhttpd] (2 samples, 0.97%)</title><rect x="1098.3" y="675" width="11.5" height="10.0" fill="rgb(239,15,44)" rx="2" ry="2" />
+<text  x="1101.35" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="806.2" y="510" width="11.5" height="10.0" fill="rgb(243,223,23)" rx="2" ry="2" />
+<text  x="809.21" y="518" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.49%)</title><rect x="754.7" y="312" width="5.7" height="10.0" fill="rgb(253,105,47)" rx="2" ry="2" />
+<text  x="757.66" y="320" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="609" width="11.4" height="10.0" fill="rgb(206,25,12)" rx="2" ry="2" />
+<text  x="574.36" y="617" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="577.1" y="290" width="5.7" height="10.0" fill="rgb(233,48,53)" rx="2" ry="2" />
+<text  x="580.09" y="298" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="587" width="17.2" height="10.0" fill="rgb(218,91,16)" rx="2" ry="2" />
+<text  x="322.32" y="595" ></text>
+</g>
+<g >
+<title>[lua5.1] (2 samples, 0.97%)</title><rect x="766.1" y="411" width="11.5" height="10.0" fill="rgb(234,15,38)" rx="2" ry="2" />
+<text  x="769.12" y="419" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="477" width="5.7" height="10.0" fill="rgb(252,98,28)" rx="2" ry="2" />
+<text  x="557.17" y="485" ></text>
+</g>
+<g >
+<title>wpa_supplicant (3 samples, 1.46%)</title><rect x="302.1" y="664" width="17.2" height="10.0" fill="rgb(237,151,3)" rx="2" ry="2" />
+<text  x="305.14" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="631" width="5.7" height="10.0" fill="rgb(234,134,38)" rx="2" ry="2" />
+<text  x="557.17" y="639" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="499" width="5.7" height="10.0" fill="rgb(212,190,29)" rx="2" ry="2" />
+<text  x="1124.26" y="507" ></text>
+</g>
+<g >
+<title>[libjson-c.so.5.1.0] (1 samples, 0.49%)</title><rect x="720.3" y="576" width="5.7" height="10.0" fill="rgb(227,27,40)" rx="2" ry="2" />
+<text  x="723.29" y="584" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="521" width="17.2" height="10.0" fill="rgb(252,129,20)" rx="2" ry="2" />
+<text  x="322.32" y="529" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="754.7" y="389" width="5.7" height="10.0" fill="rgb(222,82,22)" rx="2" ry="2" />
+<text  x="757.66" y="397" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="559.9" y="642" width="11.5" height="10.0" fill="rgb(210,129,53)" rx="2" ry="2" />
+<text  x="562.90" y="650" ></text>
+</g>
+<g >
+<title>el0_svc_handler (4 samples, 1.94%)</title><rect x="1138.4" y="675" width="23.0" height="10.0" fill="rgb(249,63,46)" rx="2" ry="2" />
+<text  x="1141.45" y="683" >e..</text>
+</g>
+<g >
+<title>uhttpd (2 samples, 0.97%)</title><rect x="892.1" y="576" width="11.5" height="10.0" fill="rgb(243,68,31)" rx="2" ry="2" />
+<text  x="895.14" y="584" ></text>
+</g>
+<g >
+<title>grep (3 samples, 1.46%)</title><rect x="514.1" y="686" width="17.2" height="10.0" fill="rgb(209,148,6)" rx="2" ry="2" />
+<text  x="517.08" y="694" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="1121.3" y="202" width="5.7" height="10.0" fill="rgb(219,69,36)" rx="2" ry="2" />
+<text  x="1124.26" y="210" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="554.2" y="444" width="5.7" height="10.0" fill="rgb(230,80,34)" rx="2" ry="2" />
+<text  x="557.17" y="452" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="571.4" y="301" width="5.7" height="10.0" fill="rgb(224,50,48)" rx="2" ry="2" />
+<text  x="574.36" y="309" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="554" width="17.2" height="10.0" fill="rgb(221,21,5)" rx="2" ry="2" />
+<text  x="322.32" y="562" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (17 samples, 8.25%)</title><rect x="726.0" y="708" width="97.4" height="10.0" fill="rgb(234,152,0)" rx="2" ry="2" />
+<text  x="729.02" y="716" >[liblua.so...</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="642" width="11.5" height="10.0" fill="rgb(228,149,39)" rx="2" ry="2" />
+<text  x="711.83" y="650" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="216.2" y="697" width="5.7" height="10.0" fill="rgb(231,168,32)" rx="2" ry="2" />
+<text  x="219.21" y="705" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="577.1" y="279" width="5.7" height="10.0" fill="rgb(224,2,3)" rx="2" ry="2" />
+<text  x="580.09" y="287" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="620" width="11.4" height="10.0" fill="rgb(248,218,9)" rx="2" ry="2" />
+<text  x="574.36" y="628" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="554.2" y="400" width="5.7" height="10.0" fill="rgb(231,81,32)" rx="2" ry="2" />
+<text  x="557.17" y="408" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="806.2" y="499" width="11.5" height="10.0" fill="rgb(235,209,44)" rx="2" ry="2" />
+<text  x="809.21" y="507" ></text>
+</g>
+<g >
+<title>el0_svc_handler (3 samples, 1.46%)</title><rect x="1161.4" y="686" width="17.1" height="10.0" fill="rgb(217,129,0)" rx="2" ry="2" />
+<text  x="1164.36" y="694" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="1104.1" y="576" width="5.7" height="10.0" fill="rgb(253,226,21)" rx="2" ry="2" />
+<text  x="1107.08" y="584" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="760.4" y="367" width="5.7" height="10.0" fill="rgb(240,59,39)" rx="2" ry="2" />
+<text  x="763.39" y="375" ></text>
+</g>
+<g >
+<title>[uhttpd] (6 samples, 2.91%)</title><rect x="880.7" y="697" width="34.3" height="10.0" fill="rgb(226,93,12)" rx="2" ry="2" />
+<text  x="883.68" y="705" >[u..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="510" width="5.7" height="10.0" fill="rgb(248,155,20)" rx="2" ry="2" />
+<text  x="1124.26" y="518" ></text>
+</g>
+<g >
+<title>[libustream-ssl.so] (2 samples, 0.97%)</title><rect x="852.0" y="708" width="11.5" height="10.0" fill="rgb(208,198,27)" rx="2" ry="2" />
+<text  x="855.04" y="716" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="675" width="17.2" height="10.0" fill="rgb(229,43,52)" rx="2" ry="2" />
+<text  x="322.32" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (9 samples, 4.37%)</title><rect x="726.0" y="477" width="51.6" height="10.0" fill="rgb(224,220,26)" rx="2" ry="2" />
+<text  x="729.02" y="485" >[libl..</text>
+</g>
+<g >
+<title>[rrdtool] (3 samples, 1.46%)</title><rect x="491.2" y="664" width="17.1" height="10.0" fill="rgb(251,211,43)" rx="2" ry="2" />
+<text  x="494.17" y="672" ></text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 0.49%)</title><rect x="611.5" y="675" width="5.7" height="10.0" fill="rgb(229,197,43)" rx="2" ry="2" />
+<text  x="614.46" y="683" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="571.4" y="642" width="11.4" height="10.0" fill="rgb(244,45,47)" rx="2" ry="2" />
+<text  x="574.36" y="650" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="290" width="5.8" height="10.0" fill="rgb(217,133,22)" rx="2" ry="2" />
+<text  x="551.45" y="298" ></text>
+</g>
+<g >
+<title>[unknown] (3 samples, 1.46%)</title><rect x="319.3" y="290" width="17.2" height="10.0" fill="rgb(225,106,0)" rx="2" ry="2" />
+<text  x="322.32" y="298" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="720.3" y="290" width="5.7" height="10.0" fill="rgb(233,47,9)" rx="2" ry="2" />
+<text  x="723.29" y="298" ></text>
+</g>
+<g >
+<title>[lua5.1] (1 samples, 0.49%)</title><rect x="577.1" y="235" width="5.7" height="10.0" fill="rgb(209,91,50)" rx="2" ry="2" />
+<text  x="580.09" y="243" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (2 samples, 0.97%)</title><rect x="880.7" y="686" width="11.4" height="10.0" fill="rgb(243,210,30)" rx="2" ry="2" />
+<text  x="883.68" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="499" width="11.5" height="10.0" fill="rgb(226,160,41)" rx="2" ry="2" />
+<text  x="711.83" y="507" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.49%)</title><rect x="1127.0" y="697" width="5.7" height="10.0" fill="rgb(228,27,53)" rx="2" ry="2" />
+<text  x="1129.99" y="705" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="1121.3" y="378" width="5.7" height="10.0" fill="rgb(232,175,49)" rx="2" ry="2" />
+<text  x="1124.26" y="386" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="806.2" y="389" width="5.7" height="10.0" fill="rgb(233,20,29)" rx="2" ry="2" />
+<text  x="809.21" y="397" ></text>
+</g>
+<g >
+<title>[libjson-c.so.5.1.0] (1 samples, 0.49%)</title><rect x="720.3" y="653" width="5.7" height="10.0" fill="rgb(227,198,11)" rx="2" ry="2" />
+<text  x="723.29" y="661" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="811.9" y="378" width="5.8" height="10.0" fill="rgb(226,159,45)" rx="2" ry="2" />
+<text  x="814.94" y="386" ></text>
+</g>
+<g >
+<title>rrdtool (3 samples, 1.46%)</title><rect x="582.8" y="631" width="17.2" height="10.0" fill="rgb(219,41,30)" rx="2" ry="2" />
+<text  x="585.82" y="639" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.49%)</title><rect x="1178.5" y="664" width="5.8" height="10.0" fill="rgb(213,105,46)" rx="2" ry="2" />
+<text  x="1181.54" y="672" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (9 samples, 4.37%)</title><rect x="726.0" y="444" width="51.6" height="10.0" fill="rgb(211,148,16)" rx="2" ry="2" />
+<text  x="729.02" y="452" >[libl..</text>
+</g>
+<g >
+<title>[libz.so.1.2.11] (2 samples, 0.97%)</title><rect x="863.5" y="719" width="11.5" height="10.0" fill="rgb(252,45,24)" rx="2" ry="2" />
+<text  x="866.50" y="727" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (3 samples, 1.46%)</title><rect x="319.3" y="686" width="17.2" height="10.0" fill="rgb(230,10,40)" rx="2" ry="2" />
+<text  x="322.32" y="694" ></text>
+</g>
+<g >
+<title>search_binary_handler.part.52 (3 samples, 1.46%)</title><rect x="1161.4" y="719" width="17.1" height="10.0" fill="rgb(218,55,21)" rx="2" ry="2" />
+<text  x="1164.36" y="727" ></text>
+</g>
+<g >
+<title>[libjson-c.so.5.1.0] (1 samples, 0.49%)</title><rect x="720.3" y="686" width="5.7" height="10.0" fill="rgb(211,113,44)" rx="2" ry="2" />
+<text  x="723.29" y="694" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="806.2" y="400" width="5.7" height="10.0" fill="rgb(223,179,24)" rx="2" ry="2" />
+<text  x="809.21" y="408" ></text>
+</g>
+<g >
+<title>__arm64_sys_execve (4 samples, 1.94%)</title><rect x="1138.4" y="686" width="23.0" height="10.0" fill="rgb(219,225,12)" rx="2" ry="2" />
+<text  x="1141.45" y="694" >_..</text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (2 samples, 0.97%)</title><rect x="708.8" y="510" width="11.5" height="10.0" fill="rgb(215,170,46)" rx="2" ry="2" />
+<text  x="711.83" y="518" ></text>
+</g>
+<g >
+<title>sh (1 samples, 0.49%)</title><rect x="1178.5" y="653" width="5.8" height="10.0" fill="rgb(224,89,7)" rx="2" ry="2" />
+<text  x="1181.54" y="661" ></text>
+</g>
+<g >
+<title>[liblua.so.5.1.5] (1 samples, 0.49%)</title><rect x="548.4" y="279" width="5.8" height="10.0" fill="rgb(211,164,49)" rx="2" ry="2" />
+<text  x="551.45" y="287" ></text>
+</g>
+</g>
+</svg>

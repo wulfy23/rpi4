@@ -1,0 +1,143 @@
+
+
+
+
+
+        ##################################### RELEASE NOTES
+
+
+        all master builds after r182xx are pretty much fine and there is no
+        real need to update past those build-ids (arguably back to around
+        r17xxx)
+
+		note: there is no ujail(added back r19003 removed post due to simple-adblock issue)
+              or fw4 on the master builds
+              (but I am happy to make one for you if you wish)
+
+
+
+
+
+
+
+
+       ############################## kernel 5.10 prior to 5.10.103 (r19075ish) has dirtypipe cve
+                                      priv-esc vuln (requires user / application access)
+
+
+       ############################## docker user installation has issue
+                         -for all docker packages due to conflict between
+                          websockets-openssl(mosquitto) and
+                          websockets-full(luci-app-dockerman<ttyd)
+                          user is required to pass nodeps to opkg
+                             > opkg install --nodeps luci-app-dockerman
+                          (fyi all packages consume around 110M)
+
+
+
+       ############################## https-dns-proxy and/or simple-adblock
+                         -these services are known to be troublesome on
+                          upgrade, you may need to login and manually
+                          start/restart them and/or dnsmasq
+
+       
+
+       ############################### 20220303 remove 21.02.2 due to luci errors
+                          -bugger can't trigger again... leave 23 up in devel for a bit more
+                          -possible config > r19033 > 21.02.2 dg interaction
+                           (diff factory)
+                          -upg w argon selected?
+                          -'release' only output?
+                          -certain bannermsg?
+                          -messed with cascade.css browser cache?
+                          -half connected early browser cache?
+                          -cmdline login before luci opened? (sysinfo)
+                          -nb: dgd to 19 was still there something to do with
+                               welcomeback strings
+
+       ############################### r19xxx (19003 > 19039)
+                         -likely 'current/testing or just devel' for a while due to re-enable
+                          ujail and switch back to elf-dat current
+                          probably only kick it to stable once r18xxx becomes truly stale
+                             -simple-adblock issue reported with ujail removing procd-ujail
+                              and procd-seccomp resolves
+                         -also quite a few general logic tidying all over the place
+                          could cause some fallout in unknown places
+
+
+       ############################### r18913 or 21.02.2
+                        -user reports of not being able to reboot
+                         and/or odd issue with missing file?
+                         use busybox reboot -f and wait for newer builds or
+                         more diagnostic details
+
+
+       ############################### r18913
+                        -minor CVE fix for tcpdump
+                        -support for reboot_recovery if ROOTFSEXPAND_DATAPART= was
+                         enabled on last/next upgrade
+
+
+
+
+       ############################## possible pppoe ipv6 masq logspam @master
+
+
+       ############################## bbr (5.0.77-7)
+                          -switched congestion tcp to bbr for fun report issues
+                           (afaik only really effects host based connections i.e.
+                            local services)
+
+
+
+       ##################################################### 5.1 fw4 notes: (manual install only)
+
+                          -probably mwan(y)/vpn-pbr(ipsets)/banip(y) etc wont work
+                           and firewall.user? which might mean miniupnpd or similar
+                          -rpi4.qos seems ok in parallel mode
+                          -although the upstream advice'
+                           is to use wrapper, parallel is currently much better with
+                           less breakage
+
+
+
+
+        ##### some dnsmasq CVE affecting 21.01.1 not sure about master level ~medium
+			  dependant upon exposure (topology)
+			http://lists.openwrt.org/pipermail/openwrt-devel/2022-January/037717.html
+
+
+        ##### ffmpeg glitch from ipkg meta on package restore
+              if switching between release and master (with -R)
+              can be ignored for now and likely no ill effects
+
+
+        #####~ r18609   nothing special, still fw3 and kernel bumped to 5.10.92
+                        fixed below CPUfreq issues
+
+        #####~ r18531(again)
+
+
+
+        ####################!!!!!!!!!!!!!!!!! THIS BUILD (5.0.19) HAS CPUFREQ PROBLEMS JUMP BACK TO r18531/5.0.11
+        #####~ r18609   nothing special, still fw3 and kernel bumped to 5.10.92
+                        #edit: gpu-fwreverted(well users of CM4 specifically seeed boards if any
+                         may wish to keep an eye on usb3 oddities moving forward)
+
+              -9        remove ujail again... possibly some altservice (wwan) issues
+                        https://forum.openwrt.org/t/rpi4-community-build/69998/1974?u=wulfy23
+                        edit:nope but 600Mhz applies
+
+              -23ish    flavour: stable revert to 5.0.11 / kernel 90 due to possible scaling issue and
+                        also remove ujail while at it for simpler troubleshooting
+                        short term
+
+              -23ish    flavour: current r18609 with fixed fw
+
+
+
+        #####~ r1853x+ has seeedstudio lan78xx kmod
+
+
+
+

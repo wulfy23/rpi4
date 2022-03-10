@@ -1,0 +1,936 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" width="1200" height="301" onload="init(evt)" viewBox="0 0 1200 301" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id="background" y1="0" y2="1" x1="0" x2="0" >
+		<stop stop-color="#eeeeee" offset="5%" />
+		<stop stop-color="#eeeeb0" offset="95%" />
+	</linearGradient>
+</defs>
+<style type="text/css">
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type="text/ecmascript">
+<![CDATA[
+	"use strict";
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById("details").firstChild;
+		searchbtn = document.getElementById("search");
+		ignorecaseBtn = document.getElementById("ignorecase");
+		unzoombtn = document.getElementById("unzoom");
+		matchedtxt = document.getElementById("matched");
+		svg = document.getElementsByTagName("svg")[0];
+		searching = 0;
+		currentSearchTerm = null;
+	}
+
+	window.addEventListener("click", function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == "a") {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains("parent")) unzoom();
+			zoom(target);
+		}
+		else if (e.target.id == "unzoom") unzoom();
+		else if (e.target.id == "search") search_prompt();
+		else if (e.target.id == "ignorecase") toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener("mouseover", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = "Function: " + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener("mouseout", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	window.addEventListener("keydown",function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+	}, false)
+
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener("keydown",function (e) {
+		if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+		return;
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == "frames") return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes["_orig_" + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute("_orig_" + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes["_orig_"+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes["_orig_" + attr].value;
+		e.removeAttribute("_orig_"+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, "title").firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, "rect");
+		var t = find_child(e, "text");
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, "title").textContent.replace(/\([^(]*\)$/,"");
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = "";
+			return;
+		}
+
+		t.textContent = txt;
+		// Fit in full text width
+		if (/^ *$/.test(txt) || t.getSubStringLength(0, txt.length) < w)
+			return;
+
+		for (var x = txt.length - 2; x > 0; x--) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + "..";
+				return;
+			}
+		}
+		t.textContent = "";
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, "x");
+			orig_load(e, "width");
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == "text")
+					e.attributes.x.value = find_child(e.parentNode, "rect[x]").attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, "rect").attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove("hide");
+
+		var el = document.getElementById("frames").children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, "rect").attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add("parent");
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add("hide");
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add("hide");
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom() {
+		unzoombtn.classList.add("hide");
+		var el = document.getElementById("frames").children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove("parent");
+			el[i].classList.remove("hide");
+			zoom_reset(el[i]);
+			update_text(el[i]);
+		}
+		search();
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add("show");
+		} else {
+			ignorecaseBtn.classList.remove("show");
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll("#frames rect");
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], "fill")
+		}
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt("Enter a search term (regexp " +
+			    "allowed, eg: ^ext4_)"
+			    + (ignorecase ? ", ignoring case" : "")
+			    + "\nPress Ctrl-i to toggle case sensitivity", "");
+			if (term != null) {
+				currentSearchTerm = term;
+				search();
+			}
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove("show");
+			searchbtn.firstChild.nodeValue = "Search"
+			matchedtxt.classList.add("hide");
+			matchedtxt.firstChild.nodeValue = ""
+		}
+	}
+	function search(term) {
+		if (currentSearchTerm === null) return;
+		var term = currentSearchTerm;
+
+		var re = new RegExp(term, ignorecase ? 'i' : '');
+		var el = document.getElementById("frames").children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, "rect");
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, "fill");
+				rect.attributes.fill.value = "rgb(230,0,230)";
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+
+		searchbtn.classList.add("show");
+		searchbtn.firstChild.nodeValue = "Reset Search";
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove("hide");
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = "Matched: " + pct + "%";
+	}
+]]>
+</script>
+<rect x="0.0" y="0" width="1200.0" height="301.0" fill="url(#background)"  />
+<text id="title" x="600.00" y="24" >rpi-dca6325631_SNAPSHOT_20210418-0557_everything.fR</text>
+<text id="details" x="10.00" y="284" > </text>
+<text id="unzoom" x="10.00" y="24" class="hide">Reset Zoom</text>
+<text id="search" x="1090.00" y="24" >Search</text>
+<text id="ignorecase" x="1174.00" y="24" >ic</text>
+<text id="matched" x="1090.00" y="284" > </text>
+<g id="frames">
+<g >
+<title>path_openat (1 samples, 5.26%)</title><rect x="444.7" y="202" width="62.1" height="10.0" fill="rgb(252,132,48)" rx="2" ry="2" />
+<text  x="447.74" y="210" >path_o..</text>
+</g>
+<g >
+<title>proc_root_readdir (2 samples, 10.53%)</title><rect x="568.9" y="213" width="124.3" height="10.0" fill="rgb(247,24,27)" rx="2" ry="2" />
+<text  x="571.95" y="221" >proc_root_readdir</text>
+</g>
+<g >
+<title>proc_readdir (1 samples, 5.26%)</title><rect x="693.2" y="224" width="62.1" height="10.0" fill="rgb(209,51,2)" rx="2" ry="2" />
+<text  x="696.16" y="232" >proc_r..</text>
+</g>
+<g >
+<title>rcu_gp_kthread (1 samples, 5.26%)</title><rect x="879.5" y="246" width="62.1" height="10.0" fill="rgb(253,139,6)" rx="2" ry="2" />
+<text  x="882.47" y="254" >rcu_gp..</text>
+</g>
+<g >
+<title>proc_readdir_de (1 samples, 5.26%)</title><rect x="693.2" y="235" width="62.1" height="10.0" fill="rgb(214,216,17)" rx="2" ry="2" />
+<text  x="696.16" y="243" >proc_r..</text>
+</g>
+<g >
+<title>[collectd] (2 samples, 10.53%)</title><rect x="568.9" y="125" width="124.3" height="10.0" fill="rgb(248,212,33)" rx="2" ry="2" />
+<text  x="571.95" y="133" >[collectd]</text>
+</g>
+<g >
+<title>el0_svc (1 samples, 5.26%)</title><rect x="1065.8" y="136" width="62.1" height="10.0" fill="rgb(246,133,4)" rx="2" ry="2" />
+<text  x="1068.79" y="144" >el0_svc</text>
+</g>
+<g >
+<title>do_idle (1 samples, 5.26%)</title><rect x="941.6" y="235" width="62.1" height="10.0" fill="rgb(216,133,37)" rx="2" ry="2" />
+<text  x="944.58" y="243" >do_idle</text>
+</g>
+<g >
+<title>all (19 samples, 100%)</title><rect x="10.0" y="257" width="1180.0" height="10.0" fill="rgb(243,16,48)" rx="2" ry="2" />
+<text  x="13.00" y="265" ></text>
+</g>
+<g >
+<title>worker_thread (1 samples, 5.26%)</title><rect x="817.4" y="213" width="62.1" height="10.0" fill="rgb(232,143,33)" rx="2" ry="2" />
+<text  x="820.37" y="221" >worker..</text>
+</g>
+<g >
+<title>el0_svc_handler (2 samples, 10.53%)</title><rect x="568.9" y="169" width="124.3" height="10.0" fill="rgb(238,40,8)" rx="2" ry="2" />
+<text  x="571.95" y="177" >el0_svc_handler</text>
+</g>
+<g >
+<title>__noinstr_text_start (1 samples, 5.26%)</title><rect x="941.6" y="213" width="62.1" height="10.0" fill="rgb(240,55,27)" rx="2" ry="2" />
+<text  x="944.58" y="221" >__noin..</text>
+</g>
+<g >
+<title>do_filp_open (1 samples, 5.26%)</title><rect x="444.7" y="191" width="62.1" height="10.0" fill="rgb(244,224,41)" rx="2" ry="2" />
+<text  x="447.74" y="199" >do_fil..</text>
+</g>
+<g >
+<title>usb_stor_transparent_scsi_command (1 samples, 5.26%)</title><rect x="1127.9" y="158" width="62.1" height="10.0" fill="rgb(222,176,26)" rx="2" ry="2" />
+<text  x="1130.89" y="166" >usb_st..</text>
+</g>
+<g >
+<title>__vfs_read (1 samples, 5.26%)</title><rect x="1065.8" y="191" width="62.1" height="10.0" fill="rgb(228,47,39)" rx="2" ry="2" />
+<text  x="1068.79" y="199" >__vfs_..</text>
+</g>
+<g >
+<title>iterate_dir (2 samples, 10.53%)</title><rect x="568.9" y="202" width="124.3" height="10.0" fill="rgb(233,84,25)" rx="2" ry="2" />
+<text  x="571.95" y="210" >iterate_dir</text>
+</g>
+<g >
+<title>usb_submit_urb (1 samples, 5.26%)</title><rect x="1127.9" y="224" width="62.1" height="10.0" fill="rgb(213,194,21)" rx="2" ry="2" />
+<text  x="1130.89" y="232" >usb_su..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 5.26%)</title><rect x="258.4" y="224" width="62.1" height="10.0" fill="rgb(214,81,50)" rx="2" ry="2" />
+<text  x="261.42" y="232" >[libc...</text>
+</g>
+<g >
+<title>el0_svc (2 samples, 10.53%)</title><rect x="568.9" y="158" width="124.3" height="10.0" fill="rgb(223,195,16)" rx="2" ry="2" />
+<text  x="571.95" y="166" >el0_svc</text>
+</g>
+<g >
+<title>usb_stor_bulk_transfer_sglist.part.5 (1 samples, 5.26%)</title><rect x="1127.9" y="202" width="62.1" height="10.0" fill="rgb(216,201,52)" rx="2" ry="2" />
+<text  x="1130.89" y="210" >usb_st..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 5.26%)</title><rect x="693.2" y="103" width="62.1" height="10.0" fill="rgb(218,143,51)" rx="2" ry="2" />
+<text  x="696.16" y="111" >[libc...</text>
+</g>
+<g >
+<title>rcu_gp_kthread (1 samples, 5.26%)</title><rect x="1003.7" y="235" width="62.1" height="10.0" fill="rgb(231,216,41)" rx="2" ry="2" />
+<text  x="1006.68" y="243" >rcu_gp..</text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 5.26%)</title><rect x="506.8" y="147" width="62.1" height="10.0" fill="rgb(246,31,43)" rx="2" ry="2" />
+<text  x="509.84" y="155" >ret_fr..</text>
+</g>
+<g >
+<title>[processes.so] (1 samples, 5.26%)</title><rect x="444.7" y="125" width="62.1" height="10.0" fill="rgb(207,94,51)" rx="2" ry="2" />
+<text  x="447.74" y="133" >[proce..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 5.26%)</title><rect x="1065.8" y="114" width="62.1" height="10.0" fill="rgb(216,228,5)" rx="2" ry="2" />
+<text  x="1068.79" y="122" >[libc...</text>
+</g>
+<g >
+<title>[processes.so] (2 samples, 10.53%)</title><rect x="568.9" y="136" width="124.3" height="10.0" fill="rgb(238,97,40)" rx="2" ry="2" />
+<text  x="571.95" y="144" >[processes.so]</text>
+</g>
+<g >
+<title>finish_task_switch (1 samples, 5.26%)</title><rect x="755.3" y="246" width="62.1" height="10.0" fill="rgb(210,14,50)" rx="2" ry="2" />
+<text  x="758.26" y="254" >finish..</text>
+</g>
+<g >
+<title>reader#1 (2 samples, 10.53%)</title><rect x="568.9" y="81" width="124.3" height="10.0" fill="rgb(219,59,29)" rx="2" ry="2" />
+<text  x="571.95" y="89" >reader#1</text>
+</g>
+<g >
+<title>el0_svc (1 samples, 5.26%)</title><rect x="444.7" y="147" width="62.1" height="10.0" fill="rgb(211,93,11)" rx="2" ry="2" />
+<text  x="447.74" y="155" >el0_svc</text>
+</g>
+<g >
+<title>reader#1 (1 samples, 5.26%)</title><rect x="693.2" y="81" width="62.1" height="10.0" fill="rgb(254,104,21)" rx="2" ry="2" />
+<text  x="696.16" y="89" >reader#1</text>
+</g>
+<g >
+<title>[unknown] (1 samples, 5.26%)</title><rect x="10.0" y="224" width="62.1" height="10.0" fill="rgb(223,14,5)" rx="2" ry="2" />
+<text  x="13.00" y="232" >[unkno..</text>
+</g>
+<g >
+<title>kthread (1 samples, 5.26%)</title><rect x="506.8" y="158" width="62.1" height="10.0" fill="rgb(220,55,9)" rx="2" ry="2" />
+<text  x="509.84" y="166" >kthread</text>
+</g>
+<g >
+<title>sh (3 samples, 15.79%)</title><rect x="72.1" y="224" width="186.3" height="10.0" fill="rgb(226,4,6)" rx="2" ry="2" />
+<text  x="75.11" y="232" >sh</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 5.26%)</title><rect x="1065.8" y="59" width="62.1" height="10.0" fill="rgb(218,113,2)" rx="2" ry="2" />
+<text  x="1068.79" y="67" >[libc...</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 5.26%)</title><rect x="444.7" y="103" width="62.1" height="10.0" fill="rgb(238,96,3)" rx="2" ry="2" />
+<text  x="447.74" y="111" >[libc...</text>
+</g>
+<g >
+<title>__arm64_sys_openat (1 samples, 5.26%)</title><rect x="444.7" y="169" width="62.1" height="10.0" fill="rgb(215,131,53)" rx="2" ry="2" />
+<text  x="447.74" y="177" >__arm6..</text>
+</g>
+<g >
+<title>[busybox] (1 samples, 5.26%)</title><rect x="10.0" y="235" width="62.1" height="10.0" fill="rgb(221,47,29)" rx="2" ry="2" />
+<text  x="13.00" y="243" >[busyb..</text>
+</g>
+<g >
+<title>[unknown] (1 samples, 5.26%)</title><rect x="258.4" y="202" width="62.1" height="10.0" fill="rgb(209,166,34)" rx="2" ry="2" />
+<text  x="261.42" y="210" >[unkno..</text>
+</g>
+<g >
+<title>el0_svc (1 samples, 5.26%)</title><rect x="693.2" y="158" width="62.1" height="10.0" fill="rgb(226,110,8)" rx="2" ry="2" />
+<text  x="696.16" y="166" >el0_svc</text>
+</g>
+<g >
+<title>proc_fill_cache (2 samples, 10.53%)</title><rect x="568.9" y="235" width="124.3" height="10.0" fill="rgb(242,153,28)" rx="2" ry="2" />
+<text  x="571.95" y="243" >proc_fill_cache</text>
+</g>
+<g >
+<title>[unknown] (3 samples, 15.79%)</title><rect x="72.1" y="235" width="186.3" height="10.0" fill="rgb(236,38,34)" rx="2" ry="2" />
+<text  x="75.11" y="243" >[unknown]</text>
+</g>
+<g >
+<title>[unknown] (1 samples, 5.26%)</title><rect x="1065.8" y="48" width="62.1" height="10.0" fill="rgb(233,229,54)" rx="2" ry="2" />
+<text  x="1068.79" y="56" >[unkno..</text>
+</g>
+<g >
+<title>[cpu.so] (1 samples, 5.26%)</title><rect x="258.4" y="246" width="62.1" height="10.0" fill="rgb(211,134,44)" rx="2" ry="2" />
+<text  x="261.42" y="254" >[cpu.so]</text>
+</g>
+<g >
+<title>schedule_timeout (1 samples, 5.26%)</title><rect x="1003.7" y="246" width="62.1" height="10.0" fill="rgb(229,137,41)" rx="2" ry="2" />
+<text  x="1006.68" y="254" >schedu..</text>
+</g>
+<g >
+<title>proc_root_readdir (1 samples, 5.26%)</title><rect x="693.2" y="213" width="62.1" height="10.0" fill="rgb(216,12,19)" rx="2" ry="2" />
+<text  x="696.16" y="221" >proc_r..</text>
+</g>
+<g >
+<title>__d_lookup_rcu (1 samples, 5.26%)</title><rect x="444.7" y="246" width="62.1" height="10.0" fill="rgb(226,86,7)" rx="2" ry="2" />
+<text  x="447.74" y="254" >__d_lo..</text>
+</g>
+<g >
+<title>ksys_getdents64 (1 samples, 5.26%)</title><rect x="693.2" y="191" width="62.1" height="10.0" fill="rgb(245,112,45)" rx="2" ry="2" />
+<text  x="696.16" y="199" >ksys_g..</text>
+</g>
+<g >
+<title>[collectd] (1 samples, 5.26%)</title><rect x="258.4" y="235" width="62.1" height="10.0" fill="rgb(219,28,10)" rx="2" ry="2" />
+<text  x="261.42" y="243" >[colle..</text>
+</g>
+<g >
+<title>__schedule (1 samples, 5.26%)</title><rect x="755.3" y="235" width="62.1" height="10.0" fill="rgb(229,37,33)" rx="2" ry="2" />
+<text  x="758.26" y="243" >__sche..</text>
+</g>
+<g >
+<title>rcu_sched (1 samples, 5.26%)</title><rect x="1003.7" y="202" width="62.1" height="10.0" fill="rgb(229,161,10)" rx="2" ry="2" />
+<text  x="1006.68" y="210" >rcu_sc..</text>
+</g>
+<g >
+<title>proc_pid_readdir (2 samples, 10.53%)</title><rect x="568.9" y="224" width="124.3" height="10.0" fill="rgb(238,18,1)" rx="2" ry="2" />
+<text  x="571.95" y="232" >proc_pid_readdir</text>
+</g>
+<g >
+<title>__arm64_sys_getdents64 (1 samples, 5.26%)</title><rect x="693.2" y="180" width="62.1" height="10.0" fill="rgb(252,162,9)" rx="2" ry="2" />
+<text  x="696.16" y="188" >__arm6..</text>
+</g>
+<g >
+<title>usb_stor_invoke_transport (1 samples, 5.26%)</title><rect x="1127.9" y="169" width="62.1" height="10.0" fill="rgb(221,223,48)" rx="2" ry="2" />
+<text  x="1130.89" y="177" >usb_st..</text>
+</g>
+<g >
+<title>sh (1 samples, 5.26%)</title><rect x="10.0" y="213" width="62.1" height="10.0" fill="rgb(247,80,11)" rx="2" ry="2" />
+<text  x="13.00" y="221" >sh</text>
+</g>
+<g >
+<title>[collectd] (1 samples, 5.26%)</title><rect x="1065.8" y="81" width="62.1" height="10.0" fill="rgb(242,222,5)" rx="2" ry="2" />
+<text  x="1068.79" y="89" >[colle..</text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 10.53%)</title><rect x="568.9" y="114" width="124.3" height="10.0" fill="rgb(246,140,6)" rx="2" ry="2" />
+<text  x="571.95" y="122" >[libc.so]</text>
+</g>
+<g >
+<title>ksys_read (1 samples, 5.26%)</title><rect x="1065.8" y="169" width="62.1" height="10.0" fill="rgb(228,11,28)" rx="2" ry="2" />
+<text  x="1068.79" y="177" >ksys_r..</text>
+</g>
+<g >
+<title>kworker/0:2-eve (1 samples, 5.26%)</title><rect x="817.4" y="180" width="62.1" height="10.0" fill="rgb(219,55,42)" rx="2" ry="2" />
+<text  x="820.37" y="188" >kworke..</text>
+</g>
+<g >
+<title>__arm64_sys_read (1 samples, 5.26%)</title><rect x="1065.8" y="158" width="62.1" height="10.0" fill="rgb(230,176,51)" rx="2" ry="2" />
+<text  x="1068.79" y="166" >__arm6..</text>
+</g>
+<g >
+<title>usb_stor_invoke_transport (1 samples, 5.26%)</title><rect x="506.8" y="191" width="62.1" height="10.0" fill="rgb(240,20,19)" rx="2" ry="2" />
+<text  x="509.84" y="199" >usb_st..</text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 5.26%)</title><rect x="817.4" y="191" width="62.1" height="10.0" fill="rgb(228,85,41)" rx="2" ry="2" />
+<text  x="820.37" y="199" >ret_fr..</text>
+</g>
+<g >
+<title>usb_stor_bulk_srb (1 samples, 5.26%)</title><rect x="1127.9" y="191" width="62.1" height="10.0" fill="rgb(239,222,34)" rx="2" ry="2" />
+<text  x="1130.89" y="199" >usb_st..</text>
+</g>
+<g >
+<title>swapper (1 samples, 5.26%)</title><rect x="941.6" y="180" width="62.1" height="10.0" fill="rgb(248,189,25)" rx="2" ry="2" />
+<text  x="944.58" y="188" >swapper</text>
+</g>
+<g >
+<title>[unknown] (1 samples, 5.26%)</title><rect x="693.2" y="92" width="62.1" height="10.0" fill="rgb(215,62,6)" rx="2" ry="2" />
+<text  x="696.16" y="100" >[unkno..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 5.26%)</title><rect x="1065.8" y="125" width="62.1" height="10.0" fill="rgb(236,117,7)" rx="2" ry="2" />
+<text  x="1068.79" y="133" >[libc...</text>
+</g>
+<g >
+<title>usb_stor_control_thread (1 samples, 5.26%)</title><rect x="1127.9" y="147" width="62.1" height="10.0" fill="rgb(212,111,40)" rx="2" ry="2" />
+<text  x="1130.89" y="155" >usb_st..</text>
+</g>
+<g >
+<title>[unknown] (1 samples, 5.26%)</title><rect x="444.7" y="81" width="62.1" height="10.0" fill="rgb(206,163,4)" rx="2" ry="2" />
+<text  x="447.74" y="89" >[unkno..</text>
+</g>
+<g >
+<title>cpu_startup_entry (1 samples, 5.26%)</title><rect x="941.6" y="224" width="62.1" height="10.0" fill="rgb(232,226,51)" rx="2" ry="2" />
+<text  x="944.58" y="232" >cpu_st..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 5.26%)</title><rect x="693.2" y="147" width="62.1" height="10.0" fill="rgb(250,227,33)" rx="2" ry="2" />
+<text  x="696.16" y="155" >[libc...</text>
+</g>
+<g >
+<title>filldir64 (3 samples, 15.79%)</title><rect x="568.9" y="246" width="186.4" height="10.0" fill="rgb(206,84,54)" rx="2" ry="2" />
+<text  x="571.95" y="254" >filldir64</text>
+</g>
+<g >
+<title>reader#1 (1 samples, 5.26%)</title><rect x="444.7" y="70" width="62.1" height="10.0" fill="rgb(240,0,9)" rx="2" ry="2" />
+<text  x="447.74" y="78" >reader#1</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 5.26%)</title><rect x="258.4" y="213" width="62.1" height="10.0" fill="rgb(226,14,18)" rx="2" ry="2" />
+<text  x="261.42" y="221" >[libc...</text>
+</g>
+<g >
+<title>seq_put_decimal_ull_width (1 samples, 5.26%)</title><rect x="1065.8" y="246" width="62.1" height="10.0" fill="rgb(241,41,2)" rx="2" ry="2" />
+<text  x="1068.79" y="254" >seq_pu..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 5.26%)</title><rect x="1065.8" y="103" width="62.1" height="10.0" fill="rgb(239,62,8)" rx="2" ry="2" />
+<text  x="1068.79" y="111" >[libc...</text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 5.26%)</title><rect x="1065.8" y="147" width="62.1" height="10.0" fill="rgb(223,187,2)" rx="2" ry="2" />
+<text  x="1068.79" y="155" >el0_sv..</text>
+</g>
+<g >
+<title>kthread (1 samples, 5.26%)</title><rect x="879.5" y="235" width="62.1" height="10.0" fill="rgb(246,106,45)" rx="2" ry="2" />
+<text  x="882.47" y="243" >kthread</text>
+</g>
+<g >
+<title>schedule_timeout (1 samples, 5.26%)</title><rect x="755.3" y="213" width="62.1" height="10.0" fill="rgb(247,12,49)" rx="2" ry="2" />
+<text  x="758.26" y="221" >schedu..</text>
+</g>
+<g >
+<title>usb_stor_Bulk_transport (1 samples, 5.26%)</title><rect x="506.8" y="202" width="62.1" height="10.0" fill="rgb(206,135,28)" rx="2" ry="2" />
+<text  x="509.84" y="210" >usb_st..</text>
+</g>
+<g >
+<title>schedule (1 samples, 5.26%)</title><rect x="755.3" y="224" width="62.1" height="10.0" fill="rgb(246,199,45)" rx="2" ry="2" />
+<text  x="758.26" y="232" >schedule</text>
+</g>
+<g >
+<title>rcu_sched (1 samples, 5.26%)</title><rect x="879.5" y="213" width="62.1" height="10.0" fill="rgb(234,197,42)" rx="2" ry="2" />
+<text  x="882.47" y="221" >rcu_sc..</text>
+</g>
+<g >
+<title>start_kernel (1 samples, 5.26%)</title><rect x="941.6" y="191" width="62.1" height="10.0" fill="rgb(235,131,25)" rx="2" ry="2" />
+<text  x="944.58" y="199" >start_..</text>
+</g>
+<g >
+<title>[busybox] (4 samples, 21.05%)</title><rect x="10.0" y="246" width="248.4" height="10.0" fill="rgb(239,88,30)" rx="2" ry="2" />
+<text  x="13.00" y="254" >[busybox]</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 5.26%)</title><rect x="444.7" y="92" width="62.1" height="10.0" fill="rgb(228,33,12)" rx="2" ry="2" />
+<text  x="447.74" y="100" >[libc...</text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 5.26%)</title><rect x="1003.7" y="213" width="62.1" height="10.0" fill="rgb(229,73,31)" rx="2" ry="2" />
+<text  x="1006.68" y="221" >ret_fr..</text>
+</g>
+<g >
+<title>[collectd] (1 samples, 5.26%)</title><rect x="444.7" y="114" width="62.1" height="10.0" fill="rgb(240,100,24)" rx="2" ry="2" />
+<text  x="447.74" y="122" >[colle..</text>
+</g>
+<g >
+<title>usb-storage (1 samples, 5.26%)</title><rect x="506.8" y="136" width="62.1" height="10.0" fill="rgb(250,155,53)" rx="2" ry="2" />
+<text  x="509.84" y="144" >usb-st..</text>
+</g>
+<g >
+<title>rcu_gp_kthread (1 samples, 5.26%)</title><rect x="755.3" y="202" width="62.1" height="10.0" fill="rgb(209,132,34)" rx="2" ry="2" />
+<text  x="758.26" y="210" >rcu_gp..</text>
+</g>
+<g >
+<title>usb_sg_init (1 samples, 5.26%)</title><rect x="506.8" y="235" width="62.1" height="10.0" fill="rgb(228,86,23)" rx="2" ry="2" />
+<text  x="509.84" y="243" >usb_sg..</text>
+</g>
+<g >
+<title>__kmalloc (1 samples, 5.26%)</title><rect x="506.8" y="246" width="62.1" height="10.0" fill="rgb(221,201,34)" rx="2" ry="2" />
+<text  x="509.84" y="254" >__kmal..</text>
+</g>
+<g >
+<title>rcu_sched (1 samples, 5.26%)</title><rect x="755.3" y="169" width="62.1" height="10.0" fill="rgb(234,97,23)" rx="2" ry="2" />
+<text  x="758.26" y="177" >rcu_sc..</text>
+</g>
+<g >
+<title>usb_stor_control_thread (1 samples, 5.26%)</title><rect x="506.8" y="169" width="62.1" height="10.0" fill="rgb(246,87,43)" rx="2" ry="2" />
+<text  x="509.84" y="177" >usb_st..</text>
+</g>
+<g >
+<title>do_sys_open (1 samples, 5.26%)</title><rect x="444.7" y="180" width="62.1" height="10.0" fill="rgb(241,80,2)" rx="2" ry="2" />
+<text  x="447.74" y="188" >do_sys..</text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 10.53%)</title><rect x="568.9" y="103" width="124.3" height="10.0" fill="rgb(239,162,49)" rx="2" ry="2" />
+<text  x="571.95" y="111" >[libc.so]</text>
+</g>
+<g >
+<title>kthread (1 samples, 5.26%)</title><rect x="1127.9" y="136" width="62.1" height="10.0" fill="rgb(235,4,1)" rx="2" ry="2" />
+<text  x="1130.89" y="144" >kthread</text>
+</g>
+<g >
+<title>arch_call_rest_init (1 samples, 5.26%)</title><rect x="941.6" y="202" width="62.1" height="10.0" fill="rgb(234,198,7)" rx="2" ry="2" />
+<text  x="944.58" y="210" >arch_c..</text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 5.26%)</title><rect x="693.2" y="169" width="62.1" height="10.0" fill="rgb(212,217,9)" rx="2" ry="2" />
+<text  x="696.16" y="177" >el0_sv..</text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 5.26%)</title><rect x="444.7" y="158" width="62.1" height="10.0" fill="rgb(235,85,13)" rx="2" ry="2" />
+<text  x="447.74" y="166" >el0_sv..</text>
+</g>
+<g >
+<title>sh (2 samples, 10.53%)</title><rect x="320.5" y="213" width="124.2" height="10.0" fill="rgb(237,217,53)" rx="2" ry="2" />
+<text  x="323.53" y="221" >sh</text>
+</g>
+<g >
+<title>lookup_fast (1 samples, 5.26%)</title><rect x="444.7" y="235" width="62.1" height="10.0" fill="rgb(232,90,34)" rx="2" ry="2" />
+<text  x="447.74" y="243" >lookup..</text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 5.26%)</title><rect x="1127.9" y="125" width="62.1" height="10.0" fill="rgb(212,159,22)" rx="2" ry="2" />
+<text  x="1130.89" y="133" >ret_fr..</text>
+</g>
+<g >
+<title>kthread (1 samples, 5.26%)</title><rect x="817.4" y="202" width="62.1" height="10.0" fill="rgb(211,78,15)" rx="2" ry="2" />
+<text  x="820.37" y="210" >kthread</text>
+</g>
+<g >
+<title>seq_put_decimal_ull (1 samples, 5.26%)</title><rect x="1065.8" y="235" width="62.1" height="10.0" fill="rgb(234,136,33)" rx="2" ry="2" />
+<text  x="1068.79" y="243" >seq_pu..</text>
+</g>
+<g >
+<title>gc_worker (1 samples, 5.26%)</title><rect x="817.4" y="235" width="62.1" height="10.0" fill="rgb(206,151,20)" rx="2" ry="2" />
+<text  x="820.37" y="243" >gc_wor..</text>
+</g>
+<g >
+<title>link_path_walk.part.74 (1 samples, 5.26%)</title><rect x="444.7" y="213" width="62.1" height="10.0" fill="rgb(251,209,8)" rx="2" ry="2" />
+<text  x="447.74" y="221" >link_p..</text>
+</g>
+<g >
+<title>usb-storage (1 samples, 5.26%)</title><rect x="1127.9" y="114" width="62.1" height="10.0" fill="rgb(216,55,36)" rx="2" ry="2" />
+<text  x="1130.89" y="122" >usb-st..</text>
+</g>
+<g >
+<title>usb_stor_Bulk_transport (1 samples, 5.26%)</title><rect x="1127.9" y="180" width="62.1" height="10.0" fill="rgb(223,11,23)" rx="2" ry="2" />
+<text  x="1130.89" y="188" >usb_st..</text>
+</g>
+<g >
+<title>[processes.so] (1 samples, 5.26%)</title><rect x="1065.8" y="92" width="62.1" height="10.0" fill="rgb(217,110,29)" rx="2" ry="2" />
+<text  x="1068.79" y="100" >[proce..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 5.26%)</title><rect x="1065.8" y="70" width="62.1" height="10.0" fill="rgb(242,117,53)" rx="2" ry="2" />
+<text  x="1068.79" y="78" >[libc...</text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 10.53%)</title><rect x="320.5" y="246" width="124.2" height="10.0" fill="rgb(223,24,23)" rx="2" ry="2" />
+<text  x="323.53" y="254" >[libc.so]</text>
+</g>
+<g >
+<title>vfs_read (1 samples, 5.26%)</title><rect x="1065.8" y="180" width="62.1" height="10.0" fill="rgb(221,172,30)" rx="2" ry="2" />
+<text  x="1068.79" y="188" >vfs_read</text>
+</g>
+<g >
+<title>queue_delayed_work_on (1 samples, 5.26%)</title><rect x="817.4" y="246" width="62.1" height="10.0" fill="rgb(248,152,46)" rx="2" ry="2" />
+<text  x="820.37" y="254" >queue_..</text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 5.26%)</title><rect x="755.3" y="180" width="62.1" height="10.0" fill="rgb(225,143,22)" rx="2" ry="2" />
+<text  x="758.26" y="188" >ret_fr..</text>
+</g>
+<g >
+<title>walk_component (1 samples, 5.26%)</title><rect x="444.7" y="224" width="62.1" height="10.0" fill="rgb(218,132,14)" rx="2" ry="2" />
+<text  x="447.74" y="232" >walk_c..</text>
+</g>
+<g >
+<title>usb_stor_transparent_scsi_command (1 samples, 5.26%)</title><rect x="506.8" y="180" width="62.1" height="10.0" fill="rgb(211,125,28)" rx="2" ry="2" />
+<text  x="509.84" y="188" >usb_st..</text>
+</g>
+<g >
+<title>usb_stor_bulk_transfer_sglist.part.5 (1 samples, 5.26%)</title><rect x="506.8" y="224" width="62.1" height="10.0" fill="rgb(228,229,5)" rx="2" ry="2" />
+<text  x="509.84" y="232" >usb_st..</text>
+</g>
+<g >
+<title>proc_single_show (1 samples, 5.26%)</title><rect x="1065.8" y="213" width="62.1" height="10.0" fill="rgb(221,66,30)" rx="2" ry="2" />
+<text  x="1068.79" y="221" >proc_s..</text>
+</g>
+<g >
+<title>usb_stor_bulk_srb (1 samples, 5.26%)</title><rect x="506.8" y="213" width="62.1" height="10.0" fill="rgb(250,79,34)" rx="2" ry="2" />
+<text  x="509.84" y="221" >usb_st..</text>
+</g>
+<g >
+<title>process_one_work (1 samples, 5.26%)</title><rect x="817.4" y="224" width="62.1" height="10.0" fill="rgb(250,185,52)" rx="2" ry="2" />
+<text  x="820.37" y="232" >proces..</text>
+</g>
+<g >
+<title>iterate_dir (1 samples, 5.26%)</title><rect x="693.2" y="202" width="62.1" height="10.0" fill="rgb(219,215,10)" rx="2" ry="2" />
+<text  x="696.16" y="210" >iterat..</text>
+</g>
+<g >
+<title>rcu_idle_exit (1 samples, 5.26%)</title><rect x="941.6" y="246" width="62.1" height="10.0" fill="rgb(241,133,18)" rx="2" ry="2" />
+<text  x="944.58" y="254" >rcu_id..</text>
+</g>
+<g >
+<title>reader#1 (1 samples, 5.26%)</title><rect x="258.4" y="191" width="62.1" height="10.0" fill="rgb(228,190,30)" rx="2" ry="2" />
+<text  x="261.42" y="199" >reader#1</text>
+</g>
+<g >
+<title>kthread (1 samples, 5.26%)</title><rect x="1003.7" y="224" width="62.1" height="10.0" fill="rgb(216,207,26)" rx="2" ry="2" />
+<text  x="1006.68" y="232" >kthread</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 5.26%)</title><rect x="444.7" y="136" width="62.1" height="10.0" fill="rgb(224,217,13)" rx="2" ry="2" />
+<text  x="447.74" y="144" >[libc...</text>
+</g>
+<g >
+<title>[unknown] (2 samples, 10.53%)</title><rect x="568.9" y="92" width="124.3" height="10.0" fill="rgb(246,84,30)" rx="2" ry="2" />
+<text  x="571.95" y="100" >[unknown]</text>
+</g>
+<g >
+<title>proc_pid_status (1 samples, 5.26%)</title><rect x="1065.8" y="224" width="62.1" height="10.0" fill="rgb(208,22,53)" rx="2" ry="2" />
+<text  x="1068.79" y="232" >proc_p..</text>
+</g>
+<g >
+<title>ksys_getdents64 (2 samples, 10.53%)</title><rect x="568.9" y="191" width="124.3" height="10.0" fill="rgb(232,212,18)" rx="2" ry="2" />
+<text  x="571.95" y="199" >ksys_getdents64</text>
+</g>
+<g >
+<title>[collectd] (1 samples, 5.26%)</title><rect x="693.2" y="125" width="62.1" height="10.0" fill="rgb(219,54,54)" rx="2" ry="2" />
+<text  x="696.16" y="133" >[colle..</text>
+</g>
+<g >
+<title>[unknown] (2 samples, 10.53%)</title><rect x="320.5" y="224" width="124.2" height="10.0" fill="rgb(236,15,3)" rx="2" ry="2" />
+<text  x="323.53" y="232" >[unknown]</text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 10.53%)</title><rect x="568.9" y="147" width="124.3" height="10.0" fill="rgb(235,80,35)" rx="2" ry="2" />
+<text  x="571.95" y="155" >[libc.so]</text>
+</g>
+<g >
+<title>[busybox] (2 samples, 10.53%)</title><rect x="320.5" y="235" width="124.2" height="10.0" fill="rgb(227,31,49)" rx="2" ry="2" />
+<text  x="323.53" y="243" >[busybox]</text>
+</g>
+<g >
+<title>kthread (1 samples, 5.26%)</title><rect x="755.3" y="191" width="62.1" height="10.0" fill="rgb(205,6,44)" rx="2" ry="2" />
+<text  x="758.26" y="199" >kthread</text>
+</g>
+<g >
+<title>usb_hcd_submit_urb (1 samples, 5.26%)</title><rect x="1127.9" y="235" width="62.1" height="10.0" fill="rgb(212,224,43)" rx="2" ry="2" />
+<text  x="1130.89" y="243" >usb_hc..</text>
+</g>
+<g >
+<title>seq_read (1 samples, 5.26%)</title><rect x="1065.8" y="202" width="62.1" height="10.0" fill="rgb(230,29,28)" rx="2" ry="2" />
+<text  x="1068.79" y="210" >seq_read</text>
+</g>
+<g >
+<title>__arm64_sys_getdents64 (2 samples, 10.53%)</title><rect x="568.9" y="180" width="124.3" height="10.0" fill="rgb(242,91,42)" rx="2" ry="2" />
+<text  x="571.95" y="188" >__arm64_sys_get..</text>
+</g>
+<g >
+<title>reader#1 (1 samples, 5.26%)</title><rect x="1065.8" y="37" width="62.1" height="10.0" fill="rgb(243,155,3)" rx="2" ry="2" />
+<text  x="1068.79" y="45" >reader#1</text>
+</g>
+<g >
+<title>xhci_urb_enqueue (1 samples, 5.26%)</title><rect x="1127.9" y="246" width="62.1" height="10.0" fill="rgb(224,5,41)" rx="2" ry="2" />
+<text  x="1130.89" y="254" >xhci_u..</text>
+</g>
+<g >
+<title>usb_sg_wait (1 samples, 5.26%)</title><rect x="1127.9" y="213" width="62.1" height="10.0" fill="rgb(209,128,7)" rx="2" ry="2" />
+<text  x="1130.89" y="221" >usb_sg..</text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 5.26%)</title><rect x="879.5" y="224" width="62.1" height="10.0" fill="rgb(234,67,45)" rx="2" ry="2" />
+<text  x="882.47" y="232" >ret_fr..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 5.26%)</title><rect x="693.2" y="114" width="62.1" height="10.0" fill="rgb(248,93,12)" rx="2" ry="2" />
+<text  x="696.16" y="122" >[libc...</text>
+</g>
+<g >
+<title>[processes.so] (1 samples, 5.26%)</title><rect x="693.2" y="136" width="62.1" height="10.0" fill="rgb(227,13,0)" rx="2" ry="2" />
+<text  x="696.16" y="144" >[proce..</text>
+</g>
+</g>
+</svg>

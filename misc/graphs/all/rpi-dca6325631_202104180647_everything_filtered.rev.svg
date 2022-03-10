@@ -1,0 +1,2124 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" width="1200" height="323" onload="init(evt)" viewBox="0 0 1200 323" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id="background" y1="0" y2="1" x1="0" x2="0" >
+		<stop stop-color="#eeeeee" offset="5%" />
+		<stop stop-color="#eeeeb0" offset="95%" />
+	</linearGradient>
+</defs>
+<style type="text/css">
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type="text/ecmascript">
+<![CDATA[
+	"use strict";
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById("details").firstChild;
+		searchbtn = document.getElementById("search");
+		ignorecaseBtn = document.getElementById("ignorecase");
+		unzoombtn = document.getElementById("unzoom");
+		matchedtxt = document.getElementById("matched");
+		svg = document.getElementsByTagName("svg")[0];
+		searching = 0;
+		currentSearchTerm = null;
+	}
+
+	window.addEventListener("click", function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == "a") {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains("parent")) unzoom();
+			zoom(target);
+		}
+		else if (e.target.id == "unzoom") unzoom();
+		else if (e.target.id == "search") search_prompt();
+		else if (e.target.id == "ignorecase") toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener("mouseover", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = "Function: " + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener("mouseout", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	window.addEventListener("keydown",function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+	}, false)
+
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener("keydown",function (e) {
+		if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+		return;
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == "frames") return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes["_orig_" + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute("_orig_" + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes["_orig_"+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes["_orig_" + attr].value;
+		e.removeAttribute("_orig_"+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, "title").firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, "rect");
+		var t = find_child(e, "text");
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, "title").textContent.replace(/\([^(]*\)$/,"");
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = "";
+			return;
+		}
+
+		t.textContent = txt;
+		// Fit in full text width
+		if (/^ *$/.test(txt) || t.getSubStringLength(0, txt.length) < w)
+			return;
+
+		for (var x = txt.length - 2; x > 0; x--) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + "..";
+				return;
+			}
+		}
+		t.textContent = "";
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, "x");
+			orig_load(e, "width");
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == "text")
+					e.attributes.x.value = find_child(e.parentNode, "rect[x]").attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, "rect").attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove("hide");
+
+		var el = document.getElementById("frames").children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, "rect").attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add("parent");
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add("hide");
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add("hide");
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom() {
+		unzoombtn.classList.add("hide");
+		var el = document.getElementById("frames").children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove("parent");
+			el[i].classList.remove("hide");
+			zoom_reset(el[i]);
+			update_text(el[i]);
+		}
+		search();
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add("show");
+		} else {
+			ignorecaseBtn.classList.remove("show");
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll("#frames rect");
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], "fill")
+		}
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt("Enter a search term (regexp " +
+			    "allowed, eg: ^ext4_)"
+			    + (ignorecase ? ", ignoring case" : "")
+			    + "\nPress Ctrl-i to toggle case sensitivity", "");
+			if (term != null) {
+				currentSearchTerm = term;
+				search();
+			}
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove("show");
+			searchbtn.firstChild.nodeValue = "Search"
+			matchedtxt.classList.add("hide");
+			matchedtxt.firstChild.nodeValue = ""
+		}
+	}
+	function search(term) {
+		if (currentSearchTerm === null) return;
+		var term = currentSearchTerm;
+
+		var re = new RegExp(term, ignorecase ? 'i' : '');
+		var el = document.getElementById("frames").children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, "rect");
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, "fill");
+				rect.attributes.fill.value = "rgb(230,0,230)";
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+
+		searchbtn.classList.add("show");
+		searchbtn.firstChild.nodeValue = "Reset Search";
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove("hide");
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = "Matched: " + pct + "%";
+	}
+]]>
+</script>
+<rect x="0.0" y="0" width="1200.0" height="323.0" fill="url(#background)"  />
+<text id="title" x="600.00" y="24" >rpi-dca6325631_SNAPSHOT_20210418-0646_everything.fR</text>
+<text id="details" x="10.00" y="306" > </text>
+<text id="unzoom" x="10.00" y="24" class="hide">Reset Zoom</text>
+<text id="search" x="1090.00" y="24" >Search</text>
+<text id="ignorecase" x="1174.00" y="24" >ic</text>
+<text id="matched" x="1090.00" y="306" > </text>
+<g id="frames">
+<g >
+<title>[collectd] (1 samples, 0.99%)</title><rect x="68.4" y="257" width="11.7" height="10.0" fill="rgb(205,126,10)" rx="2" ry="2" />
+<text  x="71.42" y="265" ></text>
+</g>
+<g >
+<title>process_one_work (1 samples, 0.99%)</title><rect x="1096.5" y="268" width="11.7" height="10.0" fill="rgb(229,109,15)" rx="2" ry="2" />
+<text  x="1099.53" y="276" ></text>
+</g>
+<g >
+<title>do_idle (8 samples, 7.92%)</title><rect x="909.6" y="235" width="93.5" height="10.0" fill="rgb(220,185,21)" rx="2" ry="2" />
+<text  x="912.60" y="243" >do_idle</text>
+</g>
+<g >
+<title>wb_workfn (1 samples, 0.99%)</title><rect x="1026.4" y="224" width="11.7" height="10.0" fill="rgb(243,9,16)" rx="2" ry="2" />
+<text  x="1029.44" y="232" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="862.9" y="213" width="11.7" height="10.0" fill="rgb(242,193,22)" rx="2" ry="2" />
+<text  x="865.87" y="221" ></text>
+</g>
+<g >
+<title>kmem_cache_alloc (1 samples, 0.99%)</title><rect x="1038.1" y="268" width="11.7" height="10.0" fill="rgb(223,56,8)" rx="2" ry="2" />
+<text  x="1041.12" y="276" ></text>
+</g>
+<g >
+<title>kthread (1 samples, 0.99%)</title><rect x="804.5" y="158" width="11.6" height="10.0" fill="rgb(253,125,42)" rx="2" ry="2" />
+<text  x="807.46" y="166" ></text>
+</g>
+<g >
+<title>rrdtool_queue (1 samples, 0.99%)</title><rect x="1038.1" y="114" width="11.7" height="10.0" fill="rgb(244,218,45)" rx="2" ry="2" />
+<text  x="1041.12" y="122" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (4 samples, 3.96%)</title><rect x="208.6" y="224" width="46.7" height="10.0" fill="rgb(238,123,41)" rx="2" ry="2" />
+<text  x="211.61" y="232" >[lib..</text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 0.99%)</title><rect x="1119.9" y="202" width="11.7" height="10.0" fill="rgb(238,117,48)" rx="2" ry="2" />
+<text  x="1122.90" y="210" ></text>
+</g>
+<g >
+<title>udp_send_skb.isra.63 (1 samples, 0.99%)</title><rect x="1014.8" y="158" width="11.6" height="10.0" fill="rgb(231,96,41)" rx="2" ry="2" />
+<text  x="1017.75" y="166" ></text>
+</g>
+<g >
+<title>__lookup_slow (1 samples, 0.99%)</title><rect x="1061.5" y="224" width="11.7" height="10.0" fill="rgb(232,123,43)" rx="2" ry="2" />
+<text  x="1064.49" y="232" ></text>
+</g>
+<g >
+<title>kworker/1:3-mm_ (1 samples, 0.99%)</title><rect x="1096.5" y="224" width="11.7" height="10.0" fill="rgb(247,120,13)" rx="2" ry="2" />
+<text  x="1099.53" y="232" ></text>
+</g>
+<g >
+<title>[libc.so] (6 samples, 5.94%)</title><rect x="126.8" y="257" width="70.1" height="10.0" fill="rgb(211,165,51)" rx="2" ry="2" />
+<text  x="129.83" y="265" >[libc.so]</text>
+</g>
+<g >
+<title>[unknown] (2 samples, 1.98%)</title><rect x="337.1" y="191" width="23.4" height="10.0" fill="rgb(246,23,19)" rx="2" ry="2" />
+<text  x="340.13" y="199" >[..</text>
+</g>
+<g >
+<title>xhci_urb_enqueue (1 samples, 0.99%)</title><rect x="1178.3" y="268" width="11.7" height="10.0" fill="rgb(214,210,25)" rx="2" ry="2" />
+<text  x="1181.32" y="276" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="862.9" y="180" width="11.7" height="10.0" fill="rgb(253,21,9)" rx="2" ry="2" />
+<text  x="865.87" y="188" ></text>
+</g>
+<g >
+<title>[collectd] (1 samples, 0.99%)</title><rect x="851.2" y="191" width="11.7" height="10.0" fill="rgb(220,99,36)" rx="2" ry="2" />
+<text  x="854.19" y="199" ></text>
+</g>
+<g >
+<title>[rrdtool] (1 samples, 0.99%)</title><rect x="757.7" y="158" width="11.7" height="10.0" fill="rgb(245,84,18)" rx="2" ry="2" />
+<text  x="760.72" y="166" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1131.6" y="114" width="11.7" height="10.0" fill="rgb(232,112,29)" rx="2" ry="2" />
+<text  x="1134.58" y="122" ></text>
+</g>
+<g >
+<title>[unknown] (2 samples, 1.98%)</title><rect x="267.0" y="257" width="23.4" height="10.0" fill="rgb(241,8,41)" rx="2" ry="2" />
+<text  x="270.03" y="265" >[..</text>
+</g>
+<g >
+<title>kworker/1:1-eve (1 samples, 0.99%)</title><rect x="1119.9" y="191" width="11.7" height="10.0" fill="rgb(237,9,13)" rx="2" ry="2" />
+<text  x="1122.90" y="199" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="757.7" y="224" width="11.7" height="10.0" fill="rgb(244,171,16)" rx="2" ry="2" />
+<text  x="760.72" y="232" ></text>
+</g>
+<g >
+<title>seq_read (1 samples, 0.99%)</title><rect x="1084.9" y="246" width="11.6" height="10.0" fill="rgb(235,163,29)" rx="2" ry="2" />
+<text  x="1087.85" y="254" ></text>
+</g>
+<g >
+<title>hash_net4_kadt (1 samples, 0.99%)</title><rect x="1014.8" y="257" width="11.6" height="10.0" fill="rgb(207,74,39)" rx="2" ry="2" />
+<text  x="1017.75" y="265" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="255.3" y="125" width="11.7" height="10.0" fill="rgb(233,39,1)" rx="2" ry="2" />
+<text  x="258.35" y="133" ></text>
+</g>
+<g >
+<title>__arm64_sys_sendto (1 samples, 0.99%)</title><rect x="1014.8" y="114" width="11.6" height="10.0" fill="rgb(213,87,28)" rx="2" ry="2" />
+<text  x="1017.75" y="122" ></text>
+</g>
+<g >
+<title>sleep (1 samples, 0.99%)</title><rect x="792.8" y="114" width="11.7" height="10.0" fill="rgb(239,43,52)" rx="2" ry="2" />
+<text  x="795.77" y="122" ></text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.99%)</title><rect x="1049.8" y="180" width="11.7" height="10.0" fill="rgb(243,147,25)" rx="2" ry="2" />
+<text  x="1052.80" y="188" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1084.9" y="114" width="11.6" height="10.0" fill="rgb(253,33,7)" rx="2" ry="2" />
+<text  x="1087.85" y="122" ></text>
+</g>
+<g >
+<title>fput_many (1 samples, 0.99%)</title><rect x="1003.1" y="268" width="11.7" height="10.0" fill="rgb(206,59,31)" rx="2" ry="2" />
+<text  x="1006.07" y="276" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="255.3" y="224" width="11.7" height="10.0" fill="rgb(207,184,35)" rx="2" ry="2" />
+<text  x="258.35" y="232" ></text>
+</g>
+<g >
+<title>tick_nohz_idle_exit (1 samples, 0.99%)</title><rect x="1155.0" y="268" width="11.6" height="10.0" fill="rgb(215,99,25)" rx="2" ry="2" />
+<text  x="1157.95" y="276" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1049.8" y="147" width="11.7" height="10.0" fill="rgb(250,212,33)" rx="2" ry="2" />
+<text  x="1052.80" y="155" ></text>
+</g>
+<g >
+<title>reader#1 (1 samples, 0.99%)</title><rect x="851.2" y="147" width="11.7" height="10.0" fill="rgb(210,151,22)" rx="2" ry="2" />
+<text  x="854.19" y="155" ></text>
+</g>
+<g >
+<title>proc_pid_status (1 samples, 0.99%)</title><rect x="1084.9" y="268" width="11.6" height="10.0" fill="rgb(219,173,16)" rx="2" ry="2" />
+<text  x="1087.85" y="276" ></text>
+</g>
+<g >
+<title>alloc_set_pte (1 samples, 0.99%)</title><rect x="792.8" y="268" width="11.7" height="10.0" fill="rgb(243,150,11)" rx="2" ry="2" />
+<text  x="795.77" y="276" ></text>
+</g>
+<g >
+<title>[busybox] (1 samples, 0.99%)</title><rect x="138.5" y="224" width="11.7" height="10.0" fill="rgb(230,54,41)" rx="2" ry="2" />
+<text  x="141.51" y="232" ></text>
+</g>
+<g >
+<title>[rrdtool] (1 samples, 0.99%)</title><rect x="757.7" y="169" width="11.7" height="10.0" fill="rgb(235,192,4)" rx="2" ry="2" />
+<text  x="760.72" y="177" ></text>
+</g>
+<g >
+<title>kthread (2 samples, 1.98%)</title><rect x="874.6" y="213" width="23.3" height="10.0" fill="rgb(212,106,17)" rx="2" ry="2" />
+<text  x="877.55" y="221" >k..</text>
+</g>
+<g >
+<title>sh (2 samples, 1.98%)</title><rect x="267.0" y="246" width="23.4" height="10.0" fill="rgb(235,145,42)" rx="2" ry="2" />
+<text  x="270.03" y="254" >sh</text>
+</g>
+<g >
+<title>__arm64_sys_exit_group (1 samples, 0.99%)</title><rect x="1003.1" y="213" width="11.7" height="10.0" fill="rgb(249,103,45)" rx="2" ry="2" />
+<text  x="1006.07" y="221" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.99%)</title><rect x="769.4" y="202" width="11.7" height="10.0" fill="rgb(224,11,14)" rx="2" ry="2" />
+<text  x="772.41" y="210" ></text>
+</g>
+<g >
+<title>__pmd_alloc (1 samples, 0.99%)</title><rect x="769.4" y="268" width="11.7" height="10.0" fill="rgb(232,207,49)" rx="2" ry="2" />
+<text  x="772.41" y="276" ></text>
+</g>
+<g >
+<title>usb_submit_urb (1 samples, 0.99%)</title><rect x="1178.3" y="246" width="11.7" height="10.0" fill="rgb(244,217,15)" rx="2" ry="2" />
+<text  x="1181.32" y="254" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="56.7" y="213" width="11.7" height="10.0" fill="rgb(254,56,31)" rx="2" ry="2" />
+<text  x="59.73" y="221" ></text>
+</g>
+<g >
+<title>all (101 samples, 100%)</title><rect x="10.0" y="279" width="1180.0" height="10.0" fill="rgb(230,208,40)" rx="2" ry="2" />
+<text  x="13.00" y="287" ></text>
+</g>
+<g >
+<title>[libustream-ssl.so] (4 samples, 3.96%)</title><rect x="208.6" y="257" width="46.7" height="10.0" fill="rgb(219,80,3)" rx="2" ry="2" />
+<text  x="211.61" y="265" >[lib..</text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 0.99%)</title><rect x="1026.4" y="180" width="11.7" height="10.0" fill="rgb(216,167,6)" rx="2" ry="2" />
+<text  x="1029.44" y="188" ></text>
+</g>
+<g >
+<title>schedule_idle (8 samples, 7.92%)</title><rect x="909.6" y="246" width="93.5" height="10.0" fill="rgb(205,212,20)" rx="2" ry="2" />
+<text  x="912.60" y="254" >schedule_idle</text>
+</g>
+<g >
+<title>[unknown] (4 samples, 3.96%)</title><rect x="208.6" y="191" width="46.7" height="10.0" fill="rgb(226,227,18)" rx="2" ry="2" />
+<text  x="211.61" y="199" >[unk..</text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="1014.8" y="48" width="11.6" height="10.0" fill="rgb(235,178,45)" rx="2" ry="2" />
+<text  x="1017.75" y="56" ></text>
+</g>
+<g >
+<title>blk_queue_bounce (1 samples, 0.99%)</title><rect x="816.1" y="268" width="11.7" height="10.0" fill="rgb(231,172,40)" rx="2" ry="2" />
+<text  x="819.14" y="276" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (4 samples, 3.96%)</title><rect x="290.4" y="224" width="46.7" height="10.0" fill="rgb(205,205,51)" rx="2" ry="2" />
+<text  x="293.40" y="232" >[lib..</text>
+</g>
+<g >
+<title>do_mem_abort (1 samples, 0.99%)</title><rect x="792.8" y="202" width="11.7" height="10.0" fill="rgb(222,131,12)" rx="2" ry="2" />
+<text  x="795.77" y="210" ></text>
+</g>
+<g >
+<title>uhttpd (34 samples, 33.66%)</title><rect x="360.5" y="180" width="397.2" height="10.0" fill="rgb(243,223,44)" rx="2" ry="2" />
+<text  x="363.50" y="188" >uhttpd</text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 0.99%)</title><rect x="1096.5" y="235" width="11.7" height="10.0" fill="rgb(210,9,6)" rx="2" ry="2" />
+<text  x="1099.53" y="243" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 1.98%)</title><rect x="150.2" y="180" width="23.4" height="10.0" fill="rgb(206,7,38)" rx="2" ry="2" />
+<text  x="153.20" y="188" >[..</text>
+</g>
+<g >
+<title>phy_check_link_status (1 samples, 0.99%)</title><rect x="804.5" y="202" width="11.6" height="10.0" fill="rgb(211,88,47)" rx="2" ry="2" />
+<text  x="807.46" y="210" ></text>
+</g>
+<g >
+<title>[libwolfssl.so.4.7.0.66253b90] (34 samples, 33.66%)</title><rect x="360.5" y="268" width="397.2" height="10.0" fill="rgb(250,80,34)" rx="2" ry="2" />
+<text  x="363.50" y="276" >[libwolfssl.so.4.7.0.66253b90]</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="792.8" y="169" width="11.7" height="10.0" fill="rgb(248,65,42)" rx="2" ry="2" />
+<text  x="795.77" y="177" ></text>
+</g>
+<g >
+<title>rrdtool (1 samples, 0.99%)</title><rect x="255.3" y="114" width="11.7" height="10.0" fill="rgb(215,211,29)" rx="2" ry="2" />
+<text  x="258.35" y="122" ></text>
+</g>
+<g >
+<title>[rrdtool.so] (1 samples, 0.99%)</title><rect x="1038.1" y="158" width="11.7" height="10.0" fill="rgb(219,89,12)" rx="2" ry="2" />
+<text  x="1041.12" y="166" ></text>
+</g>
+<g >
+<title>genphy_read_status (1 samples, 0.99%)</title><rect x="804.5" y="213" width="11.6" height="10.0" fill="rgb(242,223,6)" rx="2" ry="2" />
+<text  x="807.46" y="221" ></text>
+</g>
+<g >
+<title>[unknown] (4 samples, 3.96%)</title><rect x="290.4" y="180" width="46.7" height="10.0" fill="rgb(217,16,2)" rx="2" ry="2" />
+<text  x="293.40" y="188" >[unk..</text>
+</g>
+<g >
+<title>cpu_startup_entry (1 samples, 0.99%)</title><rect x="839.5" y="246" width="11.7" height="10.0" fill="rgb(209,35,7)" rx="2" ry="2" />
+<text  x="842.50" y="254" ></text>
+</g>
+<g >
+<title>kjournald2 (1 samples, 0.99%)</title><rect x="816.1" y="191" width="11.7" height="10.0" fill="rgb(252,25,43)" rx="2" ry="2" />
+<text  x="819.14" y="199" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 1.98%)</title><rect x="150.2" y="213" width="23.4" height="10.0" fill="rgb(210,222,0)" rx="2" ry="2" />
+<text  x="153.20" y="221" >[..</text>
+</g>
+<g >
+<title>do_readv (1 samples, 0.99%)</title><rect x="1131.6" y="235" width="11.7" height="10.0" fill="rgb(216,27,41)" rx="2" ry="2" />
+<text  x="1134.58" y="243" ></text>
+</g>
+<g >
+<title>new_inode (1 samples, 0.99%)</title><rect x="1061.5" y="268" width="11.7" height="10.0" fill="rgb(234,216,31)" rx="2" ry="2" />
+<text  x="1064.49" y="276" ></text>
+</g>
+<g >
+<title>[dnsmasq] (1 samples, 0.99%)</title><rect x="56.7" y="246" width="11.7" height="10.0" fill="rgb(245,35,10)" rx="2" ry="2" />
+<text  x="59.73" y="254" ></text>
+</g>
+<g >
+<title>[unknown] (4 samples, 3.96%)</title><rect x="10.0" y="257" width="46.7" height="10.0" fill="rgb(231,187,33)" rx="2" ry="2" />
+<text  x="13.00" y="265" >[unk..</text>
+</g>
+<g >
+<title>walk_component (1 samples, 0.99%)</title><rect x="1061.5" y="202" width="11.7" height="10.0" fill="rgb(220,85,7)" rx="2" ry="2" />
+<text  x="1064.49" y="210" ></text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 0.99%)</title><rect x="816.1" y="169" width="11.7" height="10.0" fill="rgb(252,34,52)" rx="2" ry="2" />
+<text  x="819.14" y="177" ></text>
+</g>
+<g >
+<title>[unknown] (34 samples, 33.66%)</title><rect x="360.5" y="191" width="397.2" height="10.0" fill="rgb(252,137,21)" rx="2" ry="2" />
+<text  x="363.50" y="199" >[unknown]</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1049.8" y="136" width="11.7" height="10.0" fill="rgb(248,180,2)" rx="2" ry="2" />
+<text  x="1052.80" y="144" ></text>
+</g>
+<g >
+<title>process_one_work (1 samples, 0.99%)</title><rect x="804.5" y="180" width="11.6" height="10.0" fill="rgb(244,19,22)" rx="2" ry="2" />
+<text  x="807.46" y="188" ></text>
+</g>
+<g >
+<title>do_filp_open (1 samples, 0.99%)</title><rect x="1049.8" y="224" width="11.7" height="10.0" fill="rgb(217,56,29)" rx="2" ry="2" />
+<text  x="1052.80" y="232" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="862.9" y="136" width="11.7" height="10.0" fill="rgb(211,67,14)" rx="2" ry="2" />
+<text  x="865.87" y="144" ></text>
+</g>
+<g >
+<title>[rrdtool.so] (1 samples, 0.99%)</title><rect x="196.9" y="235" width="11.7" height="10.0" fill="rgb(207,27,50)" rx="2" ry="2" />
+<text  x="199.93" y="243" ></text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.99%)</title><rect x="769.4" y="191" width="11.7" height="10.0" fill="rgb(246,77,32)" rx="2" ry="2" />
+<text  x="772.41" y="199" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="792.8" y="158" width="11.7" height="10.0" fill="rgb(236,141,4)" rx="2" ry="2" />
+<text  x="795.77" y="166" ></text>
+</g>
+<g >
+<title>usb_stor_Bulk_transport (1 samples, 0.99%)</title><rect x="1166.6" y="224" width="11.7" height="10.0" fill="rgb(226,49,6)" rx="2" ry="2" />
+<text  x="1169.63" y="232" ></text>
+</g>
+<g >
+<title>[dnsmasq] (1 samples, 0.99%)</title><rect x="56.7" y="235" width="11.7" height="10.0" fill="rgb(243,116,41)" rx="2" ry="2" />
+<text  x="59.73" y="243" ></text>
+</g>
+<g >
+<title>[rrdtool] (1 samples, 0.99%)</title><rect x="255.3" y="158" width="11.7" height="10.0" fill="rgb(238,82,8)" rx="2" ry="2" />
+<text  x="258.35" y="166" ></text>
+</g>
+<g >
+<title>sh (1 samples, 0.99%)</title><rect x="126.8" y="213" width="11.7" height="10.0" fill="rgb(251,182,36)" rx="2" ry="2" />
+<text  x="129.83" y="221" ></text>
+</g>
+<g >
+<title>bcmgenet_mii_wait (1 samples, 0.99%)</title><rect x="804.5" y="268" width="11.6" height="10.0" fill="rgb(226,122,31)" rx="2" ry="2" />
+<text  x="807.46" y="276" ></text>
+</g>
+<g >
+<title>[uhttpd] (34 samples, 33.66%)</title><rect x="360.5" y="213" width="397.2" height="10.0" fill="rgb(254,17,33)" rx="2" ry="2" />
+<text  x="363.50" y="221" >[uhttpd]</text>
+</g>
+<g >
+<title>schedule (4 samples, 3.96%)</title><rect x="862.9" y="246" width="46.7" height="10.0" fill="rgb(215,17,12)" rx="2" ry="2" />
+<text  x="865.87" y="254" >sche..</text>
+</g>
+<g >
+<title>usb_hcd_submit_urb (1 samples, 0.99%)</title><rect x="1178.3" y="257" width="11.7" height="10.0" fill="rgb(217,80,53)" rx="2" ry="2" />
+<text  x="1181.32" y="265" ></text>
+</g>
+<g >
+<title>[processes.so] (1 samples, 0.99%)</title><rect x="1084.9" y="136" width="11.6" height="10.0" fill="rgb(227,48,10)" rx="2" ry="2" />
+<text  x="1087.85" y="144" ></text>
+</g>
+<g >
+<title>usb_stor_transparent_scsi_command (1 samples, 0.99%)</title><rect x="1178.3" y="191" width="11.7" height="10.0" fill="rgb(224,179,47)" rx="2" ry="2" />
+<text  x="1181.32" y="199" ></text>
+</g>
+<g >
+<title>ntpd (1 samples, 0.99%)</title><rect x="1014.8" y="37" width="11.6" height="10.0" fill="rgb(236,173,29)" rx="2" ry="2" />
+<text  x="1017.75" y="45" ></text>
+</g>
+<g >
+<title>tc (1 samples, 0.99%)</title><rect x="1061.5" y="59" width="11.7" height="10.0" fill="rgb(235,174,38)" rx="2" ry="2" />
+<text  x="1064.49" y="67" ></text>
+</g>
+<g >
+<title>rrdtool (2 samples, 1.98%)</title><rect x="150.2" y="125" width="23.4" height="10.0" fill="rgb(231,42,43)" rx="2" ry="2" />
+<text  x="153.20" y="133" >r..</text>
+</g>
+<g >
+<title>do_notify_resume (1 samples, 0.99%)</title><rect x="862.9" y="235" width="11.7" height="10.0" fill="rgb(232,226,42)" rx="2" ry="2" />
+<text  x="865.87" y="243" ></text>
+</g>
+<g >
+<title>[libc.so] (5 samples, 4.95%)</title><rect x="126.8" y="246" width="58.4" height="10.0" fill="rgb(236,38,35)" rx="2" ry="2" />
+<text  x="129.83" y="254" >[libc...</text>
+</g>
+<g >
+<title>is_bad_inode (1 samples, 0.99%)</title><rect x="1026.4" y="268" width="11.7" height="10.0" fill="rgb(236,57,8)" rx="2" ry="2" />
+<text  x="1029.44" y="276" ></text>
+</g>
+<g >
+<title>[processes.so] (1 samples, 0.99%)</title><rect x="68.4" y="246" width="11.7" height="10.0" fill="rgb(253,203,1)" rx="2" ry="2" />
+<text  x="71.42" y="254" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="1061.5" y="70" width="11.7" height="10.0" fill="rgb(253,215,35)" rx="2" ry="2" />
+<text  x="1064.49" y="78" ></text>
+</g>
+<g >
+<title>cpu_startup_entry (8 samples, 7.92%)</title><rect x="909.6" y="224" width="93.5" height="10.0" fill="rgb(245,82,2)" rx="2" ry="2" />
+<text  x="912.60" y="232" >cpu_startup..</text>
+</g>
+<g >
+<title>swapper (1 samples, 0.99%)</title><rect x="1155.0" y="224" width="11.6" height="10.0" fill="rgb(226,40,11)" rx="2" ry="2" />
+<text  x="1157.95" y="232" ></text>
+</g>
+<g >
+<title>submit_bio (1 samples, 0.99%)</title><rect x="816.1" y="235" width="11.7" height="10.0" fill="rgb(236,126,44)" rx="2" ry="2" />
+<text  x="819.14" y="243" ></text>
+</g>
+<g >
+<title>ret_from_fork (2 samples, 1.98%)</title><rect x="874.6" y="202" width="23.3" height="10.0" fill="rgb(220,139,40)" rx="2" ry="2" />
+<text  x="877.55" y="210" >r..</text>
+</g>
+<g >
+<title>[busybox] (1 samples, 0.99%)</title><rect x="126.8" y="235" width="11.7" height="10.0" fill="rgb(246,7,13)" rx="2" ry="2" />
+<text  x="129.83" y="243" ></text>
+</g>
+<g >
+<title>[collectd] (1 samples, 0.99%)</title><rect x="1131.6" y="169" width="11.7" height="10.0" fill="rgb(228,2,25)" rx="2" ry="2" />
+<text  x="1134.58" y="177" ></text>
+</g>
+<g >
+<title>worker_thread (1 samples, 0.99%)</title><rect x="1096.5" y="257" width="11.7" height="10.0" fill="rgb(213,165,29)" rx="2" ry="2" />
+<text  x="1099.53" y="265" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="851.2" y="180" width="11.7" height="10.0" fill="rgb(215,52,4)" rx="2" ry="2" />
+<text  x="854.19" y="188" ></text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 0.99%)</title><rect x="804.5" y="147" width="11.6" height="10.0" fill="rgb(216,153,2)" rx="2" ry="2" />
+<text  x="807.46" y="155" ></text>
+</g>
+<g >
+<title>kworker/2:1-eve (1 samples, 0.99%)</title><rect x="804.5" y="136" width="11.6" height="10.0" fill="rgb(226,104,14)" rx="2" ry="2" />
+<text  x="807.46" y="144" ></text>
+</g>
+<g >
+<title>od_dbs_update (1 samples, 0.99%)</title><rect x="827.8" y="257" width="11.7" height="10.0" fill="rgb(244,120,4)" rx="2" ry="2" />
+<text  x="830.82" y="265" ></text>
+</g>
+<g >
+<title>do_translation_fault (1 samples, 0.99%)</title><rect x="792.8" y="213" width="11.7" height="10.0" fill="rgb(250,97,51)" rx="2" ry="2" />
+<text  x="795.77" y="221" ></text>
+</g>
+<g >
+<title>[uhttpd] (4 samples, 3.96%)</title><rect x="208.6" y="213" width="46.7" height="10.0" fill="rgb(214,191,39)" rx="2" ry="2" />
+<text  x="211.61" y="221" >[uht..</text>
+</g>
+<g >
+<title>usb_stor_invoke_transport (1 samples, 0.99%)</title><rect x="1166.6" y="213" width="11.7" height="10.0" fill="rgb(251,125,37)" rx="2" ry="2" />
+<text  x="1169.63" y="221" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="196.9" y="213" width="11.7" height="10.0" fill="rgb(222,46,54)" rx="2" ry="2" />
+<text  x="199.93" y="221" ></text>
+</g>
+<g >
+<title>swapper (7 samples, 6.93%)</title><rect x="921.3" y="202" width="81.8" height="10.0" fill="rgb(245,14,39)" rx="2" ry="2" />
+<text  x="924.29" y="210" >swapper</text>
+</g>
+<g >
+<title>usb_stor_bulk_srb (1 samples, 0.99%)</title><rect x="1166.6" y="235" width="11.7" height="10.0" fill="rgb(252,183,6)" rx="2" ry="2" />
+<text  x="1169.63" y="243" ></text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.99%)</title><rect x="1014.8" y="92" width="11.6" height="10.0" fill="rgb(250,195,3)" rx="2" ry="2" />
+<text  x="1017.75" y="100" ></text>
+</g>
+<g >
+<title>tick_nohz_idle_enter (1 samples, 0.99%)</title><rect x="1143.3" y="268" width="11.7" height="10.0" fill="rgb(241,99,11)" rx="2" ry="2" />
+<text  x="1146.27" y="276" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="1049.8" y="92" width="11.7" height="10.0" fill="rgb(247,62,8)" rx="2" ry="2" />
+<text  x="1052.80" y="100" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="173.6" y="169" width="11.6" height="10.0" fill="rgb(211,217,24)" rx="2" ry="2" />
+<text  x="176.56" y="177" ></text>
+</g>
+<g >
+<title>rcu_sched (2 samples, 1.98%)</title><rect x="874.6" y="191" width="23.3" height="10.0" fill="rgb(205,118,1)" rx="2" ry="2" />
+<text  x="877.55" y="199" >r..</text>
+</g>
+<g >
+<title>[libc.so] (4 samples, 3.96%)</title><rect x="290.4" y="191" width="46.7" height="10.0" fill="rgb(232,175,9)" rx="2" ry="2" />
+<text  x="293.40" y="199" >[lib..</text>
+</g>
+<g >
+<title>[collectd] (1 samples, 0.99%)</title><rect x="851.2" y="224" width="11.7" height="10.0" fill="rgb(253,137,30)" rx="2" ry="2" />
+<text  x="854.19" y="232" ></text>
+</g>
+<g >
+<title>__arm64_sys_read (1 samples, 0.99%)</title><rect x="1084.9" y="202" width="11.6" height="10.0" fill="rgb(240,195,22)" rx="2" ry="2" />
+<text  x="1087.85" y="210" ></text>
+</g>
+<g >
+<title>do_idle (1 samples, 0.99%)</title><rect x="1143.3" y="257" width="11.7" height="10.0" fill="rgb(242,122,47)" rx="2" ry="2" />
+<text  x="1146.27" y="265" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1038.1" y="191" width="11.7" height="10.0" fill="rgb(244,212,43)" rx="2" ry="2" />
+<text  x="1041.12" y="199" ></text>
+</g>
+<g >
+<title>rrdtool_queue (1 samples, 0.99%)</title><rect x="196.9" y="191" width="11.7" height="10.0" fill="rgb(235,165,41)" rx="2" ry="2" />
+<text  x="199.93" y="199" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.99%)</title><rect x="1038.1" y="213" width="11.7" height="10.0" fill="rgb(236,202,41)" rx="2" ry="2" />
+<text  x="1041.12" y="221" ></text>
+</g>
+<g >
+<title>_cond_resched (1 samples, 0.99%)</title><rect x="781.1" y="268" width="11.7" height="10.0" fill="rgb(231,4,44)" rx="2" ry="2" />
+<text  x="784.09" y="276" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 1.98%)</title><rect x="150.2" y="191" width="23.4" height="10.0" fill="rgb(246,117,27)" rx="2" ry="2" />
+<text  x="153.20" y="199" >[..</text>
+</g>
+<g >
+<title>dbs_update (1 samples, 0.99%)</title><rect x="827.8" y="268" width="11.7" height="10.0" fill="rgb(248,39,48)" rx="2" ry="2" />
+<text  x="830.82" y="276" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.99%)</title><rect x="1084.9" y="191" width="11.6" height="10.0" fill="rgb(206,81,5)" rx="2" ry="2" />
+<text  x="1087.85" y="199" ></text>
+</g>
+<g >
+<title>do_exit (1 samples, 0.99%)</title><rect x="1003.1" y="235" width="11.7" height="10.0" fill="rgb(238,76,42)" rx="2" ry="2" />
+<text  x="1006.07" y="243" ></text>
+</g>
+<g >
+<title>do_notify_resume (1 samples, 0.99%)</title><rect x="851.2" y="268" width="11.7" height="10.0" fill="rgb(218,88,53)" rx="2" ry="2" />
+<text  x="854.19" y="276" ></text>
+</g>
+<g >
+<title>[rrdtool] (2 samples, 1.98%)</title><rect x="337.1" y="224" width="23.4" height="10.0" fill="rgb(236,211,2)" rx="2" ry="2" />
+<text  x="340.13" y="232" >[..</text>
+</g>
+<g >
+<title>do_sys_open (1 samples, 0.99%)</title><rect x="1038.1" y="235" width="11.7" height="10.0" fill="rgb(231,4,27)" rx="2" ry="2" />
+<text  x="1041.12" y="243" ></text>
+</g>
+<g >
+<title>rrdtool (1 samples, 0.99%)</title><rect x="757.7" y="125" width="11.7" height="10.0" fill="rgb(226,27,19)" rx="2" ry="2" />
+<text  x="760.72" y="133" ></text>
+</g>
+<g >
+<title>[busybox] (1 samples, 0.99%)</title><rect x="1014.8" y="59" width="11.6" height="10.0" fill="rgb(216,201,43)" rx="2" ry="2" />
+<text  x="1017.75" y="67" ></text>
+</g>
+<g >
+<title>kworker/0:3-eve (1 samples, 0.99%)</title><rect x="1108.2" y="202" width="11.7" height="10.0" fill="rgb(241,170,4)" rx="2" ry="2" />
+<text  x="1111.22" y="210" ></text>
+</g>
+<g >
+<title>[libz.so.1.2.11] (1 samples, 0.99%)</title><rect x="255.3" y="257" width="11.7" height="10.0" fill="rgb(245,157,15)" rx="2" ry="2" />
+<text  x="258.35" y="265" ></text>
+</g>
+<g >
+<title>usb_stor_invoke_transport (1 samples, 0.99%)</title><rect x="1178.3" y="202" width="11.7" height="10.0" fill="rgb(228,213,7)" rx="2" ry="2" />
+<text  x="1181.32" y="210" ></text>
+</g>
+<g >
+<title>[processes.so] (1 samples, 0.99%)</title><rect x="851.2" y="202" width="11.7" height="10.0" fill="rgb(205,31,18)" rx="2" ry="2" />
+<text  x="854.19" y="210" ></text>
+</g>
+<g >
+<title>_do_fork (1 samples, 0.99%)</title><rect x="769.4" y="224" width="11.7" height="10.0" fill="rgb(237,222,23)" rx="2" ry="2" />
+<text  x="772.41" y="232" ></text>
+</g>
+<g >
+<title>nf_hook_slow (1 samples, 0.99%)</title><rect x="1014.8" y="202" width="11.6" height="10.0" fill="rgb(229,170,44)" rx="2" ry="2" />
+<text  x="1017.75" y="210" ></text>
+</g>
+<g >
+<title>[dnsmasq] (1 samples, 0.99%)</title><rect x="56.7" y="257" width="11.7" height="10.0" fill="rgb(254,190,9)" rx="2" ry="2" />
+<text  x="59.73" y="265" ></text>
+</g>
+<g >
+<title>handle_mm_fault (1 samples, 0.99%)</title><rect x="792.8" y="235" width="11.7" height="10.0" fill="rgb(230,115,40)" rx="2" ry="2" />
+<text  x="795.77" y="243" ></text>
+</g>
+<g >
+<title>process_one_work (1 samples, 0.99%)</title><rect x="827.8" y="235" width="11.7" height="10.0" fill="rgb(250,9,38)" rx="2" ry="2" />
+<text  x="830.82" y="243" ></text>
+</g>
+<g >
+<title>getname (1 samples, 0.99%)</title><rect x="1038.1" y="246" width="11.7" height="10.0" fill="rgb(218,135,35)" rx="2" ry="2" />
+<text  x="1041.12" y="254" ></text>
+</g>
+<g >
+<title>[rrdtool] (1 samples, 0.99%)</title><rect x="173.6" y="202" width="11.6" height="10.0" fill="rgb(251,212,13)" rx="2" ry="2" />
+<text  x="176.56" y="210" ></text>
+</g>
+<g >
+<title>do_idle (1 samples, 0.99%)</title><rect x="839.5" y="257" width="11.7" height="10.0" fill="rgb(227,87,17)" rx="2" ry="2" />
+<text  x="842.50" y="265" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="1038.1" y="125" width="11.7" height="10.0" fill="rgb(220,225,22)" rx="2" ry="2" />
+<text  x="1041.12" y="133" ></text>
+</g>
+<g >
+<title>cgi-exec (1 samples, 0.99%)</title><rect x="1049.8" y="81" width="11.7" height="10.0" fill="rgb(211,140,3)" rx="2" ry="2" />
+<text  x="1052.80" y="89" ></text>
+</g>
+<g >
+<title>ip_local_out (1 samples, 0.99%)</title><rect x="1014.8" y="180" width="11.6" height="10.0" fill="rgb(227,207,14)" rx="2" ry="2" />
+<text  x="1017.75" y="188" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="138.5" y="213" width="11.7" height="10.0" fill="rgb(213,39,21)" rx="2" ry="2" />
+<text  x="141.51" y="221" ></text>
+</g>
+<g >
+<title>ksoftirqd/2 (1 samples, 0.99%)</title><rect x="897.9" y="202" width="11.7" height="10.0" fill="rgb(237,179,47)" rx="2" ry="2" />
+<text  x="900.92" y="210" ></text>
+</g>
+<g >
+<title>dnsmasq (1 samples, 0.99%)</title><rect x="56.7" y="202" width="11.7" height="10.0" fill="rgb(215,78,45)" rx="2" ry="2" />
+<text  x="59.73" y="210" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1014.8" y="81" width="11.6" height="10.0" fill="rgb(216,41,0)" rx="2" ry="2" />
+<text  x="1017.75" y="89" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="173.6" y="224" width="11.6" height="10.0" fill="rgb(210,95,25)" rx="2" ry="2" />
+<text  x="176.56" y="232" ></text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 0.99%)</title><rect x="827.8" y="202" width="11.7" height="10.0" fill="rgb(252,43,12)" rx="2" ry="2" />
+<text  x="830.82" y="210" ></text>
+</g>
+<g >
+<title>hash_net4_test (1 samples, 0.99%)</title><rect x="1014.8" y="268" width="11.6" height="10.0" fill="rgb(225,166,46)" rx="2" ry="2" />
+<text  x="1017.75" y="276" ></text>
+</g>
+<g >
+<title>worker_thread (1 samples, 0.99%)</title><rect x="804.5" y="169" width="11.6" height="10.0" fill="rgb(218,225,44)" rx="2" ry="2" />
+<text  x="807.46" y="177" ></text>
+</g>
+<g >
+<title>[libz.so.1.2.11] (1 samples, 0.99%)</title><rect x="757.7" y="268" width="11.7" height="10.0" fill="rgb(228,141,11)" rx="2" ry="2" />
+<text  x="760.72" y="276" ></text>
+</g>
+<g >
+<title>secondary_start_kernel (7 samples, 6.93%)</title><rect x="921.3" y="213" width="81.8" height="10.0" fill="rgb(232,79,12)" rx="2" ry="2" />
+<text  x="924.29" y="221" >secondary..</text>
+</g>
+<g >
+<title>wait_for_completion (1 samples, 0.99%)</title><rect x="1166.6" y="268" width="11.7" height="10.0" fill="rgb(222,193,51)" rx="2" ry="2" />
+<text  x="1169.63" y="276" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.99%)</title><rect x="1003.1" y="202" width="11.7" height="10.0" fill="rgb(233,124,28)" rx="2" ry="2" />
+<text  x="1006.07" y="210" ></text>
+</g>
+<g >
+<title>[rrdtool] (2 samples, 1.98%)</title><rect x="150.2" y="158" width="23.4" height="10.0" fill="rgb(210,84,43)" rx="2" ry="2" />
+<text  x="153.20" y="166" >[..</text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="68.4" y="202" width="11.7" height="10.0" fill="rgb(239,214,44)" rx="2" ry="2" />
+<text  x="71.42" y="210" ></text>
+</g>
+<g >
+<title>[libz.so.1.2.11] (1 samples, 0.99%)</title><rect x="757.7" y="257" width="11.7" height="10.0" fill="rgb(231,2,5)" rx="2" ry="2" />
+<text  x="760.72" y="265" ></text>
+</g>
+<g >
+<title>udp_sendmsg (1 samples, 0.99%)</title><rect x="1014.8" y="147" width="11.6" height="10.0" fill="rgb(222,102,52)" rx="2" ry="2" />
+<text  x="1017.75" y="155" ></text>
+</g>
+<g >
+<title>schedule_timeout (2 samples, 1.98%)</title><rect x="874.6" y="235" width="23.3" height="10.0" fill="rgb(252,118,42)" rx="2" ry="2" />
+<text  x="877.55" y="243" >s..</text>
+</g>
+<g >
+<title>smpboot_thread_fn (1 samples, 0.99%)</title><rect x="897.9" y="235" width="11.7" height="10.0" fill="rgb(248,170,15)" rx="2" ry="2" />
+<text  x="900.92" y="243" ></text>
+</g>
+<g >
+<title>usb_stor_msg_common (1 samples, 0.99%)</title><rect x="1178.3" y="235" width="11.7" height="10.0" fill="rgb(229,158,14)" rx="2" ry="2" />
+<text  x="1181.32" y="243" ></text>
+</g>
+<g >
+<title>seq_read (1 samples, 0.99%)</title><rect x="1131.6" y="268" width="11.7" height="10.0" fill="rgb(207,48,42)" rx="2" ry="2" />
+<text  x="1134.58" y="276" ></text>
+</g>
+<g >
+<title>secondary_start_kernel (1 samples, 0.99%)</title><rect x="839.5" y="235" width="11.7" height="10.0" fill="rgb(249,47,41)" rx="2" ry="2" />
+<text  x="842.50" y="243" ></text>
+</g>
+<g >
+<title>cpu_startup_entry (1 samples, 0.99%)</title><rect x="1143.3" y="246" width="11.7" height="10.0" fill="rgb(225,118,29)" rx="2" ry="2" />
+<text  x="1146.27" y="254" ></text>
+</g>
+<g >
+<title>handle_mm_fault (1 samples, 0.99%)</title><rect x="1073.2" y="224" width="11.7" height="10.0" fill="rgb(227,29,47)" rx="2" ry="2" />
+<text  x="1076.17" y="232" ></text>
+</g>
+<g >
+<title>[rrdtool] (2 samples, 1.98%)</title><rect x="150.2" y="169" width="23.4" height="10.0" fill="rgb(250,205,0)" rx="2" ry="2" />
+<text  x="153.20" y="177" >[..</text>
+</g>
+<g >
+<title>[libc.so] (19 samples, 18.81%)</title><rect x="68.4" y="268" width="222.0" height="10.0" fill="rgb(220,222,8)" rx="2" ry="2" />
+<text  x="71.42" y="276" >[libc.so]</text>
+</g>
+<g >
+<title>[rrdtool] (2 samples, 1.98%)</title><rect x="337.1" y="213" width="23.4" height="10.0" fill="rgb(248,80,16)" rx="2" ry="2" />
+<text  x="340.13" y="221" >[..</text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="757.7" y="202" width="11.7" height="10.0" fill="rgb(206,116,12)" rx="2" ry="2" />
+<text  x="760.72" y="210" ></text>
+</g>
+<g >
+<title>scsi_test_unit_ready (1 samples, 0.99%)</title><rect x="1119.9" y="268" width="11.7" height="10.0" fill="rgb(224,35,52)" rx="2" ry="2" />
+<text  x="1122.90" y="276" ></text>
+</g>
+<g >
+<title>rrdtool_queue (1 samples, 0.99%)</title><rect x="185.2" y="180" width="11.7" height="10.0" fill="rgb(218,97,23)" rx="2" ry="2" />
+<text  x="188.25" y="188" ></text>
+</g>
+<g >
+<title>process_one_work (1 samples, 0.99%)</title><rect x="781.1" y="257" width="11.7" height="10.0" fill="rgb(247,5,40)" rx="2" ry="2" />
+<text  x="784.09" y="265" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="185.2" y="202" width="11.7" height="10.0" fill="rgb(246,139,29)" rx="2" ry="2" />
+<text  x="188.25" y="210" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.99%)</title><rect x="1131.6" y="213" width="11.7" height="10.0" fill="rgb(237,228,15)" rx="2" ry="2" />
+<text  x="1134.58" y="221" ></text>
+</g>
+<g >
+<title>[collectd] (1 samples, 0.99%)</title><rect x="1131.6" y="158" width="11.7" height="10.0" fill="rgb(206,15,42)" rx="2" ry="2" />
+<text  x="1134.58" y="166" ></text>
+</g>
+<g >
+<title>finish_task_switch (12 samples, 11.88%)</title><rect x="862.9" y="268" width="140.2" height="10.0" fill="rgb(246,18,21)" rx="2" ry="2" />
+<text  x="865.87" y="276" >finish_task_switch</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1049.8" y="103" width="11.7" height="10.0" fill="rgb(219,219,3)" rx="2" ry="2" />
+<text  x="1052.80" y="111" ></text>
+</g>
+<g >
+<title>[rrdtool] (4 samples, 3.96%)</title><rect x="290.4" y="213" width="46.7" height="10.0" fill="rgb(228,216,35)" rx="2" ry="2" />
+<text  x="293.40" y="221" >[rrd..</text>
+</g>
+<g >
+<title>copy_process (1 samples, 0.99%)</title><rect x="769.4" y="235" width="11.7" height="10.0" fill="rgb(238,55,14)" rx="2" ry="2" />
+<text  x="772.41" y="243" ></text>
+</g>
+<g >
+<title>proc_pid_instantiate (1 samples, 0.99%)</title><rect x="1061.5" y="257" width="11.7" height="10.0" fill="rgb(212,209,24)" rx="2" ry="2" />
+<text  x="1064.49" y="265" ></text>
+</g>
+<g >
+<title>do_el0_ia_bp_hardening (1 samples, 0.99%)</title><rect x="1073.2" y="180" width="11.7" height="10.0" fill="rgb(238,81,34)" rx="2" ry="2" />
+<text  x="1076.17" y="188" ></text>
+</g>
+<g >
+<title>[libustream-ssl.so] (34 samples, 33.66%)</title><rect x="360.5" y="257" width="397.2" height="10.0" fill="rgb(219,57,11)" rx="2" ry="2" />
+<text  x="363.50" y="265" >[libustream-ssl.so]</text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="255.3" y="202" width="11.7" height="10.0" fill="rgb(245,58,21)" rx="2" ry="2" />
+<text  x="258.35" y="210" ></text>
+</g>
+<g >
+<title>[rrdtool] (1 samples, 0.99%)</title><rect x="862.9" y="147" width="11.7" height="10.0" fill="rgb(234,3,33)" rx="2" ry="2" />
+<text  x="865.87" y="155" ></text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 0.99%)</title><rect x="781.1" y="224" width="11.7" height="10.0" fill="rgb(237,136,52)" rx="2" ry="2" />
+<text  x="784.09" y="232" ></text>
+</g>
+<g >
+<title>[busybox] (4 samples, 3.96%)</title><rect x="10.0" y="268" width="46.7" height="10.0" fill="rgb(234,215,37)" rx="2" ry="2" />
+<text  x="13.00" y="276" >[bus..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1084.9" y="158" width="11.6" height="10.0" fill="rgb(205,157,15)" rx="2" ry="2" />
+<text  x="1087.85" y="166" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="56.7" y="224" width="11.7" height="10.0" fill="rgb(217,13,3)" rx="2" ry="2" />
+<text  x="59.73" y="232" ></text>
+</g>
+<g >
+<title>__writeback_inodes_wb (1 samples, 0.99%)</title><rect x="1026.4" y="246" width="11.7" height="10.0" fill="rgb(234,224,14)" rx="2" ry="2" />
+<text  x="1029.44" y="254" ></text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 0.99%)</title><rect x="1166.6" y="169" width="11.7" height="10.0" fill="rgb(249,73,11)" rx="2" ry="2" />
+<text  x="1169.63" y="177" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="1038.1" y="169" width="11.7" height="10.0" fill="rgb(235,57,52)" rx="2" ry="2" />
+<text  x="1041.12" y="177" ></text>
+</g>
+<g >
+<title>[dnsmasq] (1 samples, 0.99%)</title><rect x="56.7" y="268" width="11.7" height="10.0" fill="rgb(226,56,24)" rx="2" ry="2" />
+<text  x="59.73" y="276" ></text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.99%)</title><rect x="1003.1" y="191" width="11.7" height="10.0" fill="rgb(241,80,19)" rx="2" ry="2" />
+<text  x="1006.07" y="199" ></text>
+</g>
+<g >
+<title>vfs_read (1 samples, 0.99%)</title><rect x="1084.9" y="224" width="11.6" height="10.0" fill="rgb(220,227,24)" rx="2" ry="2" />
+<text  x="1087.85" y="232" ></text>
+</g>
+<g >
+<title>uhttpd (4 samples, 3.96%)</title><rect x="208.6" y="180" width="46.7" height="10.0" fill="rgb(215,114,28)" rx="2" ry="2" />
+<text  x="211.61" y="188" >uhttpd</text>
+</g>
+<g >
+<title>[libubox.so.20210302] (4 samples, 3.96%)</title><rect x="208.6" y="235" width="46.7" height="10.0" fill="rgb(221,100,34)" rx="2" ry="2" />
+<text  x="211.61" y="243" >[lib..</text>
+</g>
+<g >
+<title>process_one_work (1 samples, 0.99%)</title><rect x="1119.9" y="235" width="11.7" height="10.0" fill="rgb(249,51,31)" rx="2" ry="2" />
+<text  x="1122.90" y="243" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1084.9" y="169" width="11.6" height="10.0" fill="rgb(223,93,44)" rx="2" ry="2" />
+<text  x="1087.85" y="177" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="792.8" y="125" width="11.7" height="10.0" fill="rgb(248,92,9)" rx="2" ry="2" />
+<text  x="795.77" y="133" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="862.9" y="191" width="11.7" height="10.0" fill="rgb(250,215,52)" rx="2" ry="2" />
+<text  x="865.87" y="199" ></text>
+</g>
+<g >
+<title>fput (1 samples, 0.99%)</title><rect x="1003.1" y="257" width="11.7" height="10.0" fill="rgb(252,90,20)" rx="2" ry="2" />
+<text  x="1006.07" y="265" ></text>
+</g>
+<g >
+<title>iptable_mangle_hook (1 samples, 0.99%)</title><rect x="1014.8" y="213" width="11.6" height="10.0" fill="rgb(250,70,1)" rx="2" ry="2" />
+<text  x="1017.75" y="221" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="196.9" y="224" width="11.7" height="10.0" fill="rgb(234,228,25)" rx="2" ry="2" />
+<text  x="199.93" y="232" ></text>
+</g>
+<g >
+<title>ipt_do_table (1 samples, 0.99%)</title><rect x="1014.8" y="224" width="11.6" height="10.0" fill="rgb(238,12,48)" rx="2" ry="2" />
+<text  x="1017.75" y="232" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1131.6" y="125" width="11.7" height="10.0" fill="rgb(213,182,33)" rx="2" ry="2" />
+<text  x="1134.58" y="133" ></text>
+</g>
+<g >
+<title>__handle_mm_fault (1 samples, 0.99%)</title><rect x="1073.2" y="235" width="11.7" height="10.0" fill="rgb(253,127,13)" rx="2" ry="2" />
+<text  x="1076.17" y="243" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (34 samples, 33.66%)</title><rect x="360.5" y="224" width="397.2" height="10.0" fill="rgb(243,117,52)" rx="2" ry="2" />
+<text  x="363.50" y="232" >[libubox.so.20210302]</text>
+</g>
+<g >
+<title>[busybox] (1 samples, 0.99%)</title><rect x="769.4" y="169" width="11.7" height="10.0" fill="rgb(245,199,29)" rx="2" ry="2" />
+<text  x="772.41" y="177" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="68.4" y="224" width="11.7" height="10.0" fill="rgb(214,94,47)" rx="2" ry="2" />
+<text  x="71.42" y="232" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="757.7" y="180" width="11.7" height="10.0" fill="rgb(237,173,35)" rx="2" ry="2" />
+<text  x="760.72" y="188" ></text>
+</g>
+<g >
+<title>do_page_fault (1 samples, 0.99%)</title><rect x="1073.2" y="213" width="11.7" height="10.0" fill="rgb(242,154,36)" rx="2" ry="2" />
+<text  x="1076.17" y="221" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="1131.6" y="103" width="11.7" height="10.0" fill="rgb(218,213,34)" rx="2" ry="2" />
+<text  x="1134.58" y="111" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 1.98%)</title><rect x="337.1" y="202" width="23.4" height="10.0" fill="rgb(236,212,17)" rx="2" ry="2" />
+<text  x="340.13" y="210" >[..</text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="255.3" y="180" width="11.7" height="10.0" fill="rgb(213,188,16)" rx="2" ry="2" />
+<text  x="258.35" y="188" ></text>
+</g>
+<g >
+<title>kworker/u8:0-ev (1 samples, 0.99%)</title><rect x="1026.4" y="169" width="11.7" height="10.0" fill="rgb(212,190,37)" rx="2" ry="2" />
+<text  x="1029.44" y="177" ></text>
+</g>
+<g >
+<title>proc_root_lookup (1 samples, 0.99%)</title><rect x="1061.5" y="235" width="11.7" height="10.0" fill="rgb(226,163,4)" rx="2" ry="2" />
+<text  x="1064.49" y="243" ></text>
+</g>
+<g >
+<title>[libc.so] (3 samples, 2.97%)</title><rect x="138.5" y="235" width="35.1" height="10.0" fill="rgb(216,152,11)" rx="2" ry="2" />
+<text  x="141.51" y="243" >[l..</text>
+</g>
+<g >
+<title>queue_delayed_work_on (1 samples, 0.99%)</title><rect x="1108.2" y="268" width="11.7" height="10.0" fill="rgb(241,115,14)" rx="2" ry="2" />
+<text  x="1111.22" y="276" ></text>
+</g>
+<g >
+<title>kworker/1:1-eve (1 samples, 0.99%)</title><rect x="781.1" y="213" width="11.7" height="10.0" fill="rgb(250,141,47)" rx="2" ry="2" />
+<text  x="784.09" y="221" ></text>
+</g>
+<g >
+<title>[collectd] (1 samples, 0.99%)</title><rect x="851.2" y="213" width="11.7" height="10.0" fill="rgb(240,26,25)" rx="2" ry="2" />
+<text  x="854.19" y="221" ></text>
+</g>
+<g >
+<title>el0_ia (1 samples, 0.99%)</title><rect x="1073.2" y="169" width="11.7" height="10.0" fill="rgb(219,119,34)" rx="2" ry="2" />
+<text  x="1076.17" y="177" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1131.6" y="180" width="11.7" height="10.0" fill="rgb(247,149,4)" rx="2" ry="2" />
+<text  x="1134.58" y="188" ></text>
+</g>
+<g >
+<title>do_iter_read (1 samples, 0.99%)</title><rect x="1131.6" y="257" width="11.7" height="10.0" fill="rgb(240,102,33)" rx="2" ry="2" />
+<text  x="1134.58" y="265" ></text>
+</g>
+<g >
+<title>wb_writeback (1 samples, 0.99%)</title><rect x="1026.4" y="235" width="11.7" height="10.0" fill="rgb(242,66,54)" rx="2" ry="2" />
+<text  x="1029.44" y="243" ></text>
+</g>
+<g >
+<title>[rrdtool] (1 samples, 0.99%)</title><rect x="173.6" y="191" width="11.6" height="10.0" fill="rgb(207,194,41)" rx="2" ry="2" />
+<text  x="176.56" y="199" ></text>
+</g>
+<g >
+<title>dput (1 samples, 0.99%)</title><rect x="1049.8" y="257" width="11.7" height="10.0" fill="rgb(221,150,54)" rx="2" ry="2" />
+<text  x="1052.80" y="265" ></text>
+</g>
+<g >
+<title>__handle_mm_fault (1 samples, 0.99%)</title><rect x="792.8" y="246" width="11.7" height="10.0" fill="rgb(252,2,18)" rx="2" ry="2" />
+<text  x="795.77" y="254" ></text>
+</g>
+<g >
+<title>rrdtool (1 samples, 0.99%)</title><rect x="862.9" y="114" width="11.7" height="10.0" fill="rgb(216,138,40)" rx="2" ry="2" />
+<text  x="865.87" y="122" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="757.7" y="213" width="11.7" height="10.0" fill="rgb(212,70,20)" rx="2" ry="2" />
+<text  x="760.72" y="221" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="862.9" y="125" width="11.7" height="10.0" fill="rgb(248,58,24)" rx="2" ry="2" />
+<text  x="865.87" y="133" ></text>
+</g>
+<g >
+<title>__arm64_sys_openat (1 samples, 0.99%)</title><rect x="1049.8" y="202" width="11.7" height="10.0" fill="rgb(228,144,13)" rx="2" ry="2" />
+<text  x="1052.80" y="210" ></text>
+</g>
+<g >
+<title>ip_output (1 samples, 0.99%)</title><rect x="1014.8" y="191" width="11.6" height="10.0" fill="rgb(247,146,40)" rx="2" ry="2" />
+<text  x="1017.75" y="199" ></text>
+</g>
+<g >
+<title>proc_pid_lookup (1 samples, 0.99%)</title><rect x="1061.5" y="246" width="11.7" height="10.0" fill="rgb(246,154,51)" rx="2" ry="2" />
+<text  x="1064.49" y="254" ></text>
+</g>
+<g >
+<title>jbd2/sda3-8 (1 samples, 0.99%)</title><rect x="816.1" y="158" width="11.7" height="10.0" fill="rgb(219,102,7)" rx="2" ry="2" />
+<text  x="819.14" y="166" ></text>
+</g>
+<g >
+<title>__arm64_sys_openat (1 samples, 0.99%)</title><rect x="1061.5" y="147" width="11.7" height="10.0" fill="rgb(236,127,54)" rx="2" ry="2" />
+<text  x="1064.49" y="155" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="255.3" y="213" width="11.7" height="10.0" fill="rgb(213,192,24)" rx="2" ry="2" />
+<text  x="258.35" y="221" ></text>
+</g>
+<g >
+<title>inet_sendmsg (1 samples, 0.99%)</title><rect x="1014.8" y="136" width="11.6" height="10.0" fill="rgb(229,52,43)" rx="2" ry="2" />
+<text  x="1017.75" y="144" ></text>
+</g>
+<g >
+<title>work_pending (1 samples, 0.99%)</title><rect x="862.9" y="224" width="11.7" height="10.0" fill="rgb(252,66,14)" rx="2" ry="2" />
+<text  x="865.87" y="232" ></text>
+</g>
+<g >
+<title>set_match_v4 (1 samples, 0.99%)</title><rect x="1014.8" y="235" width="11.6" height="10.0" fill="rgb(228,34,23)" rx="2" ry="2" />
+<text  x="1017.75" y="243" ></text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 0.99%)</title><rect x="1178.3" y="158" width="11.7" height="10.0" fill="rgb(247,108,13)" rx="2" ry="2" />
+<text  x="1181.32" y="166" ></text>
+</g>
+<g >
+<title>vfs_readv (1 samples, 0.99%)</title><rect x="1131.6" y="246" width="11.7" height="10.0" fill="rgb(205,5,12)" rx="2" ry="2" />
+<text  x="1134.58" y="254" ></text>
+</g>
+<g >
+<title>path_openat (1 samples, 0.99%)</title><rect x="1061.5" y="180" width="11.7" height="10.0" fill="rgb(216,86,15)" rx="2" ry="2" />
+<text  x="1064.49" y="188" ></text>
+</g>
+<g >
+<title>sleep (1 samples, 0.99%)</title><rect x="1003.1" y="180" width="11.7" height="10.0" fill="rgb(239,168,40)" rx="2" ry="2" />
+<text  x="1006.07" y="188" ></text>
+</g>
+<g >
+<title>page_add_file_rmap (1 samples, 0.99%)</title><rect x="1073.2" y="268" width="11.7" height="10.0" fill="rgb(236,0,25)" rx="2" ry="2" />
+<text  x="1076.17" y="276" ></text>
+</g>
+<g >
+<title>[tc-tiny] (1 samples, 0.99%)</title><rect x="1061.5" y="92" width="11.7" height="10.0" fill="rgb(250,88,37)" rx="2" ry="2" />
+<text  x="1064.49" y="100" ></text>
+</g>
+<g >
+<title>alloc_set_pte (1 samples, 0.99%)</title><rect x="1073.2" y="257" width="11.7" height="10.0" fill="rgb(216,158,17)" rx="2" ry="2" />
+<text  x="1076.17" y="265" ></text>
+</g>
+<g >
+<title>sh (1 samples, 0.99%)</title><rect x="1073.2" y="147" width="11.7" height="10.0" fill="rgb(233,21,4)" rx="2" ry="2" />
+<text  x="1076.17" y="155" ></text>
+</g>
+<g >
+<title>do_group_exit (1 samples, 0.99%)</title><rect x="1003.1" y="224" width="11.7" height="10.0" fill="rgb(208,204,39)" rx="2" ry="2" />
+<text  x="1006.07" y="232" ></text>
+</g>
+<g >
+<title>[dnsmasq] (4 samples, 3.96%)</title><rect x="80.1" y="257" width="46.7" height="10.0" fill="rgb(219,1,7)" rx="2" ry="2" />
+<text  x="83.10" y="265" >[dns..</text>
+</g>
+<g >
+<title>secondary_start_kernel (1 samples, 0.99%)</title><rect x="1155.0" y="235" width="11.6" height="10.0" fill="rgb(230,212,40)" rx="2" ry="2" />
+<text  x="1157.95" y="243" ></text>
+</g>
+<g >
+<title>sleep (1 samples, 0.99%)</title><rect x="138.5" y="202" width="11.7" height="10.0" fill="rgb(237,34,47)" rx="2" ry="2" />
+<text  x="141.51" y="210" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="196.9" y="202" width="11.7" height="10.0" fill="rgb(230,9,15)" rx="2" ry="2" />
+<text  x="199.93" y="210" ></text>
+</g>
+<g >
+<title>[collectd] (1 samples, 0.99%)</title><rect x="1084.9" y="125" width="11.6" height="10.0" fill="rgb(243,30,7)" rx="2" ry="2" />
+<text  x="1087.85" y="133" ></text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.99%)</title><rect x="1038.1" y="202" width="11.7" height="10.0" fill="rgb(244,88,43)" rx="2" ry="2" />
+<text  x="1041.12" y="210" ></text>
+</g>
+<g >
+<title>usb-storage (1 samples, 0.99%)</title><rect x="1178.3" y="147" width="11.7" height="10.0" fill="rgb(221,190,18)" rx="2" ry="2" />
+<text  x="1181.32" y="155" ></text>
+</g>
+<g >
+<title>vmstat_shepherd (1 samples, 0.99%)</title><rect x="1108.2" y="257" width="11.7" height="10.0" fill="rgb(208,125,16)" rx="2" ry="2" />
+<text  x="1111.22" y="265" ></text>
+</g>
+<g >
+<title>rrdtool (2 samples, 1.98%)</title><rect x="337.1" y="180" width="23.4" height="10.0" fill="rgb(253,123,35)" rx="2" ry="2" />
+<text  x="340.13" y="188" >r..</text>
+</g>
+<g >
+<title>[libubox.so.20210302] (34 samples, 33.66%)</title><rect x="360.5" y="235" width="397.2" height="10.0" fill="rgb(208,74,0)" rx="2" ry="2" />
+<text  x="363.50" y="243" >[libubox.so.20210302]</text>
+</g>
+<g >
+<title>[libz.so.1.2.11] (1 samples, 0.99%)</title><rect x="255.3" y="246" width="11.7" height="10.0" fill="rgb(245,92,47)" rx="2" ry="2" />
+<text  x="258.35" y="254" ></text>
+</g>
+<g >
+<title>kthread (1 samples, 0.99%)</title><rect x="1178.3" y="169" width="11.7" height="10.0" fill="rgb(247,52,48)" rx="2" ry="2" />
+<text  x="1181.32" y="177" ></text>
+</g>
+<g >
+<title>el0_da (1 samples, 0.99%)</title><rect x="792.8" y="191" width="11.7" height="10.0" fill="rgb(209,75,52)" rx="2" ry="2" />
+<text  x="795.77" y="199" ></text>
+</g>
+<g >
+<title>sh (4 samples, 3.96%)</title><rect x="10.0" y="246" width="46.7" height="10.0" fill="rgb(251,49,18)" rx="2" ry="2" />
+<text  x="13.00" y="254" >sh</text>
+</g>
+<g >
+<title>disk_events_workfn (1 samples, 0.99%)</title><rect x="1119.9" y="246" width="11.7" height="10.0" fill="rgb(226,71,24)" rx="2" ry="2" />
+<text  x="1122.90" y="254" ></text>
+</g>
+<g >
+<title>[unknown] (2 samples, 1.98%)</title><rect x="150.2" y="136" width="23.4" height="10.0" fill="rgb(205,130,19)" rx="2" ry="2" />
+<text  x="153.20" y="144" >[..</text>
+</g>
+<g >
+<title>[libc.so] (34 samples, 33.66%)</title><rect x="360.5" y="202" width="397.2" height="10.0" fill="rgb(242,0,34)" rx="2" ry="2" />
+<text  x="363.50" y="210" >[libc.so]</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="851.2" y="246" width="11.7" height="10.0" fill="rgb(216,95,36)" rx="2" ry="2" />
+<text  x="854.19" y="254" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="173.6" y="235" width="11.6" height="10.0" fill="rgb(241,25,29)" rx="2" ry="2" />
+<text  x="176.56" y="243" ></text>
+</g>
+<g >
+<title>reader#1 (1 samples, 0.99%)</title><rect x="68.4" y="191" width="11.7" height="10.0" fill="rgb(226,175,24)" rx="2" ry="2" />
+<text  x="71.42" y="199" ></text>
+</g>
+<g >
+<title>writeback_sb_inodes (1 samples, 0.99%)</title><rect x="1026.4" y="257" width="11.7" height="10.0" fill="rgb(250,140,42)" rx="2" ry="2" />
+<text  x="1029.44" y="265" ></text>
+</g>
+<g >
+<title>[libustream-ssl.so] (34 samples, 33.66%)</title><rect x="360.5" y="246" width="397.2" height="10.0" fill="rgb(248,112,7)" rx="2" ry="2" />
+<text  x="363.50" y="254" >[libustream-ssl.so]</text>
+</g>
+<g >
+<title>arch_call_rest_init (1 samples, 0.99%)</title><rect x="909.6" y="202" width="11.7" height="10.0" fill="rgb(238,22,31)" rx="2" ry="2" />
+<text  x="912.60" y="210" ></text>
+</g>
+<g >
+<title>swapper (1 samples, 0.99%)</title><rect x="839.5" y="224" width="11.7" height="10.0" fill="rgb(220,111,46)" rx="2" ry="2" />
+<text  x="842.50" y="232" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="851.2" y="235" width="11.7" height="10.0" fill="rgb(245,76,31)" rx="2" ry="2" />
+<text  x="854.19" y="243" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (6 samples, 5.94%)</title><rect x="290.4" y="246" width="70.1" height="10.0" fill="rgb(233,157,11)" rx="2" ry="2" />
+<text  x="293.40" y="254" >[librrd..</text>
+</g>
+<g >
+<title>[processes.so] (1 samples, 0.99%)</title><rect x="1131.6" y="147" width="11.7" height="10.0" fill="rgb(239,204,50)" rx="2" ry="2" />
+<text  x="1134.58" y="155" ></text>
+</g>
+<g >
+<title>kthread (1 samples, 0.99%)</title><rect x="816.1" y="180" width="11.7" height="10.0" fill="rgb(248,103,24)" rx="2" ry="2" />
+<text  x="819.14" y="188" ></text>
+</g>
+<g >
+<title>dnsmasq (4 samples, 3.96%)</title><rect x="80.1" y="202" width="46.7" height="10.0" fill="rgb(230,64,20)" rx="2" ry="2" />
+<text  x="83.10" y="210" >dnsm..</text>
+</g>
+<g >
+<title>[libc.so] (4 samples, 3.96%)</title><rect x="208.6" y="202" width="46.7" height="10.0" fill="rgb(243,88,30)" rx="2" ry="2" />
+<text  x="211.61" y="210" >[lib..</text>
+</g>
+<g >
+<title>finish_fault (1 samples, 0.99%)</title><rect x="792.8" y="257" width="11.7" height="10.0" fill="rgb(215,173,24)" rx="2" ry="2" />
+<text  x="795.77" y="265" ></text>
+</g>
+<g >
+<title>usb_stor_control_thread (1 samples, 0.99%)</title><rect x="1178.3" y="180" width="11.7" height="10.0" fill="rgb(225,45,26)" rx="2" ry="2" />
+<text  x="1181.32" y="188" ></text>
+</g>
+<g >
+<title>worker_thread (1 samples, 0.99%)</title><rect x="827.8" y="224" width="11.7" height="10.0" fill="rgb(237,21,2)" rx="2" ry="2" />
+<text  x="830.82" y="232" ></text>
+</g>
+<g >
+<title>reader#1 (1 samples, 0.99%)</title><rect x="1131.6" y="92" width="11.7" height="10.0" fill="rgb(244,17,42)" rx="2" ry="2" />
+<text  x="1134.58" y="100" ></text>
+</g>
+<g >
+<title>cpu_startup_entry (1 samples, 0.99%)</title><rect x="1155.0" y="246" width="11.6" height="10.0" fill="rgb(223,37,51)" rx="2" ry="2" />
+<text  x="1157.95" y="254" ></text>
+</g>
+<g >
+<title>do_translation_fault (1 samples, 0.99%)</title><rect x="1073.2" y="202" width="11.7" height="10.0" fill="rgb(207,145,17)" rx="2" ry="2" />
+<text  x="1076.17" y="210" ></text>
+</g>
+<g >
+<title>do_sys_open (1 samples, 0.99%)</title><rect x="1049.8" y="213" width="11.7" height="10.0" fill="rgb(239,177,18)" rx="2" ry="2" />
+<text  x="1052.80" y="221" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 1.98%)</title><rect x="150.2" y="224" width="23.4" height="10.0" fill="rgb(235,170,49)" rx="2" ry="2" />
+<text  x="153.20" y="232" >[..</text>
+</g>
+<g >
+<title>worker_thread (1 samples, 0.99%)</title><rect x="1108.2" y="235" width="11.7" height="10.0" fill="rgb(224,110,8)" rx="2" ry="2" />
+<text  x="1111.22" y="243" ></text>
+</g>
+<g >
+<title>jbd2_journal_commit_transaction (1 samples, 0.99%)</title><rect x="816.1" y="202" width="11.7" height="10.0" fill="rgb(248,159,50)" rx="2" ry="2" />
+<text  x="819.14" y="210" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1061.5" y="114" width="11.7" height="10.0" fill="rgb(215,102,48)" rx="2" ry="2" />
+<text  x="1064.49" y="122" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="769.4" y="180" width="11.7" height="10.0" fill="rgb(208,180,25)" rx="2" ry="2" />
+<text  x="772.41" y="188" ></text>
+</g>
+<g >
+<title>kthread (1 samples, 0.99%)</title><rect x="827.8" y="213" width="11.7" height="10.0" fill="rgb(254,194,15)" rx="2" ry="2" />
+<text  x="830.82" y="221" ></text>
+</g>
+<g >
+<title>__arm64_sys_clone (1 samples, 0.99%)</title><rect x="769.4" y="213" width="11.7" height="10.0" fill="rgb(213,18,15)" rx="2" ry="2" />
+<text  x="772.41" y="221" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="196.9" y="257" width="11.7" height="10.0" fill="rgb(254,175,36)" rx="2" ry="2" />
+<text  x="199.93" y="265" ></text>
+</g>
+<g >
+<title>kthread (1 samples, 0.99%)</title><rect x="1108.2" y="224" width="11.7" height="10.0" fill="rgb(248,163,4)" rx="2" ry="2" />
+<text  x="1111.22" y="232" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="851.2" y="169" width="11.7" height="10.0" fill="rgb(245,38,40)" rx="2" ry="2" />
+<text  x="854.19" y="177" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1131.6" y="191" width="11.7" height="10.0" fill="rgb(220,152,44)" rx="2" ry="2" />
+<text  x="1134.58" y="199" ></text>
+</g>
+<g >
+<title>swapper (1 samples, 0.99%)</title><rect x="1143.3" y="224" width="11.7" height="10.0" fill="rgb(219,148,2)" rx="2" ry="2" />
+<text  x="1146.27" y="232" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1084.9" y="147" width="11.6" height="10.0" fill="rgb(221,152,48)" rx="2" ry="2" />
+<text  x="1087.85" y="155" ></text>
+</g>
+<g >
+<title>__sys_sendto (1 samples, 0.99%)</title><rect x="1014.8" y="125" width="11.6" height="10.0" fill="rgb(234,206,8)" rx="2" ry="2" />
+<text  x="1017.75" y="133" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="255.3" y="136" width="11.7" height="10.0" fill="rgb(216,46,22)" rx="2" ry="2" />
+<text  x="258.35" y="144" ></text>
+</g>
+<g >
+<title>lookup_slow (1 samples, 0.99%)</title><rect x="1061.5" y="213" width="11.7" height="10.0" fill="rgb(237,207,54)" rx="2" ry="2" />
+<text  x="1064.49" y="221" ></text>
+</g>
+<g >
+<title>[libc.so] (4 samples, 3.96%)</title><rect x="80.1" y="224" width="46.7" height="10.0" fill="rgb(206,48,2)" rx="2" ry="2" />
+<text  x="83.10" y="232" >[lib..</text>
+</g>
+<g >
+<title>[rrdtool] (1 samples, 0.99%)</title><rect x="862.9" y="158" width="11.7" height="10.0" fill="rgb(244,227,18)" rx="2" ry="2" />
+<text  x="865.87" y="166" ></text>
+</g>
+<g >
+<title>__vfs_read (1 samples, 0.99%)</title><rect x="1084.9" y="235" width="11.6" height="10.0" fill="rgb(228,122,22)" rx="2" ry="2" />
+<text  x="1087.85" y="243" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1049.8" y="114" width="11.7" height="10.0" fill="rgb(238,68,2)" rx="2" ry="2" />
+<text  x="1052.80" y="122" ></text>
+</g>
+<g >
+<title>usb_stor_transparent_scsi_command (1 samples, 0.99%)</title><rect x="1166.6" y="202" width="11.7" height="10.0" fill="rgb(212,149,48)" rx="2" ry="2" />
+<text  x="1169.63" y="210" ></text>
+</g>
+<g >
+<title>__arm64_sys_openat (1 samples, 0.99%)</title><rect x="1038.1" y="224" width="11.7" height="10.0" fill="rgb(241,201,35)" rx="2" ry="2" />
+<text  x="1041.12" y="232" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (6 samples, 5.94%)</title><rect x="290.4" y="235" width="70.1" height="10.0" fill="rgb(251,33,39)" rx="2" ry="2" />
+<text  x="293.40" y="243" >[librrd..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="68.4" y="213" width="11.7" height="10.0" fill="rgb(237,125,48)" rx="2" ry="2" />
+<text  x="71.42" y="221" ></text>
+</g>
+<g >
+<title>ksys_read (1 samples, 0.99%)</title><rect x="1084.9" y="213" width="11.6" height="10.0" fill="rgb(237,84,8)" rx="2" ry="2" />
+<text  x="1087.85" y="221" ></text>
+</g>
+<g >
+<title>rrdtool (4 samples, 3.96%)</title><rect x="290.4" y="169" width="46.7" height="10.0" fill="rgb(216,26,53)" rx="2" ry="2" />
+<text  x="293.40" y="177" >rrdt..</text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.99%)</title><rect x="1061.5" y="136" width="11.7" height="10.0" fill="rgb(239,139,27)" rx="2" ry="2" />
+<text  x="1064.49" y="144" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="757.7" y="147" width="11.7" height="10.0" fill="rgb(222,201,15)" rx="2" ry="2" />
+<text  x="760.72" y="155" ></text>
+</g>
+<g >
+<title>dup_mm (1 samples, 0.99%)</title><rect x="769.4" y="246" width="11.7" height="10.0" fill="rgb(216,120,1)" rx="2" ry="2" />
+<text  x="772.41" y="254" ></text>
+</g>
+<g >
+<title>kthread (1 samples, 0.99%)</title><rect x="1026.4" y="191" width="11.7" height="10.0" fill="rgb(241,131,11)" rx="2" ry="2" />
+<text  x="1029.44" y="199" ></text>
+</g>
+<g >
+<title>do_sys_open (1 samples, 0.99%)</title><rect x="1061.5" y="158" width="11.7" height="10.0" fill="rgb(209,190,13)" rx="2" ry="2" />
+<text  x="1064.49" y="166" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.99%)</title><rect x="1014.8" y="103" width="11.6" height="10.0" fill="rgb(240,74,38)" rx="2" ry="2" />
+<text  x="1017.75" y="111" ></text>
+</g>
+<g >
+<title>worker_thread (1 samples, 0.99%)</title><rect x="781.1" y="246" width="11.7" height="10.0" fill="rgb(211,162,27)" rx="2" ry="2" />
+<text  x="784.09" y="254" ></text>
+</g>
+<g >
+<title>sh (1 samples, 0.99%)</title><rect x="769.4" y="147" width="11.7" height="10.0" fill="rgb(229,196,1)" rx="2" ry="2" />
+<text  x="772.41" y="155" ></text>
+</g>
+<g >
+<title>usb_stor_control_thread (1 samples, 0.99%)</title><rect x="1166.6" y="191" width="11.7" height="10.0" fill="rgb(232,225,52)" rx="2" ry="2" />
+<text  x="1169.63" y="199" ></text>
+</g>
+<g >
+<title>submit_bh_wbc (1 samples, 0.99%)</title><rect x="816.1" y="224" width="11.7" height="10.0" fill="rgb(219,9,9)" rx="2" ry="2" />
+<text  x="819.14" y="232" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="757.7" y="246" width="11.7" height="10.0" fill="rgb(233,211,35)" rx="2" ry="2" />
+<text  x="760.72" y="254" ></text>
+</g>
+<g >
+<title>kthread (1 samples, 0.99%)</title><rect x="1096.5" y="246" width="11.7" height="10.0" fill="rgb(209,167,12)" rx="2" ry="2" />
+<text  x="1099.53" y="254" ></text>
+</g>
+<g >
+<title>blk_mq_make_request (1 samples, 0.99%)</title><rect x="816.1" y="257" width="11.7" height="10.0" fill="rgb(218,154,41)" rx="2" ry="2" />
+<text  x="819.14" y="265" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="196.9" y="246" width="11.7" height="10.0" fill="rgb(214,47,23)" rx="2" ry="2" />
+<text  x="199.93" y="254" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (6 samples, 5.94%)</title><rect x="290.4" y="268" width="70.1" height="10.0" fill="rgb(234,52,23)" rx="2" ry="2" />
+<text  x="293.40" y="276" >[librrd..</text>
+</g>
+<g >
+<title>secondary_start_kernel (1 samples, 0.99%)</title><rect x="1143.3" y="235" width="11.7" height="10.0" fill="rgb(231,227,46)" rx="2" ry="2" />
+<text  x="1146.27" y="243" ></text>
+</g>
+<g >
+<title>copy_page_range (1 samples, 0.99%)</title><rect x="769.4" y="257" width="11.7" height="10.0" fill="rgb(214,180,5)" rx="2" ry="2" />
+<text  x="772.41" y="265" ></text>
+</g>
+<g >
+<title>worker_thread (1 samples, 0.99%)</title><rect x="1119.9" y="224" width="11.7" height="10.0" fill="rgb(213,228,1)" rx="2" ry="2" />
+<text  x="1122.90" y="232" ></text>
+</g>
+<g >
+<title>swapper (1 samples, 0.99%)</title><rect x="909.6" y="180" width="11.7" height="10.0" fill="rgb(234,188,19)" rx="2" ry="2" />
+<text  x="912.60" y="188" ></text>
+</g>
+<g >
+<title>default_idle_call (1 samples, 0.99%)</title><rect x="839.5" y="268" width="11.7" height="10.0" fill="rgb(236,205,50)" rx="2" ry="2" />
+<text  x="842.50" y="276" ></text>
+</g>
+<g >
+<title>dbs_work_handler (1 samples, 0.99%)</title><rect x="827.8" y="246" width="11.7" height="10.0" fill="rgb(247,22,35)" rx="2" ry="2" />
+<text  x="830.82" y="254" ></text>
+</g>
+<g >
+<title>rcu_gp_kthread (2 samples, 1.98%)</title><rect x="874.6" y="224" width="23.3" height="10.0" fill="rgb(242,117,11)" rx="2" ry="2" />
+<text  x="877.55" y="232" >r..</text>
+</g>
+<g >
+<title>do_idle (1 samples, 0.99%)</title><rect x="1155.0" y="257" width="11.6" height="10.0" fill="rgb(237,103,39)" rx="2" ry="2" />
+<text  x="1157.95" y="265" ></text>
+</g>
+<g >
+<title>do_page_fault (1 samples, 0.99%)</title><rect x="792.8" y="224" width="11.7" height="10.0" fill="rgb(211,176,54)" rx="2" ry="2" />
+<text  x="795.77" y="232" ></text>
+</g>
+<g >
+<title>usb-storage (1 samples, 0.99%)</title><rect x="1166.6" y="158" width="11.7" height="10.0" fill="rgb(231,8,1)" rx="2" ry="2" />
+<text  x="1169.63" y="166" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="185.2" y="246" width="11.7" height="10.0" fill="rgb(248,123,15)" rx="2" ry="2" />
+<text  x="188.25" y="254" ></text>
+</g>
+<g >
+<title>usb_stor_Bulk_transport (1 samples, 0.99%)</title><rect x="1178.3" y="213" width="11.7" height="10.0" fill="rgb(248,126,32)" rx="2" ry="2" />
+<text  x="1181.32" y="221" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 1.98%)</title><rect x="150.2" y="147" width="23.4" height="10.0" fill="rgb(210,51,3)" rx="2" ry="2" />
+<text  x="153.20" y="155" >[..</text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 0.99%)</title><rect x="1108.2" y="213" width="11.7" height="10.0" fill="rgb(214,47,45)" rx="2" ry="2" />
+<text  x="1111.22" y="221" ></text>
+</g>
+<g >
+<title>[libustream-ssl.so] (4 samples, 3.96%)</title><rect x="208.6" y="246" width="46.7" height="10.0" fill="rgb(246,178,44)" rx="2" ry="2" />
+<text  x="211.61" y="254" >[lib..</text>
+</g>
+<g >
+<title>lockref_put_return (1 samples, 0.99%)</title><rect x="1049.8" y="268" width="11.7" height="10.0" fill="rgb(239,188,16)" rx="2" ry="2" />
+<text  x="1052.80" y="276" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1038.1" y="147" width="11.7" height="10.0" fill="rgb(249,82,50)" rx="2" ry="2" />
+<text  x="1041.12" y="155" ></text>
+</g>
+<g >
+<title>path_openat (1 samples, 0.99%)</title><rect x="1049.8" y="235" width="11.7" height="10.0" fill="rgb(214,207,13)" rx="2" ry="2" />
+<text  x="1052.80" y="243" ></text>
+</g>
+<g >
+<title>[collectd] (1 samples, 0.99%)</title><rect x="68.4" y="235" width="11.7" height="10.0" fill="rgb(217,167,0)" rx="2" ry="2" />
+<text  x="71.42" y="243" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="757.7" y="235" width="11.7" height="10.0" fill="rgb(226,144,41)" rx="2" ry="2" />
+<text  x="760.72" y="243" ></text>
+</g>
+<g >
+<title>process_one_work (1 samples, 0.99%)</title><rect x="1026.4" y="213" width="11.7" height="10.0" fill="rgb(254,13,24)" rx="2" ry="2" />
+<text  x="1029.44" y="221" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1049.8" y="169" width="11.7" height="10.0" fill="rgb(228,3,31)" rx="2" ry="2" />
+<text  x="1052.80" y="177" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (2 samples, 1.98%)</title><rect x="150.2" y="202" width="23.4" height="10.0" fill="rgb(218,100,41)" rx="2" ry="2" />
+<text  x="153.20" y="210" >[..</text>
+</g>
+<g >
+<title>[unknown] (4 samples, 3.96%)</title><rect x="80.1" y="213" width="46.7" height="10.0" fill="rgb(227,52,12)" rx="2" ry="2" />
+<text  x="83.10" y="221" >[unk..</text>
+</g>
+<g >
+<title>__mdiobus_read (1 samples, 0.99%)</title><rect x="804.5" y="246" width="11.6" height="10.0" fill="rgb(237,46,14)" rx="2" ry="2" />
+<text  x="807.46" y="254" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="255.3" y="235" width="11.7" height="10.0" fill="rgb(205,122,10)" rx="2" ry="2" />
+<text  x="258.35" y="243" ></text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 0.99%)</title><rect x="897.9" y="213" width="11.7" height="10.0" fill="rgb(226,186,49)" rx="2" ry="2" />
+<text  x="900.92" y="221" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1049.8" y="125" width="11.7" height="10.0" fill="rgb(222,2,27)" rx="2" ry="2" />
+<text  x="1052.80" y="133" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="757.7" y="136" width="11.7" height="10.0" fill="rgb(221,185,46)" rx="2" ry="2" />
+<text  x="760.72" y="144" ></text>
+</g>
+<g >
+<title>mdiobus_read (1 samples, 0.99%)</title><rect x="804.5" y="235" width="11.6" height="10.0" fill="rgb(219,176,42)" rx="2" ry="2" />
+<text  x="807.46" y="243" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (6 samples, 5.94%)</title><rect x="290.4" y="257" width="70.1" height="10.0" fill="rgb(232,46,37)" rx="2" ry="2" />
+<text  x="293.40" y="265" >[librrd..</text>
+</g>
+<g >
+<title>submit_bh (1 samples, 0.99%)</title><rect x="816.1" y="213" width="11.7" height="10.0" fill="rgb(247,193,25)" rx="2" ry="2" />
+<text  x="819.14" y="221" ></text>
+</g>
+<g >
+<title>ip_send_skb (1 samples, 0.99%)</title><rect x="1014.8" y="169" width="11.6" height="10.0" fill="rgb(216,227,28)" rx="2" ry="2" />
+<text  x="1017.75" y="177" ></text>
+</g>
+<g >
+<title>proc_single_show (1 samples, 0.99%)</title><rect x="1084.9" y="257" width="11.6" height="10.0" fill="rgb(245,216,39)" rx="2" ry="2" />
+<text  x="1087.85" y="265" ></text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.99%)</title><rect x="1131.6" y="202" width="11.7" height="10.0" fill="rgb(243,175,31)" rx="2" ry="2" />
+<text  x="1134.58" y="210" ></text>
+</g>
+<g >
+<title>__arm64_sys_readv (1 samples, 0.99%)</title><rect x="1131.6" y="224" width="11.7" height="10.0" fill="rgb(225,153,35)" rx="2" ry="2" />
+<text  x="1134.58" y="232" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1049.8" y="158" width="11.7" height="10.0" fill="rgb(226,136,43)" rx="2" ry="2" />
+<text  x="1052.80" y="166" ></text>
+</g>
+<g >
+<title>usb_stor_bulk_transfer_sglist.part.5 (1 samples, 0.99%)</title><rect x="1166.6" y="246" width="11.7" height="10.0" fill="rgb(227,81,4)" rx="2" ry="2" />
+<text  x="1169.63" y="254" ></text>
+</g>
+<g >
+<title>kthread (1 samples, 0.99%)</title><rect x="1166.6" y="180" width="11.7" height="10.0" fill="rgb(232,139,24)" rx="2" ry="2" />
+<text  x="1169.63" y="188" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="173.6" y="180" width="11.6" height="10.0" fill="rgb(227,183,22)" rx="2" ry="2" />
+<text  x="176.56" y="188" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="185.2" y="235" width="11.7" height="10.0" fill="rgb(224,152,21)" rx="2" ry="2" />
+<text  x="188.25" y="243" ></text>
+</g>
+<g >
+<title>kthread (1 samples, 0.99%)</title><rect x="781.1" y="235" width="11.7" height="10.0" fill="rgb(211,99,42)" rx="2" ry="2" />
+<text  x="784.09" y="243" ></text>
+</g>
+<g >
+<title>do_mem_abort (1 samples, 0.99%)</title><rect x="1073.2" y="191" width="11.7" height="10.0" fill="rgb(213,31,15)" rx="2" ry="2" />
+<text  x="1076.17" y="199" ></text>
+</g>
+<g >
+<title>usb_stor_bulk_transfer_buf (1 samples, 0.99%)</title><rect x="1178.3" y="224" width="11.7" height="10.0" fill="rgb(206,185,13)" rx="2" ry="2" />
+<text  x="1181.32" y="232" ></text>
+</g>
+<g >
+<title>phy_state_machine (1 samples, 0.99%)</title><rect x="804.5" y="191" width="11.6" height="10.0" fill="rgb(215,196,39)" rx="2" ry="2" />
+<text  x="807.46" y="199" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1084.9" y="103" width="11.6" height="10.0" fill="rgb(234,181,2)" rx="2" ry="2" />
+<text  x="1087.85" y="111" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="792.8" y="136" width="11.7" height="10.0" fill="rgb(242,114,41)" rx="2" ry="2" />
+<text  x="795.77" y="144" ></text>
+</g>
+<g >
+<title>work_pending (1 samples, 0.99%)</title><rect x="851.2" y="257" width="11.7" height="10.0" fill="rgb(223,65,6)" rx="2" ry="2" />
+<text  x="854.19" y="265" ></text>
+</g>
+<g >
+<title>[dnsmasq] (4 samples, 3.96%)</title><rect x="80.1" y="235" width="46.7" height="10.0" fill="rgb(216,197,31)" rx="2" ry="2" />
+<text  x="83.10" y="243" >[dns..</text>
+</g>
+<g >
+<title>__noinstr_text_start (1 samples, 0.99%)</title><rect x="909.6" y="213" width="11.7" height="10.0" fill="rgb(211,229,0)" rx="2" ry="2" />
+<text  x="912.60" y="221" ></text>
+</g>
+<g >
+<title>genphy_update_link (1 samples, 0.99%)</title><rect x="804.5" y="224" width="11.6" height="10.0" fill="rgb(225,187,35)" rx="2" ry="2" />
+<text  x="807.46" y="232" ></text>
+</g>
+<g >
+<title>rrdtool (1 samples, 0.99%)</title><rect x="173.6" y="158" width="11.6" height="10.0" fill="rgb(252,159,35)" rx="2" ry="2" />
+<text  x="176.56" y="166" ></text>
+</g>
+<g >
+<title>[dnsmasq] (4 samples, 3.96%)</title><rect x="80.1" y="246" width="46.7" height="10.0" fill="rgb(249,174,2)" rx="2" ry="2" />
+<text  x="83.10" y="254" >[dns..</text>
+</g>
+<g >
+<title>getname_flags (1 samples, 0.99%)</title><rect x="1038.1" y="257" width="11.7" height="10.0" fill="rgb(221,206,6)" rx="2" ry="2" />
+<text  x="1041.12" y="265" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="792.8" y="180" width="11.7" height="10.0" fill="rgb(247,40,6)" rx="2" ry="2" />
+<text  x="795.77" y="188" ></text>
+</g>
+<g >
+<title>[rrdtool.so] (1 samples, 0.99%)</title><rect x="185.2" y="224" width="11.7" height="10.0" fill="rgb(220,173,4)" rx="2" ry="2" />
+<text  x="188.25" y="232" ></text>
+</g>
+<g >
+<title>__schedule (12 samples, 11.88%)</title><rect x="862.9" y="257" width="140.2" height="10.0" fill="rgb(232,223,2)" rx="2" ry="2" />
+<text  x="865.87" y="265" >__schedule</text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="1084.9" y="92" width="11.6" height="10.0" fill="rgb(236,199,34)" rx="2" ry="2" />
+<text  x="1087.85" y="100" ></text>
+</g>
+<g >
+<title>start_kernel (1 samples, 0.99%)</title><rect x="909.6" y="191" width="11.7" height="10.0" fill="rgb(243,32,22)" rx="2" ry="2" />
+<text  x="912.60" y="199" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="851.2" y="158" width="11.7" height="10.0" fill="rgb(211,128,14)" rx="2" ry="2" />
+<text  x="854.19" y="166" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1014.8" y="70" width="11.6" height="10.0" fill="rgb(237,43,14)" rx="2" ry="2" />
+<text  x="1017.75" y="78" ></text>
+</g>
+<g >
+<title>generic_make_request (1 samples, 0.99%)</title><rect x="816.1" y="246" width="11.7" height="10.0" fill="rgb(252,206,40)" rx="2" ry="2" />
+<text  x="819.14" y="254" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="1038.1" y="180" width="11.7" height="10.0" fill="rgb(232,189,40)" rx="2" ry="2" />
+<text  x="1041.12" y="188" ></text>
+</g>
+<g >
+<title>disk_check_events (1 samples, 0.99%)</title><rect x="1119.9" y="257" width="11.7" height="10.0" fill="rgb(240,83,10)" rx="2" ry="2" />
+<text  x="1122.90" y="265" ></text>
+</g>
+<g >
+<title>terminate_walk (1 samples, 0.99%)</title><rect x="1049.8" y="246" width="11.7" height="10.0" fill="rgb(239,0,12)" rx="2" ry="2" />
+<text  x="1052.80" y="254" ></text>
+</g>
+<g >
+<title>mmput (1 samples, 0.99%)</title><rect x="1003.1" y="246" width="11.7" height="10.0" fill="rgb(249,22,8)" rx="2" ry="2" />
+<text  x="1006.07" y="254" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="792.8" y="147" width="11.7" height="10.0" fill="rgb(220,86,49)" rx="2" ry="2" />
+<text  x="795.77" y="155" ></text>
+</g>
+<g >
+<title>[busybox] (1 samples, 0.99%)</title><rect x="1073.2" y="158" width="11.7" height="10.0" fill="rgb(211,201,3)" rx="2" ry="2" />
+<text  x="1076.17" y="166" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1061.5" y="81" width="11.7" height="10.0" fill="rgb(207,123,20)" rx="2" ry="2" />
+<text  x="1064.49" y="89" ></text>
+</g>
+<g >
+<title>[rrdtool] (1 samples, 0.99%)</title><rect x="255.3" y="147" width="11.7" height="10.0" fill="rgb(219,122,2)" rx="2" ry="2" />
+<text  x="258.35" y="155" ></text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.99%)</title><rect x="1084.9" y="180" width="11.6" height="10.0" fill="rgb(243,14,33)" rx="2" ry="2" />
+<text  x="1087.85" y="188" ></text>
+</g>
+<g >
+<title>unimac_mdio_read (1 samples, 0.99%)</title><rect x="804.5" y="257" width="11.6" height="10.0" fill="rgb(249,30,22)" rx="2" ry="2" />
+<text  x="807.46" y="265" ></text>
+</g>
+<g >
+<title>[rrdtool] (4 samples, 3.96%)</title><rect x="290.4" y="202" width="46.7" height="10.0" fill="rgb(226,203,20)" rx="2" ry="2" />
+<text  x="293.40" y="210" >[rrd..</text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="126.8" y="224" width="11.7" height="10.0" fill="rgb(209,85,30)" rx="2" ry="2" />
+<text  x="129.83" y="232" ></text>
+</g>
+<g >
+<title>process_one_work (1 samples, 0.99%)</title><rect x="1108.2" y="246" width="11.7" height="10.0" fill="rgb(209,110,43)" rx="2" ry="2" />
+<text  x="1111.22" y="254" ></text>
+</g>
+<g >
+<title>kthread (1 samples, 0.99%)</title><rect x="897.9" y="224" width="11.7" height="10.0" fill="rgb(215,15,31)" rx="2" ry="2" />
+<text  x="900.92" y="232" ></text>
+</g>
+<g >
+<title>ip_set_test (1 samples, 0.99%)</title><rect x="1014.8" y="246" width="11.6" height="10.0" fill="rgb(253,85,15)" rx="2" ry="2" />
+<text  x="1017.75" y="254" ></text>
+</g>
+<g >
+<title>worker_thread (1 samples, 0.99%)</title><rect x="1026.4" y="202" width="11.7" height="10.0" fill="rgb(251,138,29)" rx="2" ry="2" />
+<text  x="1029.44" y="210" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="185.2" y="213" width="11.7" height="10.0" fill="rgb(222,209,29)" rx="2" ry="2" />
+<text  x="188.25" y="221" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="757.7" y="191" width="11.7" height="10.0" fill="rgb(211,164,51)" rx="2" ry="2" />
+<text  x="760.72" y="199" ></text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.99%)</title><rect x="1061.5" y="125" width="11.7" height="10.0" fill="rgb(248,21,18)" rx="2" ry="2" />
+<text  x="1064.49" y="133" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="862.9" y="169" width="11.7" height="10.0" fill="rgb(207,140,26)" rx="2" ry="2" />
+<text  x="865.87" y="177" ></text>
+</g>
+<g >
+<title>kthread (1 samples, 0.99%)</title><rect x="1119.9" y="213" width="11.7" height="10.0" fill="rgb(241,78,1)" rx="2" ry="2" />
+<text  x="1122.90" y="221" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="769.4" y="158" width="11.7" height="10.0" fill="rgb(246,157,19)" rx="2" ry="2" />
+<text  x="772.41" y="166" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="255.3" y="169" width="11.7" height="10.0" fill="rgb(215,117,47)" rx="2" ry="2" />
+<text  x="258.35" y="177" ></text>
+</g>
+<g >
+<title>usb_sg_wait (1 samples, 0.99%)</title><rect x="1166.6" y="257" width="11.7" height="10.0" fill="rgb(250,83,12)" rx="2" ry="2" />
+<text  x="1169.63" y="265" ></text>
+</g>
+<g >
+<title>[tc-tiny] (1 samples, 0.99%)</title><rect x="1061.5" y="103" width="11.7" height="10.0" fill="rgb(234,22,13)" rx="2" ry="2" />
+<text  x="1064.49" y="111" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="255.3" y="191" width="11.7" height="10.0" fill="rgb(226,98,26)" rx="2" ry="2" />
+<text  x="258.35" y="199" ></text>
+</g>
+<g >
+<title>kworker/2:1-eve (1 samples, 0.99%)</title><rect x="827.8" y="191" width="11.7" height="10.0" fill="rgb(244,157,0)" rx="2" ry="2" />
+<text  x="830.82" y="199" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="173.6" y="213" width="11.6" height="10.0" fill="rgb(205,35,35)" rx="2" ry="2" />
+<text  x="176.56" y="221" ></text>
+</g>
+<g >
+<title>[collectd] (1 samples, 0.99%)</title><rect x="1131.6" y="136" width="11.7" height="10.0" fill="rgb(251,4,40)" rx="2" ry="2" />
+<text  x="1134.58" y="144" ></text>
+</g>
+<g >
+<title>reader#1 (1 samples, 0.99%)</title><rect x="1084.9" y="81" width="11.6" height="10.0" fill="rgb(234,224,30)" rx="2" ry="2" />
+<text  x="1087.85" y="89" ></text>
+</g>
+<g >
+<title>do_filp_open (1 samples, 0.99%)</title><rect x="1061.5" y="169" width="11.7" height="10.0" fill="rgb(224,177,8)" rx="2" ry="2" />
+<text  x="1064.49" y="177" ></text>
+</g>
+<g >
+<title>filemap_map_pages (1 samples, 0.99%)</title><rect x="1073.2" y="246" width="11.7" height="10.0" fill="rgb(208,47,1)" rx="2" ry="2" />
+<text  x="1076.17" y="254" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.99%)</title><rect x="185.2" y="191" width="11.7" height="10.0" fill="rgb(219,110,6)" rx="2" ry="2" />
+<text  x="188.25" y="199" ></text>
+</g>
+<g >
+<title>link_path_walk.part.74 (1 samples, 0.99%)</title><rect x="1061.5" y="191" width="11.7" height="10.0" fill="rgb(224,150,18)" rx="2" ry="2" />
+<text  x="1064.49" y="199" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.99%)</title><rect x="1038.1" y="136" width="11.7" height="10.0" fill="rgb(249,226,17)" rx="2" ry="2" />
+<text  x="1041.12" y="144" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.99%)</title><rect x="1049.8" y="191" width="11.7" height="10.0" fill="rgb(247,20,5)" rx="2" ry="2" />
+<text  x="1052.80" y="199" ></text>
+</g>
+<g >
+<title>[librrd.so.0.0.0] (1 samples, 0.99%)</title><rect x="862.9" y="202" width="11.7" height="10.0" fill="rgb(242,4,13)" rx="2" ry="2" />
+<text  x="865.87" y="210" ></text>
+</g>
+</g>
+</svg>

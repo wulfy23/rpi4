@@ -2,10 +2,28 @@
 
 # OpenWrt builds for the rpi-4
 
-see: [s]https://forum.openwrt.org/t/rpi4-community-build/69998[/s] to request packages, provide feedback etc.
+see: <s>https://forum.openwrt.org/t/rpi4-community-build/69998</s> to request packages, provide feedback etc.
 
 after being DoS'd by a senior openwrt developer... i'm no longer active on the forums...
-and builds are discontinued
+and builds are <s>discontinued</s> on life support
+
+a few build users have reached out regarding contintuation of builds...
+while the gut says we are prolonging the inedible youth in asia...
+
+given github issues is available to us
+
+- https://github.com/wulfy23/rpi4/issues
+
+it's probably the least I can do to attempt to build images which
+contain critical fixes for CVE's and whatsnot
+
+anticipate degradation in master based builds and potential discontinuation of them, leaving only release builds available
+- factory images if present are primarily for use by existing users of the build
+
+
+
+
+
 
 
 
@@ -90,7 +108,7 @@ and builds are discontinued
 - persistent logs / statistics / nlbwmon / upgrade-data
 - sqmdscp console/other priority @> rpi4.qos
 - lucisshon, wifiadminboot
-- fwcustom geoip-db, bcp38
+- fwcustom geoip-db(git dl)
 
 ## utilities
 - speedtest-ookla(git-dl'd)
@@ -104,6 +122,7 @@ and builds are discontinued
 - openvpn + kmod-tun + wireguard + mwan3 + vpn-pbr
 - banip + adblock
 - many many more... if you call in the next 15mins, you will recieve a free toaster!
+
 
 
 

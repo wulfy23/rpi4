@@ -1,0 +1,1102 @@
+#!/bin/sh
+
+
+
+
+
+
+
+
+
+
+
+
+DIRTYCHECK=$(grep '^Version: 5.10' /usr/lib/opkg/info/kernel.control | awk '{print $2}')
+#echo "CHECK: $DIRTYCHECK"
+
+if grep -q '^Version: 5.10' /usr/lib/opkg/info/kernel.control; then
+
+	case "$DIRTYCHECK" in
+		"5.10.103"*)
+			:
+			#echo "dirty 5.10 safe"
+			#exit 0
+		;;
+		"5.10"*)
+			: #echo "dirty 5.10 unsafe: $DIRTYCHECK"
+			DIRTYISSUE=1
+		;;
+		*)
+			: #exit 0
+		;;
+
+	esac
+
+	:
+fi
+
+
+
+
+
+
+if [ -f /bin/bannermsg_do.sh ] && [ ! -z "$DIRTYISSUE" ]; then
+
+
+
+/bin/bannermsg_do.sh msg "023-50321_dirty-pipe-vulterability" "kernel:$DIRTYCHECK is vulnerable to dirtypipe CVE-2022-0847<br>note: priv-esc aka would require user access<br>update to 5.10.103 or newer</b>" 1>/dev/null 2>/dev/null
+
+
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+FLASHSTATUSf="/tmp/.flashstatus"
+
+
+
+
+ALLPARAMS=${*}
+VERBOSE=1
+RCSLEEP=0
+#DEBUG=1
+
+
+
+
+
+
+
+
+
+
+fails() {
+#@Bshasum not statix in vars
+	rm /tmp/*.img.gz 2>/dev/null
+    if [ ! -z "$AUTOMATED" ]; then
+	    echo "#failed>${1}" > ${FLASHSTATUSf}
+    fi
+    echo "$1" && exit 1
+}
+
+
+
+
+
+
+usage() {
+cat <<EOG
+
+    $0 [-R] [stable|current|testing|20.1] [downgrade/force|check] [-v] [dlonly]
+
+	check   =   report 'upgradable' ( 'flavour' is newer )
+
+        stable  =   long term image with minimal testing code
+        current =   medium term image with some code + latest packages ( medium chance of bugs some new features )
+        testing =   short term image with latest testing code / features / packages ( no opkg repos - removed anytime )
+
+
+	NOTE: 'variants' @ extra||std are not yet supported -> all functionality is based on extra...
+	      std is build / uploaded at the same time as extra so you can still use these checks
+	      to know when builds are available
+
+
+        (-D dbg)
+        (-Q quick)
+        (-q quiet exit status only @ check only) (possible if ! 'docmd' then)
+
+
+	-S [automated]
+
+EOG
+}
+
+
+
+
+
+################################################################### non-echo@-qetc... START
+ecmd="echo "; i=$(basename $0); if [ -x /etc/custom/custfunc.sh  ]; then . /etc/custom/custfunc.sh; ecmd="echm ${i} "; fi
+if [ -f /root/wrt.ini  ]; then . /root/wrt.ini; fi
+if [ -z "$ffD"  ]; then ffD="/root"; fi
+########################################3
+#UPGRADEsFLAVOUR="current"
+########################################3
+#iM="$i" #iM="$(basename $0)"
+iL="/$i.log"
+LOGCHECKS=1 #???fromoldfunction-testdirname?
+
+
+
+
+
+
+
+echL() { SL=$(date +%Y%m%d%H%M%S)
+
+### all cases except * had log anyway move above
+[ -n "$LOGCHECKS" ] && echo "$i-$SL> ${1}" >> $iL
+
+case "${2}" in
+	status) 
+		echo "#${1}" >> "$FLASHSTATUSf" #experimental >> here > msgout sysuponline
+	;;
+	log) :; ;; #MOVEDABOVE [ -n "$LOGCHECKS" ] && echo "$i-$SL> ${1}" >> $iL; return 0
+	msg) #[ -n "$LOGCHECKS" ] && echo "$i-$SL> ${1}" >> $iL
+		$ecmd "$1"
+	;;
+	console) #[ -n "$LOGCHECKS" ] && echo "$i-$SL> ${1}" >> $iL
+		echo "$1" > /dev/console
+	;;
+	logger) #[ -n "$LOGCHECKS" ] && echo "$i-$SL> ${1}" >> $iL
+		logger -p info -t $i "${*}"
+	;;
+	*) $ecmd "$1"; ;;
+esac
+}
+
+#*) $ecmd "$1"; ;;
+################################################################### non-echo@-qetc... END
+
+
+
+
+
+
+
+WGETBIN=$(readlink -f $(type -p wget))
+CURLBIN=$(readlink -f $(type -p curl))
+
+#WGETv="wget --no-parent -q -nd -l1 -nv --show-progress "
+#WGETs="wget --no-parent -q -nd -l1 -nv "
+#-T 3
+WGETv="wget -T 6 --no-parent -q -nd -l1 -nv --show-progress "
+WGETs="wget -T 6 --no-parent -q -nd -l1 -nv "
+
+
+
+#case "$(cat /tmp/sysinfo/board_name)" in '4-model-b')
+MODELf=$(cat /tmp/sysinfo/board_name)
+Gbase="https://raw.github.com/wulfy23/rpi4/master"
+SUMSname="sha256sums"
+Wbase="https://rpi4.wulfy23.info"
+
+
+
+
+
+#WIP->multimodelsupport #case "$(cat /tmp/sysinfo/board_name)" in #esac
+
+
+
+
+while [ "$#" -gt 0 ]; do
+    case "${1}" in
+    "-h"|"--help"|help) usage; shift 1; exit 0; ;;
+    "-D") DEBUG=1; shift 1; ;;
+    "-v") VERBOSE=2; shift 1; ;;
+    "-Q") VERBOSE=0; shift 1; ;;
+
+    "-S")
+		#DONTREALLYFLASH=1 #@cgi>write state to /tmp/.flashstatus "ish" || minimal ~ parsable output
+		VERBOSE=
+		SILENT=1
+		AUTOMATED=1
+		shift 1
+	;;
+
+    stable) FLAVOUR="stable"; shift 1; ;;
+    current) FLAVOUR="current"; shift 1; ;;
+    testing) FLAVOUR="testing"; shift 1; ;;
+	release) FLAVOUR="release"; shift 1; ;;
+	"21."*) FLAVOUR="${1}"; shift 1; ;; #20.1) FLAVOUR="20!.1" #NOTUSINGBELOW-FORNOW-WAS-SAMPLE
+
+    check) DOCHECK="check"; shift 1; ;;
+    downgrade) DOWNGRADE="downgrade"; shift 1; ;;
+    force) FORCE="force"; shift 1; ;;
+    "-R") RESTOREPACKAGES="-R"; shift 1; ;;
+
+    dlonly) DLONLY=1; shift 1; ;;
+
+    *)
+        echo "$0 [stable|current|check] ?:$1"; exit 0 #NOPE echo "$0 [stable|current|check] ?:$1"; usage: exit 0
+    ;;
+    esac #if [ -f
+done
+
+
+
+
+
+
+if [ ! -z "$DEBUG" ]; then RCSLEEP=2; fi #@@@ similar||alsomod@VERBOSE
+if [ ! -z "$DEBUG" ]; then VERBOSE=2; fi #@@@ && [ "$VERSBOSE" -lt 2]; then
+##############################################################echo "debugnoflavourgiven"; set -x
+
+
+
+################################################################################3 POPULATE VARS from INI if NOTGIVEN
+#FLAVOUR="${FLAVOUR:-UPGRADEsFLAVOUR}"
+############################################################## FLAVOUR
+if [ -z "${FLAVOUR}" ] && [ ! -z "${UPGRADEsFLAVOUR}" ]; then
+
+    #@@@if [ ! -z "$DEBUG" ] #|| VERSBOS
+    if [ ! -z "$VERBOSE" ] && [ "$VERBOSE" -gt 1 ]; then
+        echo "no-flavour-given@ini> FLAVOUR=${UPGRADEsFLAVOUR}"; sleep 1
+    fi
+    FLAVOUR="${UPGRADEsFLAVOUR}"
+
+elif [ -z "${FLAVOUR}" ] && [ -z "${UPGRADEsFLAVOUR}" ]; then
+    echo "err> you must specify build flavour: [stable|current|testing|20.1]"
+    echo "or UPGRADEsFLAVOUR=[stable|current|testing|20.1] in wrt.ini"
+    #UPGRADEsFLAVOUR="current"
+    exit 0
+
+else
+    if [ ! -z "$DEBUG" ]; then
+        echo "flavour@cmdline> FLAVOUR=${FLAVOUR}"; sleep ${RCSLEEP:0}
+    fi
+fi
+
+
+
+
+
+
+
+
+   
+   
+	case "${FLAVOUR}" in
+	"21.02"*) #20210917TESTONLY-NOTWORKING
+
+
+		echo "no release build available"; exit 0
+	#	echo "version: ${FLAVOUR} no build available"; exit 0 #usage; exit 0
+		;;
+
+
+	release)
+
+#Fsub="builds/rpi-4_21.02.2_1.1.5-2_r16495_extra"
+#Bname="rpi4.64-21.02.2-29129-1.1.5-2-r16495-ext4-sys.img.gz"
+
+
+#Fsub="builds/rpi-4_21.02.2_1.1.5-7_r16495_extra"
+#Bname="rpi4.64-21.02.2-29132-1.1.5-7-r16495-ext4-sys.img.gz"
+
+
+Fsub="builds/rpi-4_21.02.2_1.1.5-13_r16495_extra"
+Bname="rpi4.64-21.02.2-29139-1.1.5-13-r16495-ext4-sys.img.gz"
+
+Fsub="builds/rpi-4_21.02.2_1.1.5-17_r16495_extra"
+Bname="rpi4.64-21.02.2-29163-1.1.5-17-r16495-ext4-sys.img.gz"
+
+Fsub="builds/rpi-4_21.02.2_1.1.5-19_r16495_extra"
+Bname="rpi4.64-21.02.2-29166-1.1.5-19-r16495-ext4-sys.img.gz"
+
+
+#bullseye sysinfohosts argonupdatecheckcolor elfdatswitcher
+#Fsub="builds/rpi-4_21.02.2_1.1.5-23_r16495_extra"
+#Bname="rpi4.64-21.02.2-29226-1.1.5-23-r16495-ext4-sys.img.gz"
+
+
+Fsub="builds/devel/rpi-4_21.02.2_1.1.5-23_r16495_extra"
+Bname="rpi4.64-21.02.2-29226-1.1.5-23-r16495-ext4-sys.img.gz"
+
+
+
+
+
+#		echo "no release build available"; exit 0
+    ;; ############################################################## ENDRELEASE 
+
+
+
+
+
+	stable)
+
+Fsub="builds/rpi-4_snapshot_5.0.77-132_r18711_extra"
+Bname="rpi4.64-snapshot-27935-5.0.77-132-r18711-ext4-sys.img.gz"
+
+
+Fsub="builds/rpi-4_snapshot_5.0.93-5_r18777_extra"
+Bname="rpi4.64-snapshot-27961-5.0.93-5-r18777-ext4-sys.img.gz"
+
+
+
+
+Fsub="builds/rpi-4_snapshot_5.0.93-7_r18777_extra"
+Bname="rpi4.64-snapshot-27961-5.0.93-7-r18777-ext4-sys.img.gz"
+
+
+
+Fsub="builds/rpi-4_snapshot_5.0.93-11_r18777_extra"
+Bname="rpi4.64-snapshot-27963-5.0.93-11-r18777-ext4-sys.img.gz"
+
+Fsub="builds/rpi-4_snapshot_5.0.93-17_r18777_extra"
+Bname="rpi4.64-snapshot-27970-5.0.93-17-r18777-ext4-sys.img.gz"
+
+
+
+Fsub="builds/rpi-4_snapshot_5.0.93-79_r18777_extra"
+Bname="rpi4.64-snapshot-29061-5.0.93-79-r18777-ext4-sys.img.gz"
+
+
+
+
+
+#Fsub="builds/rpi-4_snapshot_5.0.93-131_r18777_extra"
+#Bname="rpi4.64-snapshot-29133-5.0.93-131-r18777-ext4-sys.img.gz"
+
+
+
+#tcpdumpcve
+Fsub="builds/rpi-4_snapshot_5.0.103-11_r18913_extra"
+Bname="rpi4.64-snapshot-29162-5.0.103-11-r18913-ext4-sys.img.gz"
+
+
+
+Fsub="builds/rpi-4_snapshot_5.0.103-12_r18913_extra"
+Bname="rpi4.64-snapshot-29166-5.0.103-12-r18913-ext4-sys.img.gz"
+
+
+
+
+#Fsub="builds/rpi-4_snapshot_5.0.135-7_r19039_extra"
+#Bname="rpi4.64-snapshot-29225-5.0.135-7-r19039-ext4-sys.img.gz"
+
+
+Fsub="builds/rpi-4_snapshot_5.0.109-9_r19003_extra"
+Bname="rpi4.64-snapshot-29225-5.0.109-9-r19003-ext4-sys.img.gz"
+
+
+
+Fsub="builds/rpi-4_snapshot_5.0.109-13_r19003_extra"
+Bname="rpi4.64-snapshot-29232-5.0.109-13-r19003-ext4-sys.img.gz"
+
+
+
+Fsub="builds/rpi-4_snapshot_5.0.109-15_r19003_extra"
+Bname="rpi4.64-snapshot-29233-5.0.109-15-r19003-ext4-sys.img.gz"
+
+
+
+
+Fsub="builds/rpi-4_snapshot_5.7.5-2_r19075_extra"
+Bname="rpi4.64-snapshot-29236-5.7.5-2-r19075-ext4-sys.img.gz"
+
+
+
+
+
+		#echo "no stable build available"; exit 0
+    ;; ############################################################## ENDSTABLE
+
+
+
+
+
+
+
+
+
+	current)
+
+Fsub="builds/rpi-4_snapshot_5.0.77-132_r18711_extra"
+Bname="rpi4.64-snapshot-27935-5.0.77-132-r18711-ext4-sys.img.gz"
+
+Fsub="builds/rpi-4_snapshot_5.0.93-5_r18777_extra"
+Bname="rpi4.64-snapshot-27961-5.0.93-5-r18777-ext4-sys.img.gz"
+
+
+Fsub="builds/rpi-4_snapshot_5.0.93-7_r18777_extra"
+Bname="rpi4.64-snapshot-27961-5.0.93-7-r18777-ext4-sys.img.gz"
+
+Fsub="builds/rpi-4_snapshot_5.0.93-11_r18777_extra"
+Bname="rpi4.64-snapshot-27963-5.0.93-11-r18777-ext4-sys.img.gz"
+
+Fsub="builds/rpi-4_snapshot_5.0.93-17_r18777_extra"
+Bname="rpi4.64-snapshot-27970-5.0.93-17-r18777-ext4-sys.img.gz"
+
+
+
+Fsub="builds/rpi-4_snapshot_5.0.93-79_r18777_extra"
+Bname="rpi4.64-snapshot-29061-5.0.93-79-r18777-ext4-sys.img.gz"
+
+
+#Fsub="builds/rpi-4_snapshot_5.0.93-131_r18777_extra"
+#Bname="rpi4.64-snapshot-29133-5.0.93-131-r18777-ext4-sys.img.gz"
+
+
+
+
+
+
+#tcpdumpcve
+Fsub="builds/rpi-4_snapshot_5.0.103-11_r18913_extra"
+Bname="rpi4.64-snapshot-29162-5.0.103-11-r18913-ext4-sys.img.gz"
+
+
+
+Fsub="builds/rpi-4_snapshot_5.0.103-12_r18913_extra"
+Bname="rpi4.64-snapshot-29166-5.0.103-12-r18913-ext4-sys.img.gz"
+
+
+
+Fsub="builds/rpi-4_snapshot_5.0.109-5_r19003_extra"
+Bname="rpi4.64-snapshot-29211-5.0.109-5-r19003-ext4-sys.img.gz"
+
+
+
+Fsub="builds/rpi-4_snapshot_5.0.109-7_r19003_extra"
+Bname="rpi4.64-snapshot-29213-5.0.109-7-r19003-ext4-sys.img.gz"
+
+
+Fsub="builds/rpi-4_snapshot_5.0.135-5_r19039_extra"
+Bname="rpi4.64-snapshot-29223-5.0.135-5-r19039-ext4-sys.img.gz"
+
+
+
+#Fsub="builds/rpi-4_snapshot_5.0.135-7_r19039_extra"
+#Bname="rpi4.64-snapshot-29225-5.0.135-7-r19039-ext4-sys.img.gz"
+
+
+
+
+Fsub="builds/rpi-4_snapshot_5.0.109-9_r19003_extra"
+Bname="rpi4.64-snapshot-29225-5.0.109-9-r19003-ext4-sys.img.gz"
+
+
+Fsub="builds/rpi-4_snapshot_5.0.109-13_r19003_extra"
+Bname="rpi4.64-snapshot-29232-5.0.109-13-r19003-ext4-sys.img.gz"
+
+
+
+
+
+
+Fsub="builds/rpi-4_snapshot_5.0.109-15_r19003_extra"
+Bname="rpi4.64-snapshot-29233-5.0.109-15-r19003-ext4-sys.img.gz"
+
+
+
+Fsub="builds/rpi-4_snapshot_5.7.5-2_r19075_extra"
+Bname="rpi4.64-snapshot-29236-5.7.5-2-r19075-ext4-sys.img.gz"
+
+
+
+
+
+
+
+
+		#echo "no current build available"; exit 0
+	;; ############################################################## ENDCURRENT
+
+
+
+
+
+
+    testing)
+Fsub="builds/rpi-4_snapshot_5.0.109-9_r19003_extra"
+Bname="rpi4.64-snapshot-29225-5.0.109-9-r19003-ext4-sys.img.gz"
+
+
+Fsub="builds/devel/rpi-4_21.02.2_1.1.5-19_r16495_extra"
+Bname="rpi4.64-21.02.2-29166-1.1.5-19-r16495-ext4-sys.img.gz"
+
+
+Fsub="builds/devel/rpi-4_21.02.2_1.1.5-23_r16495_extra"
+Bname="rpi4.64-21.02.2-29226-1.1.5-23-r16495-ext4-sys.img.gz"
+
+
+
+#		echo "no testing build available"; exit 0
+	
+	;; ############################################################## ENDTESTING
+
+
+
+
+    *) echo "unknown flavour ${FLAVOUR} no build available"; usage; exit 0; ;;
+    esac
+
+
+
+
+
+
+if [ -z "$DOCHECK" ]; then if [ -z "$Bname" ]; then echo "no> $0 stable|current|check@@@" && exit 0; fi; fi
+if [ -z "$Bname" ]; then echo "no> $0 stable|current|check@@@" && exit 0; fi ###paranoid/checksforgitextrapathsetvars
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#oSYSURL="$Gbase/$Fsub/$Bname"
+oSYSURL="$Wbase/$Fsub/$Bname"
+
+
+
+
+
+
+
+
+SYSout="/tmp/${Bname}" #SYSout="/tmp/rpisysup.sh"
+
+
+
+
+#echo "$oSYSURL"
+
+
+
+
+
+
+
+
+
+
+
+
+
+#@@@prereqwget||curlcheckmods
+if [ ! -z "$VERBOSE" ] && [ "$VERBOSE" -eq 2 ]; then
+    WGET="$WGETv"
+elif [ -z "$DOCHECK" ]; then
+    WGET="$WGETs"
+else
+    WGET="$WGETs"
+    #WGET="$WGETv"
+fi
+
+
+
+
+
+
+
+
+
+
+if [ -f "${SYSout}" ] && [ -z "$FORCE" ]; then
+	IMGINTMP=1 #@!!!NEEDTORM@cleanup on shasumfail
+fi
+
+
+
+if [ ! -z "$IMGINTMP" ]; then
+	: #dbgmsg...
+fi
+
+
+
+
+
+
+if [ ! -z "$DEBUG" ]; then
+    echo "# $0 ${ALLPARAMS}"
+    echo "    git-repo: $Gbase"
+    echo "######################################################"
+    echo "      modelf: $MODELf"
+    echo "     flavour: $FLAVOUR"
+    echo "######################################################"
+    sleep ${RCSLEEP:-0}; sleep ${RCSLEEP:-0}; sleep ${RCSLEEP:-0}
+fi
+
+
+
+
+
+	if [ ! -z "$DEBUG" ]; then echo "${Gbase}/${Fsub}/ibbuildinformation.txt"; sleep ${RCSLEEP:-0}; fi
+	if [ ! -z "$VERBOSE" ] && [ "$VERBOSE" -gt 1 ] && [ ! -z "$SILENT" ]; then
+		echo "Downloading ibbuildinformation.txt..."; sleep ${RCSLEEP:-0}
+	fi
+
+	$WGET -O /tmp/ibbuildinformation.txt "${Wbase}/${Fsub}/ibbuildinformation.txt" || fails "buildinfo-dlprob"
+
+
+
+
+echo "${oSYSURL}" > /tmp/.updateurl #OLD-addflavourforfaster-safer-use
+echo "${oSYSURL}" > /tmp/.updateurl.$FLAVOUR
+
+
+
+
+
+
+
+
+
+
+
+
+onsysVERSION=$(cat /etc/custom/buildinfo.txt | grep '^localversion' | cut -d'=' -f2 | sed 's/"//g' | sed "s/'//g")
+onsysVERSIONn=$(echo $onsysVERSION | sed 's/\.//g' | sed "s/\-//g")
+onsysVERSION_M=$(echo $onsysVERSION | cut -d'.' -f1)
+onsysVERSION_m=$(echo $onsysVERSION | cut -d'.' -f2)
+onsysVERSION_s=$(echo $onsysVERSION | cut -d'.' -f3 | sed 's/\-.*$//g') #onsysVERSION_s=$(echo $onsysVERSION | cut -d'.' -f3)
+if echo $onsysVERSION | grep -q '\-'; then onsysVERSION_r=$(echo $onsysVERSION | cut -d'-' -f2); else onsysVERSION_r=0; fi
+onsysVERSION_c="${onsysVERSION_M}${onsysVERSION_m}${onsysVERSION_s}${onsysVERSION_r}"
+onlineVERSION=$(cat /tmp/ibbuildinformation.txt | grep '^localversion' | cut -d'=' -f2 | sed 's/"//g' | sed "s/'//g")
+
+#onlineVERSION="1.15.17-53" #dummyolder
+#onlineVERSION="2.15.17-53" #dummyolder
+#onlineVERSION="0.15.17-53" #dummyolder
+
+onlineVERSIONn=$(echo $onlineVERSION | sed 's/\.//g' | sed "s/\-//g")
+onlineVERSION_M=$(echo $onlineVERSION | cut -d'.' -f1)
+onlineVERSION_m=$(echo $onlineVERSION | cut -d'.' -f2)
+onlineVERSION_s=$(echo $onlineVERSION | cut -d'.' -f3 | sed 's/\-.*$//g') #onlineVERSION_s=$(echo $onlineVERSION | cut -d'.' -f3)
+if echo $onlineVERSION | grep -q '\-'; then onlineVERSION_r=$(echo $onlineVERSION | cut -d'-' -f2); else onlineVERSION_r=0; fi
+onlineVERSION_c="${onlineVERSION_M}${onlineVERSION_m}${onlineVERSION_s}${onlineVERSION_r}"
+
+
+
+
+
+
+
+if [ "${onsysVERSION_M}" -lt "${onlineVERSION_M}" ]; then
+    M_newer=1
+    NEWER=1
+fi
+if [ -z "$M_newer" ] && [ "${onsysVERSION_M}" -eq "${onlineVERSION_M}" ]; then
+    if [ "${onsysVERSION_m}" -lt "${onlineVERSION_m}" ]; then m_newer=1; fi
+    if [ "${onsysVERSION_m}" -lt "${onlineVERSION_m}" ]; then m_newer=$((${onlineVERSION_m} - ${onsysVERSION_m})); fi
+fi
+
+
+
+
+
+
+if [ -z "$m_newer" ]; then
+    if [ "${onsysVERSION_M}" -eq "${onlineVERSION_M}" ] && [ "${onsysVERSION_m}" -eq "${onlineVERSION_m}" ]; then
+        #if [ "${onsysVERSION_s}" -lt "${onlineVERSION_s}" ]; then s_newer=1; fi
+        if [ "${onsysVERSION_s}" -lt "${onlineVERSION_s}" ]; then s_newer=$((${onlineVERSION_s} - ${onsysVERSION_s})); fi
+    fi
+fi
+
+
+
+
+
+
+
+
+
+if [ -z "$s_newer" ]; then
+    if [ "${onsysVERSION_M}" -eq "${onlineVERSION_M}" ] && [ "${onsysVERSION_m}" -eq "${onlineVERSION_m}" ] && \
+        [ "${onsysVERSION_s}" -eq "${onlineVERSION_s}" ]; then
+            #if [ "${onsysVERSION_r}" -lt "${onlineVERSION_r}" ]; then r_newer=1; fi
+            if [ "${onsysVERSION_r}" -lt "${onlineVERSION_r}" ]; then r_newer=$((${onlineVERSION_r} - ${onsysVERSION_r})); fi
+        fi
+fi
+
+
+
+
+
+
+
+
+
+
+#if [ -z "$r_newer" ]; then OLDER=1; fi
+if [ -z "$r_newer" ] && [ -z "$M_newer" ] && [ -z "$m_newer" ] && [ -z "$s_newer" ]; then
+    #if [ -z "$M_newer" ] && [ -z "$m_newer" ] && [ -z "$s_newer" ]; then
+        OLDER=1
+    #fi
+#else
+fi
+
+
+
+
+
+
+
+###################################
+#if [ ! -z "$DEBUG" ]; then echo "OLDER: $OLDER M_newer: $M_newer m_newer: $m_newer s_newer: $s_newer r_newer: $r_newer"; fi
+###sleep 3; #exit 0
+###################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+if [ "$onlineVERSION" = "$onsysVERSION" ]; then
+    echo "   online:$onlineVERSION = onsys:$onsysVERSION"; #sleep 1
+    if [ ! -z "$FORCE" ] || [ ! -z "$DOWNGRADE" ]; then  #if [ -z "$FORCE" ]; then #-z DOWNGRADE
+		echo "force:$FORCE/downgrade:$DOWNGRADE given flash(continue) anyway (unless check given)"
+        DOWNGRADE=1
+    else
+
+		if ([ ! -z "$VERBOSE" ] && [ "$VERBOSE" -gt 1 ]) || [ ! -z "$DEBUG" ]; then
+			echo "force:$FORCE/downgrade:$DOWNGRADE notgiven-sameversion -> exit"
+        fi
+
+		exit 0 #if [ -z "$FORCE" ]; then #|| [ -z "$DOWNGRADE" ]; then  #if [ -z "$FORCE" ]; then #-z DOWNGRADE
+    fi
+
+
+
+
+elif [ ! -z "$OLDER" ]; then
+    echo "   flavour:${FLAVOUR} online:$onlineVERSION[older] onsys:$onsysVERSION ${DOWNGRADE}"; #sleep 2
+else
+    
+
+
+if [ "${onsysVERSION_M}" -eq "${onlineVERSION_M}" ] && [ "${onsysVERSION_m}" -eq "${onlineVERSION_m}" ] && \
+        [ "${onsysVERSION_s}" -eq "${onlineVERSION_s}" ]; then
+            if [ "${onsysVERSION_r}" -lt "${onlineVERSION_r}" ]; then
+		    #r_newer=$((${onlineVERSION_r} - ${onsysVERSION_r})); 
+
+
+	echo "   ${FLAVOUR}[minor-update] online:${onlineVERSION}($onsysVERSION)"; #sleep 2
+
+echo "${r_newer:-0}" > /tmp/.updatecheck.numrevisionsM
+
+
+
+
+
+else
+	echo "   flavour:${FLAVOUR} online:${onlineVERSION}[newer] onsys:$onsysVERSION notminorFIXMENOIDEAWHATENTERSHERE"; #sleep 2
+
+
+
+
+
+
+	fi
+
+
+
+
+else
+
+	echo "   ${FLAVOUR} [newer-major] ${onlineVERSION}($onsysVERSION)"; #sleep 2
+
+
+
+
+
+fi
+
+
+
+
+
+
+
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	if [ ! -z "$AUTOMATED" ] && [ ! -z "$DOCHECK" ]; then
+		echo "#check-complete" > ${FLASHSTATUSf}
+	fi
+
+
+
+    if [ ! -z "$DOCHECK" ]; then exit 0; fi #echo "checkonly... " && exit 0; fi
+
+
+
+    if [ ! -z "$OLDER" ] && [ -z "$DOWNGRADE" ]; then
+            
+	
+		if [ -z "$SILENT" ]; then #SILENT = downgrade from luci so just do it
+			echo "use> 'downgrade'"; sleep 1; exit 0 #echo "use> $0 'downgrade'"; sleep 1; exit 0
+    	fi
+		
+		
+	elif [ ! -z "$OLDER" ] && [ ! -z "$DOWNGRADE" ]; then
+            : #echo "downgrading..."; sleep 1 ######echo "downgrading...: ${DOWNGRADE}"; sleep 1
+    fi
+
+
+
+if [ ! -z "$VERBOSE" ] && [ ! -z "$SILENT" ]; then
+	echo "VERBOSE(debug) and -S(SILENT) should not be used together"
+	sleep 2
+fi
+
+
+
+
+
+
+if [ -z "$IMGINTMP" ]; then
+
+
+if [ ! -z "$VERBOSE" ] && [ "$VERBOSE" -eq 1 ]; then
+    echo "Downloading... $FLAVOUR"; sleep ${RCSLEEP:-0} #echo "Download: wulfy23/rpi4 $FLAVOUT"; sleep 1 #FLAVOUT?
+elif [ ! -z "$VERBOSE" ] && [ "$VERBOSE" -gt 1 ]; then
+    echo "Download: wulfy23/rpi4 $FLAVOUR $Bname ($oSYSURL)"; sleep ${RCSLEEP:-0}
+fi
+
+if [ ! -z "$AUTOMATED" ]; then #SILENT
+	#@echL "msg" status
+	echo "downloading..." >> ${FLASHSTATUSf}
+fi
+
+
+#else nodlneeded IMGINTMP
+
+
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+if [ -z "$IMGINTMP" ] && [ -z "$FORCE" ]; then
+
+	if [ ! -z "$AUTOMATED" ]; then #SILENT
+		#@echL "msg" status
+		echo "downloading..." > ${FLASHSTATUSf}
+	fi
+
+	#$WGET -O ${SYSout} "${oSYSURL}" || fails "dl-img-prob"
+	if ! $WGET -O ${SYSout} "${oSYSURL}"; then
+		rm ${SYSout} 2>/dev/null #@and all the other files...
+		fails "dl-img-prob"
+	fi
+
+elif [ ! -z "$IMGINTMP" ]; then
+	echo "image@tmp: $SYSout" >&2
+fi
+
+
+
+
+
+
+if [ -z "$IMGINTMP" ]; then
+
+
+
+if [ ! -z "$VERBOSE" ] && [ "$VERBOSE" -gt 1 ] && [ ! -z "$SILENT" ]; then
+    echo "Download: sha256sums" >&2; sleep ${RCSLEEP:-0}
+fi
+$WGET -O /tmp/sha256sums "${Wbase}/${Fsub}/sha256sums" || fails "dl-shasum-prob"
+
+#else imgintmp skipshasumget
+fi
+
+
+
+
+
+
+
+if [ -z "$IMGINTMP" ]; then
+
+
+if [ ! -z "$VERBOSE" ] && [ "$VERBOSE" -gt 1 ]; then
+	echo "sha256sum check" >&2; sleep ${RCSLEEP:-0}
+fi
+
+CDIR="${PWD}"
+cd /tmp
+sha256sum -c sha256sums 2>/dev/null| grep -v 'ibbuildinfo' | grep OK || fails "shasum-chk-issue"; cd $CDIR
+#echo "cd /tmp; sha256sum -c sha256sums 2>/dev/null|grep OK; cd $CDIR" #sha256sum -c /tmp/sha256sums 2>/dev/null|grep OK
+
+
+fi
+
+
+
+
+
+
+
+
+
+
+if [ ! -z "$RESTOREPACKAGES" ]; then #prep-dootherstuffhere
+    :
+else
+    :
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+#if [ ! -z "$IMGINTMP" ]; then
+
+
+
+
+#@@@new@20201212
+if [ ! -z "$DLONLY" ] && [ ! -z "$AUTOMATED" ]; then
+	#if [ -z "$IMGINTMP" ]; then
+	if [ -z "$IMGINTMP" ] && ! grep -q "downloaded" ${FLASHSTATUSf}; then
+		echo "#downloaded..." > ${FLASHSTATUSf}
+	fi
+	exit 0
+elif [ ! -z "$DLONLY" ]; then
+	echo "DLONLY img @ ${SYSout}"
+	exit 0
+fi
+
+
+#fi
+
+
+
+if [ ! -z "$AUTOMATED" ]; then #NOTJUSTAUTOMATEDsysupgradeWILLexitWITHOUTTHISanywayBUTstderr/outputusefulforcleanmsg
+	#2>Terr=z? #@@@touch.$SYSout.valid
+	sysupgrade -T ${SYSout} 2>${FLASHSTATUSf}.T 1>${FLASHSTATUSf}.T
+	if grep -q 'Use sysupgrade -F ' ${FLASHSTATUSf}.T; then
+		echo "#failed[invalidmsg]..." > ${FLASHSTATUSf}
+	else
+		echo "#flashing..." > ${FLASHSTATUSf}
+	fi
+fi
+
+
+
+
+
+if [ ! -z "$AUTOMATED" ] && grep -q '^#failed' ${FLASHSTATUSf}; then
+	echo "######### failed-flash [add-cleanup-handle]"
+	$(cat $FLASHSTATUSf)
+	exit 0
+fi
+
+#echo "FORCEEXITforFLASHINGstateTEST"
+#exit 0
+
+
+         
+
+
+
+
+
+
+
+if [ ! -z "$DONTREALLYFLASH" ]; then
+	echo "-S TESTING DONTREALLY FLASH" > /dev/console
+	echo "#disabled...DONTREALLYFLASH" > ${FLASHSTATUSf}
+	exit 0
+fi
+
+
+
+
+
+
+
+
+#if [ ! -z "$VERBOSE" ] && [ "$VERBOSE" -eq 1 ]; then echo "run> sysupgrade $RESTOREPACKAGES ${SYSout}"; sleep 2; fi
+
+if [ ! -z "$VERBOSE" ] && [ "$VERBOSE" -gt 1 ]; then
+    echo "sysupgrade -v $RESTOREPACKAGES ${SYSout}"; sleep ${RCSLEEP:-"2"}
+    sysupgrade -v $RESTOREPACKAGES ${SYSout}
+else
+    #echo "runthiscommand> sysupgrade $RESTOREPACKAGES ${SYSout}"
+    sysupgrade $RESTOREPACKAGES ${SYSout}
+fi
+#@@@silent redirect?+logger?
+
+
+
+
+
+
+
+
+
+
+
+exit 0
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,2820 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" width="1200" height="631" onload="init(evt)" viewBox="0 0 1200 631" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id="background" y1="0" y2="1" x1="0" x2="0" >
+		<stop stop-color="#eeeeee" offset="5%" />
+		<stop stop-color="#eeeeb0" offset="95%" />
+	</linearGradient>
+</defs>
+<style type="text/css">
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type="text/ecmascript">
+<![CDATA[
+	"use strict";
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById("details").firstChild;
+		searchbtn = document.getElementById("search");
+		ignorecaseBtn = document.getElementById("ignorecase");
+		unzoombtn = document.getElementById("unzoom");
+		matchedtxt = document.getElementById("matched");
+		svg = document.getElementsByTagName("svg")[0];
+		searching = 0;
+		currentSearchTerm = null;
+	}
+
+	window.addEventListener("click", function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == "a") {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains("parent")) unzoom();
+			zoom(target);
+		}
+		else if (e.target.id == "unzoom") unzoom();
+		else if (e.target.id == "search") search_prompt();
+		else if (e.target.id == "ignorecase") toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener("mouseover", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = "Function: " + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener("mouseout", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	window.addEventListener("keydown",function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+	}, false)
+
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener("keydown",function (e) {
+		if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+		return;
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == "frames") return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes["_orig_" + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute("_orig_" + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes["_orig_"+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes["_orig_" + attr].value;
+		e.removeAttribute("_orig_"+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, "title").firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, "rect");
+		var t = find_child(e, "text");
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, "title").textContent.replace(/\([^(]*\)$/,"");
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = "";
+			return;
+		}
+
+		t.textContent = txt;
+		// Fit in full text width
+		if (/^ *$/.test(txt) || t.getSubStringLength(0, txt.length) < w)
+			return;
+
+		for (var x = txt.length - 2; x > 0; x--) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + "..";
+				return;
+			}
+		}
+		t.textContent = "";
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, "x");
+			orig_load(e, "width");
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == "text")
+					e.attributes.x.value = find_child(e.parentNode, "rect[x]").attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, "rect").attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove("hide");
+
+		var el = document.getElementById("frames").children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, "rect").attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add("parent");
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add("hide");
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add("hide");
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom() {
+		unzoombtn.classList.add("hide");
+		var el = document.getElementById("frames").children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove("parent");
+			el[i].classList.remove("hide");
+			zoom_reset(el[i]);
+			update_text(el[i]);
+		}
+		search();
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add("show");
+		} else {
+			ignorecaseBtn.classList.remove("show");
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll("#frames rect");
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], "fill")
+		}
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt("Enter a search term (regexp " +
+			    "allowed, eg: ^ext4_)"
+			    + (ignorecase ? ", ignoring case" : "")
+			    + "\nPress Ctrl-i to toggle case sensitivity", "");
+			if (term != null) {
+				currentSearchTerm = term;
+				search();
+			}
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove("show");
+			searchbtn.firstChild.nodeValue = "Search"
+			matchedtxt.classList.add("hide");
+			matchedtxt.firstChild.nodeValue = ""
+		}
+	}
+	function search(term) {
+		if (currentSearchTerm === null) return;
+		var term = currentSearchTerm;
+
+		var re = new RegExp(term, ignorecase ? 'i' : '');
+		var el = document.getElementById("frames").children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, "rect");
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, "fill");
+				rect.attributes.fill.value = "rgb(230,0,230)";
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+
+		searchbtn.classList.add("show");
+		searchbtn.firstChild.nodeValue = "Reset Search";
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove("hide");
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = "Matched: " + pct + "%";
+	}
+]]>
+</script>
+<rect x="0.0" y="0" width="1200.0" height="631.0" fill="url(#background)"  />
+<text id="title" x="600.00" y="24" >rpi-dca6325631_SNAPSHOT_20210418-0546_everything.f</text>
+<text id="details" x="10.00" y="614" > </text>
+<text id="unzoom" x="10.00" y="24" class="hide">Reset Zoom</text>
+<text id="search" x="1090.00" y="24" >Search</text>
+<text id="ignorecase" x="1174.00" y="24" >ic</text>
+<text id="matched" x="1090.00" y="614" > </text>
+<g id="frames">
+<g >
+<title>xhci_urb_enqueue (1 samples, 0.88%)</title><rect x="900.2" y="455" width="10.3" height="10.0" fill="rgb(207,153,4)" rx="2" ry="2" />
+<text  x="903.18" y="463" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="20.4" y="554" width="10.3" height="10.0" fill="rgb(216,137,7)" rx="2" ry="2" />
+<text  x="23.35" y="562" ></text>
+</g>
+<g >
+<title>__arm64_sys_exit_group (1 samples, 0.88%)</title><rect x="744.9" y="543" width="10.4" height="10.0" fill="rgb(253,97,36)" rx="2" ry="2" />
+<text  x="747.91" y="551" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="10.0" y="488" width="10.4" height="10.0" fill="rgb(234,32,54)" rx="2" ry="2" />
+<text  x="13.00" y="496" ></text>
+</g>
+<g >
+<title>handle_mm_fault (1 samples, 0.88%)</title><rect x="424.0" y="521" width="10.4" height="10.0" fill="rgb(211,101,20)" rx="2" ry="2" />
+<text  x="427.04" y="529" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="10.0" y="554" width="10.4" height="10.0" fill="rgb(219,19,33)" rx="2" ry="2" />
+<text  x="13.00" y="562" ></text>
+</g>
+<g >
+<title>strnlen_user (1 samples, 0.88%)</title><rect x="879.5" y="488" width="10.3" height="10.0" fill="rgb(237,87,15)" rx="2" ry="2" />
+<text  x="882.47" y="496" ></text>
+</g>
+<g >
+<title>search_binary_handler.part.52 (1 samples, 0.88%)</title><rect x="289.5" y="477" width="10.3" height="10.0" fill="rgb(248,20,54)" rx="2" ry="2" />
+<text  x="292.47" y="485" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.88%)</title><rect x="82.5" y="543" width="10.3" height="10.0" fill="rgb(213,38,45)" rx="2" ry="2" />
+<text  x="85.46" y="551" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="10.0" y="444" width="10.4" height="10.0" fill="rgb(220,163,24)" rx="2" ry="2" />
+<text  x="13.00" y="452" ></text>
+</g>
+<g >
+<title>el0_da (1 samples, 0.88%)</title><rect x="41.1" y="543" width="10.3" height="10.0" fill="rgb(205,65,35)" rx="2" ry="2" />
+<text  x="44.05" y="551" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="10.0" y="466" width="10.4" height="10.0" fill="rgb(252,44,14)" rx="2" ry="2" />
+<text  x="13.00" y="474" ></text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.88%)</title><rect x="61.8" y="488" width="10.3" height="10.0" fill="rgb(221,179,23)" rx="2" ry="2" />
+<text  x="64.75" y="496" ></text>
+</g>
+<g >
+<title>wq_worker_running (1 samples, 0.88%)</title><rect x="175.6" y="532" width="10.4" height="10.0" fill="rgb(247,174,52)" rx="2" ry="2" />
+<text  x="178.61" y="540" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="10.0" y="455" width="10.4" height="10.0" fill="rgb(217,164,53)" rx="2" ry="2" />
+<text  x="13.00" y="463" ></text>
+</g>
+<g >
+<title>rb_next (1 samples, 0.88%)</title><rect x="641.4" y="455" width="10.4" height="10.0" fill="rgb(225,175,15)" rx="2" ry="2" />
+<text  x="644.40" y="463" ></text>
+</g>
+<g >
+<title>pagevec_lru_move_fn (1 samples, 0.88%)</title><rect x="465.4" y="433" width="10.4" height="10.0" fill="rgb(215,152,12)" rx="2" ry="2" />
+<text  x="468.44" y="441" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="103.2" y="532" width="10.3" height="10.0" fill="rgb(248,88,6)" rx="2" ry="2" />
+<text  x="106.16" y="540" ></text>
+</g>
+<g >
+<title>tcp_push (1 samples, 0.88%)</title><rect x="61.8" y="367" width="10.3" height="10.0" fill="rgb(215,210,16)" rx="2" ry="2" />
+<text  x="64.75" y="375" ></text>
+</g>
+<g >
+<title>do_mem_abort (1 samples, 0.88%)</title><rect x="734.6" y="521" width="10.3" height="10.0" fill="rgb(254,99,53)" rx="2" ry="2" />
+<text  x="737.56" y="529" ></text>
+</g>
+<g >
+<title>prepare_to_wait_event (1 samples, 0.88%)</title><rect x="154.9" y="433" width="10.4" height="10.0" fill="rgb(231,147,48)" rx="2" ry="2" />
+<text  x="157.91" y="441" ></text>
+</g>
+<g >
+<title>blk_execute_rq (1 samples, 0.88%)</title><rect x="206.7" y="466" width="10.3" height="10.0" fill="rgb(227,165,27)" rx="2" ry="2" />
+<text  x="209.67" y="474" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.88%)</title><rect x="237.7" y="499" width="10.4" height="10.0" fill="rgb(247,45,47)" rx="2" ry="2" />
+<text  x="240.72" y="507" ></text>
+</g>
+<g >
+<title>do_page_fault (2 samples, 1.75%)</title><rect x="434.4" y="510" width="20.7" height="10.0" fill="rgb(213,57,40)" rx="2" ry="2" />
+<text  x="437.39" y="518" ></text>
+</g>
+<g >
+<title>[netifd] (4 samples, 3.51%)</title><rect x="237.7" y="543" width="41.4" height="10.0" fill="rgb(205,74,36)" rx="2" ry="2" />
+<text  x="240.72" y="551" >[ne..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="248.1" y="510" width="10.3" height="10.0" fill="rgb(238,202,1)" rx="2" ry="2" />
+<text  x="251.07" y="518" ></text>
+</g>
+<g >
+<title>readlink (2 samples, 1.75%)</title><rect x="330.9" y="576" width="20.7" height="10.0" fill="rgb(224,229,3)" rx="2" ry="2" />
+<text  x="333.88" y="584" ></text>
+</g>
+<g >
+<title>generic_make_request (1 samples, 0.88%)</title><rect x="227.4" y="356" width="10.3" height="10.0" fill="rgb(221,114,23)" rx="2" ry="2" />
+<text  x="230.37" y="364" ></text>
+</g>
+<g >
+<title>search_binary_handler.part.52 (4 samples, 3.51%)</title><rect x="455.1" y="510" width="41.4" height="10.0" fill="rgb(244,96,13)" rx="2" ry="2" />
+<text  x="458.09" y="518" >sea..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="92.8" y="532" width="10.4" height="10.0" fill="rgb(210,122,48)" rx="2" ry="2" />
+<text  x="95.81" y="540" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="20.4" y="488" width="10.3" height="10.0" fill="rgb(252,217,32)" rx="2" ry="2" />
+<text  x="23.35" y="496" ></text>
+</g>
+<g >
+<title>__do_execve_file (1 samples, 0.88%)</title><rect x="51.4" y="521" width="10.4" height="10.0" fill="rgb(230,26,2)" rx="2" ry="2" />
+<text  x="54.40" y="529" ></text>
+</g>
+<g >
+<title>el0_svc (4 samples, 3.51%)</title><rect x="455.1" y="554" width="41.4" height="10.0" fill="rgb(252,176,11)" rx="2" ry="2" />
+<text  x="458.09" y="562" >el0..</text>
+</g>
+<g >
+<title>[vim] (22 samples, 19.30%)</title><rect x="962.3" y="466" width="227.7" height="10.0" fill="rgb(224,157,47)" rx="2" ry="2" />
+<text  x="965.28" y="474" >[vim]</text>
+</g>
+<g >
+<title>filemap_map_pages (1 samples, 0.88%)</title><rect x="713.9" y="466" width="10.3" height="10.0" fill="rgb(221,22,15)" rx="2" ry="2" />
+<text  x="716.86" y="474" ></text>
+</g>
+<g >
+<title>kthread (1 samples, 0.88%)</title><rect x="320.5" y="554" width="10.4" height="10.0" fill="rgb(250,211,54)" rx="2" ry="2" />
+<text  x="323.53" y="562" ></text>
+</g>
+<g >
+<title>[vim] (3 samples, 2.63%)</title><rect x="1158.9" y="301" width="31.1" height="10.0" fill="rgb(220,161,28)" rx="2" ry="2" />
+<text  x="1161.95" y="309" >[v..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="858.8" y="532" width="10.3" height="10.0" fill="rgb(229,139,22)" rx="2" ry="2" />
+<text  x="861.77" y="540" ></text>
+</g>
+<g >
+<title>phy_state_machine (2 samples, 1.75%)</title><rect x="154.9" y="521" width="20.7" height="10.0" fill="rgb(237,127,34)" rx="2" ry="2" />
+<text  x="157.91" y="529" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="70" width="10.4" height="10.0" fill="rgb(227,174,51)" rx="2" ry="2" />
+<text  x="1182.65" y="78" ></text>
+</g>
+<g >
+<title>__do_execve_file (1 samples, 0.88%)</title><rect x="693.2" y="499" width="10.3" height="10.0" fill="rgb(214,63,37)" rx="2" ry="2" />
+<text  x="696.16" y="507" ></text>
+</g>
+<g >
+<title>do_writev (1 samples, 0.88%)</title><rect x="92.8" y="455" width="10.4" height="10.0" fill="rgb(231,178,21)" rx="2" ry="2" />
+<text  x="95.81" y="463" ></text>
+</g>
+<g >
+<title>rpi_firmware_transaction (1 samples, 0.88%)</title><rect x="144.6" y="400" width="10.3" height="10.0" fill="rgb(244,199,48)" rx="2" ry="2" />
+<text  x="147.56" y="408" ></text>
+</g>
+<g >
+<title>__do_sys_wait4 (1 samples, 0.88%)</title><rect x="20.4" y="422" width="10.3" height="10.0" fill="rgb(223,122,44)" rx="2" ry="2" />
+<text  x="23.35" y="430" ></text>
+</g>
+<g >
+<title>[vim] (24 samples, 21.05%)</title><rect x="941.6" y="532" width="248.4" height="10.0" fill="rgb(221,129,36)" rx="2" ry="2" />
+<text  x="944.58" y="540" >[vim]</text>
+</g>
+<g >
+<title>ret_from_fork (2 samples, 1.75%)</title><rect x="889.8" y="565" width="20.7" height="10.0" fill="rgb(228,14,30)" rx="2" ry="2" />
+<text  x="892.82" y="573" ></text>
+</g>
+<g >
+<title>blk_mq_make_request (1 samples, 0.88%)</title><rect x="227.4" y="345" width="10.3" height="10.0" fill="rgb(230,95,19)" rx="2" ry="2" />
+<text  x="230.37" y="353" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.88%)</title><rect x="920.9" y="565" width="10.3" height="10.0" fill="rgb(214,31,13)" rx="2" ry="2" />
+<text  x="923.88" y="573" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 1.75%)</title><rect x="724.2" y="554" width="20.7" height="10.0" fill="rgb(208,154,11)" rx="2" ry="2" />
+<text  x="727.21" y="562" ></text>
+</g>
+<g >
+<title>tcp_sendmsg (1 samples, 0.88%)</title><rect x="61.8" y="389" width="10.3" height="10.0" fill="rgb(224,75,41)" rx="2" ry="2" />
+<text  x="64.75" y="397" ></text>
+</g>
+<g >
+<title>[procd] (1 samples, 0.88%)</title><rect x="310.2" y="510" width="10.3" height="10.0" fill="rgb(218,2,40)" rx="2" ry="2" />
+<text  x="313.18" y="518" ></text>
+</g>
+<g >
+<title>search_binary_handler.part.52 (1 samples, 0.88%)</title><rect x="51.4" y="510" width="10.4" height="10.0" fill="rgb(211,227,1)" rx="2" ry="2" />
+<text  x="54.40" y="518" ></text>
+</g>
+<g >
+<title>set_target (1 samples, 0.88%)</title><rect x="144.6" y="488" width="10.3" height="10.0" fill="rgb(230,25,0)" rx="2" ry="2" />
+<text  x="147.56" y="496" ></text>
+</g>
+<g >
+<title>vm_mmap (1 samples, 0.88%)</title><rect x="869.1" y="477" width="10.4" height="10.0" fill="rgb(226,40,43)" rx="2" ry="2" />
+<text  x="872.12" y="485" ></text>
+</g>
+<g >
+<title>remove_vma (1 samples, 0.88%)</title><rect x="289.5" y="422" width="10.3" height="10.0" fill="rgb(205,165,29)" rx="2" ry="2" />
+<text  x="292.47" y="430" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="136" width="10.4" height="10.0" fill="rgb(240,84,24)" rx="2" ry="2" />
+<text  x="1182.65" y="144" ></text>
+</g>
+<g >
+<title>do_page_fault (1 samples, 0.88%)</title><rect x="310.2" y="444" width="10.3" height="10.0" fill="rgb(254,111,46)" rx="2" ry="2" />
+<text  x="313.18" y="452" ></text>
+</g>
+<g >
+<title>unmap_single_vma (1 samples, 0.88%)</title><rect x="72.1" y="477" width="10.4" height="10.0" fill="rgb(236,174,41)" rx="2" ry="2" />
+<text  x="75.11" y="485" ></text>
+</g>
+<g >
+<title>do_translation_fault (1 samples, 0.88%)</title><rect x="310.2" y="455" width="10.3" height="10.0" fill="rgb(253,49,1)" rx="2" ry="2" />
+<text  x="313.18" y="463" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.88%)</title><rect x="310.2" y="521" width="10.3" height="10.0" fill="rgb(232,181,5)" rx="2" ry="2" />
+<text  x="313.18" y="529" ></text>
+</g>
+<g >
+<title>[vim] (14 samples, 12.28%)</title><rect x="1045.1" y="400" width="144.9" height="10.0" fill="rgb(235,218,45)" rx="2" ry="2" />
+<text  x="1048.09" y="408" >[vim]</text>
+</g>
+<g >
+<title>[vim] (2 samples, 1.75%)</title><rect x="1169.3" y="279" width="20.7" height="10.0" fill="rgb(206,8,17)" rx="2" ry="2" />
+<text  x="1172.30" y="287" ></text>
+</g>
+<g >
+<title>put_cpu_partial (1 samples, 0.88%)</title><rect x="475.8" y="411" width="10.3" height="10.0" fill="rgb(214,173,40)" rx="2" ry="2" />
+<text  x="478.79" y="419" ></text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 0.88%)</title><rect x="206.7" y="565" width="10.3" height="10.0" fill="rgb(208,47,40)" rx="2" ry="2" />
+<text  x="209.67" y="573" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.88%)</title><rect x="289.5" y="543" width="10.3" height="10.0" fill="rgb(244,214,42)" rx="2" ry="2" />
+<text  x="292.47" y="551" ></text>
+</g>
+<g >
+<title>process_one_work (2 samples, 1.75%)</title><rect x="217.0" y="532" width="20.7" height="10.0" fill="rgb(229,177,40)" rx="2" ry="2" />
+<text  x="220.02" y="540" ></text>
+</g>
+<g >
+<title>bash (2 samples, 1.75%)</title><rect x="10.0" y="576" width="20.7" height="10.0" fill="rgb(223,154,18)" rx="2" ry="2" />
+<text  x="13.00" y="584" ></text>
+</g>
+<g >
+<title>__slab_free.isra.94 (1 samples, 0.88%)</title><rect x="289.5" y="389" width="10.3" height="10.0" fill="rgb(247,113,0)" rx="2" ry="2" />
+<text  x="292.47" y="397" ></text>
+</g>
+<g >
+<title>schedule (1 samples, 0.88%)</title><rect x="196.3" y="532" width="10.4" height="10.0" fill="rgb(242,61,20)" rx="2" ry="2" />
+<text  x="199.32" y="540" ></text>
+</g>
+<g >
+<title>genphy_read_status (2 samples, 1.75%)</title><rect x="154.9" y="499" width="20.7" height="10.0" fill="rgb(214,186,27)" rx="2" ry="2" />
+<text  x="157.91" y="507" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="641.4" y="532" width="10.4" height="10.0" fill="rgb(221,48,39)" rx="2" ry="2" />
+<text  x="644.40" y="540" ></text>
+</g>
+<g >
+<title>__arm64_sys_execve (1 samples, 0.88%)</title><rect x="910.5" y="532" width="10.4" height="10.0" fill="rgb(213,197,35)" rx="2" ry="2" />
+<text  x="913.53" y="540" ></text>
+</g>
+<g >
+<title>release_task.part.31 (1 samples, 0.88%)</title><rect x="20.4" y="378" width="10.3" height="10.0" fill="rgb(254,13,16)" rx="2" ry="2" />
+<text  x="23.35" y="386" ></text>
+</g>
+<g >
+<title>vma_link (1 samples, 0.88%)</title><rect x="51.4" y="400" width="10.4" height="10.0" fill="rgb(211,19,23)" rx="2" ry="2" />
+<text  x="54.40" y="408" ></text>
+</g>
+<g >
+<title>[vim] (10 samples, 8.77%)</title><rect x="1086.5" y="367" width="103.5" height="10.0" fill="rgb(219,156,39)" rx="2" ry="2" />
+<text  x="1089.49" y="375" >[vim]</text>
+</g>
+<g >
+<title>lru_add_drain_cpu (1 samples, 0.88%)</title><rect x="465.4" y="444" width="10.4" height="10.0" fill="rgb(238,187,48)" rx="2" ry="2" />
+<text  x="468.44" y="452" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 1.75%)</title><rect x="330.9" y="532" width="20.7" height="10.0" fill="rgb(242,130,24)" rx="2" ry="2" />
+<text  x="333.88" y="540" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="941.6" y="477" width="10.3" height="10.0" fill="rgb(229,215,3)" rx="2" ry="2" />
+<text  x="944.58" y="485" ></text>
+</g>
+<g >
+<title>__arm64_sys_execve (1 samples, 0.88%)</title><rect x="82.5" y="532" width="10.3" height="10.0" fill="rgb(210,31,25)" rx="2" ry="2" />
+<text  x="85.46" y="540" ></text>
+</g>
+<g >
+<title>[netifd] (2 samples, 1.75%)</title><rect x="258.4" y="477" width="20.7" height="10.0" fill="rgb(234,110,54)" rx="2" ry="2" />
+<text  x="261.42" y="485" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (4 samples, 3.51%)</title><rect x="237.7" y="532" width="41.4" height="10.0" fill="rgb(231,185,22)" rx="2" ry="2" />
+<text  x="240.72" y="540" >[li..</text>
+</g>
+<g >
+<title>__arm64_sys_execve (4 samples, 3.51%)</title><rect x="455.1" y="532" width="41.4" height="10.0" fill="rgb(231,135,24)" rx="2" ry="2" />
+<text  x="458.09" y="540" >__a..</text>
+</g>
+<g >
+<title>handle_mm_fault (1 samples, 0.88%)</title><rect x="734.6" y="488" width="10.3" height="10.0" fill="rgb(254,21,54)" rx="2" ry="2" />
+<text  x="737.56" y="496" ></text>
+</g>
+<g >
+<title>disk_events_workfn (1 samples, 0.88%)</title><rect x="206.7" y="521" width="10.3" height="10.0" fill="rgb(254,5,12)" rx="2" ry="2" />
+<text  x="209.67" y="529" ></text>
+</g>
+<g >
+<title>dev_pm_opp_set_rate (1 samples, 0.88%)</title><rect x="144.6" y="477" width="10.3" height="10.0" fill="rgb(218,120,39)" rx="2" ry="2" />
+<text  x="147.56" y="485" ></text>
+</g>
+<g >
+<title>cpu_startup_entry (10 samples, 8.77%)</title><rect x="755.3" y="532" width="103.5" height="10.0" fill="rgb(224,119,32)" rx="2" ry="2" />
+<text  x="758.26" y="540" >cpu_startup_..</text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.88%)</title><rect x="20.4" y="455" width="10.3" height="10.0" fill="rgb(228,21,14)" rx="2" ry="2" />
+<text  x="23.35" y="463" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="191" width="10.4" height="10.0" fill="rgb(215,175,42)" rx="2" ry="2" />
+<text  x="1182.65" y="199" ></text>
+</g>
+<g >
+<title>do_page_fault (1 samples, 0.88%)</title><rect x="734.6" y="499" width="10.3" height="10.0" fill="rgb(221,39,11)" rx="2" ry="2" />
+<text  x="737.56" y="507" ></text>
+</g>
+<g >
+<title>__schedule (5 samples, 4.39%)</title><rect x="776.0" y="499" width="51.7" height="10.0" fill="rgb(226,160,52)" rx="2" ry="2" />
+<text  x="778.96" y="507" >__sch..</text>
+</g>
+<g >
+<title>load_elf_binary (1 samples, 0.88%)</title><rect x="289.5" y="466" width="10.3" height="10.0" fill="rgb(251,57,34)" rx="2" ry="2" />
+<text  x="292.47" y="474" ></text>
+</g>
+<g >
+<title>handle_mm_fault (1 samples, 0.88%)</title><rect x="651.8" y="499" width="10.3" height="10.0" fill="rgb(210,224,10)" rx="2" ry="2" />
+<text  x="654.75" y="507" ></text>
+</g>
+<g >
+<title>do_translation_fault (1 samples, 0.88%)</title><rect x="713.9" y="510" width="10.3" height="10.0" fill="rgb(236,10,22)" rx="2" ry="2" />
+<text  x="716.86" y="518" ></text>
+</g>
+<g >
+<title>tick_nohz_idle_exit (2 samples, 1.75%)</title><rect x="838.1" y="510" width="20.7" height="10.0" fill="rgb(228,69,44)" rx="2" ry="2" />
+<text  x="841.07" y="518" ></text>
+</g>
+<g >
+<title>phy_check_link_status (2 samples, 1.75%)</title><rect x="154.9" y="510" width="20.7" height="10.0" fill="rgb(220,2,16)" rx="2" ry="2" />
+<text  x="157.91" y="518" ></text>
+</g>
+<g >
+<title>do_page_fault (1 samples, 0.88%)</title><rect x="413.7" y="499" width="10.3" height="10.0" fill="rgb(213,135,47)" rx="2" ry="2" />
+<text  x="416.68" y="507" ></text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.88%)</title><rect x="82.5" y="554" width="10.3" height="10.0" fill="rgb(235,54,34)" rx="2" ry="2" />
+<text  x="85.46" y="562" ></text>
+</g>
+<g >
+<title>do_el0_ia_bp_hardening (2 samples, 1.75%)</title><rect x="403.3" y="532" width="20.7" height="10.0" fill="rgb(211,39,53)" rx="2" ry="2" />
+<text  x="406.33" y="540" ></text>
+</g>
+<g >
+<title>genphy_update_link (2 samples, 1.75%)</title><rect x="154.9" y="488" width="20.7" height="10.0" fill="rgb(215,50,36)" rx="2" ry="2" />
+<text  x="157.91" y="496" ></text>
+</g>
+<g >
+<title>rpi_firmware_property (1 samples, 0.88%)</title><rect x="144.6" y="422" width="10.3" height="10.0" fill="rgb(215,121,50)" rx="2" ry="2" />
+<text  x="147.56" y="430" ></text>
+</g>
+<g >
+<title>[libubus.so.20210215] (2 samples, 1.75%)</title><rect x="258.4" y="510" width="20.7" height="10.0" fill="rgb(231,164,12)" rx="2" ry="2" />
+<text  x="261.42" y="518" ></text>
+</g>
+<g >
+<title>worker_thread (2 samples, 1.75%)</title><rect x="186.0" y="543" width="20.7" height="10.0" fill="rgb(251,163,54)" rx="2" ry="2" />
+<text  x="188.96" y="551" ></text>
+</g>
+<g >
+<title>do_translation_fault (1 samples, 0.88%)</title><rect x="734.6" y="510" width="10.3" height="10.0" fill="rgb(246,26,3)" rx="2" ry="2" />
+<text  x="737.56" y="518" ></text>
+</g>
+<g >
+<title>__do_execve_file (1 samples, 0.88%)</title><rect x="268.8" y="389" width="10.3" height="10.0" fill="rgb(224,138,35)" rx="2" ry="2" />
+<text  x="271.77" y="397" ></text>
+</g>
+<g >
+<title>__arm64_sys_epoll_pwait (1 samples, 0.88%)</title><rect x="237.7" y="488" width="10.4" height="10.0" fill="rgb(225,193,8)" rx="2" ry="2" />
+<text  x="240.72" y="496" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="10.0" y="477" width="10.4" height="10.0" fill="rgb(240,164,20)" rx="2" ry="2" />
+<text  x="13.00" y="485" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 1.75%)</title><rect x="1024.4" y="400" width="20.7" height="10.0" fill="rgb(208,214,21)" rx="2" ry="2" />
+<text  x="1027.39" y="408" ></text>
+</g>
+<g >
+<title>kworker/0:0-eve (5 samples, 4.39%)</title><rect x="134.2" y="576" width="51.8" height="10.0" fill="rgb(205,98,11)" rx="2" ry="2" />
+<text  x="137.21" y="584" >kwork..</text>
+</g>
+<g >
+<title>tasklet_action (1 samples, 0.88%)</title><rect x="113.5" y="510" width="10.4" height="10.0" fill="rgb(231,154,22)" rx="2" ry="2" />
+<text  x="116.51" y="518" ></text>
+</g>
+<g >
+<title>__noinstr_text_start (10 samples, 8.77%)</title><rect x="755.3" y="543" width="103.5" height="10.0" fill="rgb(210,173,3)" rx="2" ry="2" />
+<text  x="758.26" y="551" >__noinstr_te..</text>
+</g>
+<g >
+<title>mmap_region (1 samples, 0.88%)</title><rect x="51.4" y="411" width="10.4" height="10.0" fill="rgb(246,6,40)" rx="2" ry="2" />
+<text  x="54.40" y="419" ></text>
+</g>
+<g >
+<title>unmap_page_range (1 samples, 0.88%)</title><rect x="486.1" y="433" width="10.4" height="10.0" fill="rgb(229,129,4)" rx="2" ry="2" />
+<text  x="489.14" y="441" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.88%)</title><rect x="258.4" y="444" width="10.4" height="10.0" fill="rgb(205,168,53)" rx="2" ry="2" />
+<text  x="261.42" y="452" ></text>
+</g>
+<g >
+<title>__arm64_sys_brk (1 samples, 0.88%)</title><rect x="641.4" y="499" width="10.4" height="10.0" fill="rgb(251,70,20)" rx="2" ry="2" />
+<text  x="644.40" y="507" ></text>
+</g>
+<g >
+<title>elf_map (1 samples, 0.88%)</title><rect x="869.1" y="488" width="10.4" height="10.0" fill="rgb(217,11,34)" rx="2" ry="2" />
+<text  x="872.12" y="496" ></text>
+</g>
+<g >
+<title>el0_svc_handler (3 samples, 2.63%)</title><rect x="672.5" y="521" width="31.0" height="10.0" fill="rgb(218,45,1)" rx="2" ry="2" />
+<text  x="675.46" y="529" >el..</text>
+</g>
+<g >
+<title>__tcp_push_pending_frames (1 samples, 0.88%)</title><rect x="61.8" y="356" width="10.3" height="10.0" fill="rgb(223,147,15)" rx="2" ry="2" />
+<text  x="64.75" y="364" ></text>
+</g>
+<g >
+<title>__mdiobus_read (2 samples, 1.75%)</title><rect x="154.9" y="466" width="20.7" height="10.0" fill="rgb(229,216,24)" rx="2" ry="2" />
+<text  x="157.91" y="474" ></text>
+</g>
+<g >
+<title>rpi_firmware_property_list (1 samples, 0.88%)</title><rect x="144.6" y="411" width="10.3" height="10.0" fill="rgb(224,45,34)" rx="2" ry="2" />
+<text  x="147.56" y="419" ></text>
+</g>
+<g >
+<title>odhcpd (1 samples, 0.88%)</title><rect x="279.1" y="576" width="10.4" height="10.0" fill="rgb(210,37,47)" rx="2" ry="2" />
+<text  x="282.12" y="584" ></text>
+</g>
+<g >
+<title>__handle_mm_fault (1 samples, 0.88%)</title><rect x="734.6" y="477" width="10.3" height="10.0" fill="rgb(251,78,3)" rx="2" ry="2" />
+<text  x="737.56" y="485" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="1158.9" y="279" width="10.4" height="10.0" fill="rgb(238,144,42)" rx="2" ry="2" />
+<text  x="1161.95" y="287" ></text>
+</g>
+<g >
+<title>__do_execve_file (1 samples, 0.88%)</title><rect x="910.5" y="521" width="10.4" height="10.0" fill="rgb(238,214,14)" rx="2" ry="2" />
+<text  x="913.53" y="529" ></text>
+</g>
+<g >
+<title>process_one_work (1 samples, 0.88%)</title><rect x="186.0" y="532" width="10.3" height="10.0" fill="rgb(214,90,42)" rx="2" ry="2" />
+<text  x="188.96" y="540" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.88%)</title><rect x="92.8" y="477" width="10.4" height="10.0" fill="rgb(230,9,46)" rx="2" ry="2" />
+<text  x="95.81" y="485" ></text>
+</g>
+<g >
+<title>wb_workfn (1 samples, 0.88%)</title><rect x="227.4" y="521" width="10.3" height="10.0" fill="rgb(232,164,10)" rx="2" ry="2" />
+<text  x="230.37" y="529" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="257" width="10.4" height="10.0" fill="rgb(227,63,54)" rx="2" ry="2" />
+<text  x="1182.65" y="265" ></text>
+</g>
+<g >
+<title>load_elf_binary (1 samples, 0.88%)</title><rect x="82.5" y="499" width="10.3" height="10.0" fill="rgb(219,132,34)" rx="2" ry="2" />
+<text  x="85.46" y="507" ></text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.88%)</title><rect x="341.2" y="488" width="10.4" height="10.0" fill="rgb(207,225,1)" rx="2" ry="2" />
+<text  x="344.23" y="496" ></text>
+</g>
+<g >
+<title>el0_ia (1 samples, 0.88%)</title><rect x="310.2" y="488" width="10.3" height="10.0" fill="rgb(207,154,18)" rx="2" ry="2" />
+<text  x="313.18" y="496" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.88%)</title><rect x="61.8" y="477" width="10.3" height="10.0" fill="rgb(213,89,44)" rx="2" ry="2" />
+<text  x="64.75" y="485" ></text>
+</g>
+<g >
+<title>__handle_mm_fault (1 samples, 0.88%)</title><rect x="310.2" y="422" width="10.3" height="10.0" fill="rgb(243,158,41)" rx="2" ry="2" />
+<text  x="313.18" y="430" ></text>
+</g>
+<g >
+<title>__arm64_sys_execve (1 samples, 0.88%)</title><rect x="51.4" y="532" width="10.4" height="10.0" fill="rgb(221,59,8)" rx="2" ry="2" />
+<text  x="54.40" y="540" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.88%)</title><rect x="641.4" y="510" width="10.4" height="10.0" fill="rgb(245,146,13)" rx="2" ry="2" />
+<text  x="644.40" y="518" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="941.6" y="466" width="10.3" height="10.0" fill="rgb(208,14,17)" rx="2" ry="2" />
+<text  x="944.58" y="474" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="169" width="10.4" height="10.0" fill="rgb(205,100,29)" rx="2" ry="2" />
+<text  x="1182.65" y="177" ></text>
+</g>
+<g >
+<title>__blk_queue_split (1 samples, 0.88%)</title><rect x="227.4" y="334" width="10.3" height="10.0" fill="rgb(221,196,20)" rx="2" ry="2" />
+<text  x="230.37" y="342" ></text>
+</g>
+<g >
+<title>do_writepages (1 samples, 0.88%)</title><rect x="227.4" y="466" width="10.3" height="10.0" fill="rgb(251,36,30)" rx="2" ry="2" />
+<text  x="230.37" y="474" ></text>
+</g>
+<g >
+<title>do_wait (1 samples, 0.88%)</title><rect x="20.4" y="400" width="10.3" height="10.0" fill="rgb(242,88,30)" rx="2" ry="2" />
+<text  x="23.35" y="408" ></text>
+</g>
+<g >
+<title>copy_strings_kernel (1 samples, 0.88%)</title><rect x="10.0" y="323" width="10.4" height="10.0" fill="rgb(244,221,24)" rx="2" ry="2" />
+<text  x="13.00" y="331" ></text>
+</g>
+<g >
+<title>get_page_from_freelist (1 samples, 0.88%)</title><rect x="662.1" y="455" width="10.4" height="10.0" fill="rgb(243,181,34)" rx="2" ry="2" />
+<text  x="665.11" y="463" ></text>
+</g>
+<g >
+<title>ipt_do_table (1 samples, 0.88%)</title><rect x="61.8" y="257" width="10.3" height="10.0" fill="rgb(238,220,50)" rx="2" ry="2" />
+<text  x="64.75" y="265" ></text>
+</g>
+<g >
+<title>do_brk_flags (1 samples, 0.88%)</title><rect x="1138.2" y="279" width="10.4" height="10.0" fill="rgb(240,63,20)" rx="2" ry="2" />
+<text  x="1141.25" y="287" ></text>
+</g>
+<g >
+<title>exit_mmap (4 samples, 3.51%)</title><rect x="455.1" y="466" width="41.4" height="10.0" fill="rgb(248,86,16)" rx="2" ry="2" />
+<text  x="458.09" y="474" >exi..</text>
+</g>
+<g >
+<title>search_binary_handler (1 samples, 0.88%)</title><rect x="289.5" y="488" width="10.3" height="10.0" fill="rgb(221,110,50)" rx="2" ry="2" />
+<text  x="292.47" y="496" ></text>
+</g>
+<g >
+<title>search_binary_handler (1 samples, 0.88%)</title><rect x="51.4" y="488" width="10.4" height="10.0" fill="rgb(219,102,32)" rx="2" ry="2" />
+<text  x="54.40" y="496" ></text>
+</g>
+<g >
+<title>do_translation_fault (1 samples, 0.88%)</title><rect x="413.7" y="510" width="10.3" height="10.0" fill="rgb(225,214,24)" rx="2" ry="2" />
+<text  x="416.68" y="518" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.88%)</title><rect x="744.9" y="554" width="10.4" height="10.0" fill="rgb(246,29,8)" rx="2" ry="2" />
+<text  x="747.91" y="562" ></text>
+</g>
+<g >
+<title>do_iter_readv_writev (1 samples, 0.88%)</title><rect x="92.8" y="422" width="10.4" height="10.0" fill="rgb(218,135,37)" rx="2" ry="2" />
+<text  x="95.81" y="430" ></text>
+</g>
+<g >
+<title>do_translation_fault (2 samples, 1.75%)</title><rect x="434.4" y="521" width="20.7" height="10.0" fill="rgb(205,27,1)" rx="2" ry="2" />
+<text  x="437.39" y="529" ></text>
+</g>
+<g >
+<title>ret_from_fork (2 samples, 1.75%)</title><rect x="186.0" y="565" width="20.7" height="10.0" fill="rgb(209,225,16)" rx="2" ry="2" />
+<text  x="188.96" y="573" ></text>
+</g>
+<g >
+<title>pipe_write (1 samples, 0.88%)</title><rect x="92.8" y="411" width="10.4" height="10.0" fill="rgb(206,56,12)" rx="2" ry="2" />
+<text  x="95.81" y="419" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="1148.6" y="301" width="10.3" height="10.0" fill="rgb(254,33,20)" rx="2" ry="2" />
+<text  x="1151.60" y="309" ></text>
+</g>
+<g >
+<title>[busybox] (1 samples, 0.88%)</title><rect x="382.6" y="554" width="10.4" height="10.0" fill="rgb(254,49,19)" rx="2" ry="2" />
+<text  x="385.63" y="562" ></text>
+</g>
+<g >
+<title>[vim] (23 samples, 20.18%)</title><rect x="951.9" y="499" width="238.1" height="10.0" fill="rgb(237,15,53)" rx="2" ry="2" />
+<text  x="954.93" y="507" >[vim]</text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="10.0" y="400" width="10.4" height="10.0" fill="rgb(249,224,53)" rx="2" ry="2" />
+<text  x="13.00" y="408" ></text>
+</g>
+<g >
+<title>fput (1 samples, 0.88%)</title><rect x="341.2" y="389" width="10.4" height="10.0" fill="rgb(208,227,20)" rx="2" ry="2" />
+<text  x="344.23" y="397" ></text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.88%)</title><rect x="237.7" y="510" width="10.4" height="10.0" fill="rgb(212,108,40)" rx="2" ry="2" />
+<text  x="240.72" y="518" ></text>
+</g>
+<g >
+<title>usb_stor_transparent_scsi_command (2 samples, 1.75%)</title><rect x="889.8" y="532" width="20.7" height="10.0" fill="rgb(229,83,51)" rx="2" ry="2" />
+<text  x="892.82" y="540" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="20.4" y="499" width="10.3" height="10.0" fill="rgb(232,83,0)" rx="2" ry="2" />
+<text  x="23.35" y="507" ></text>
+</g>
+<g >
+<title>kworker/2:2-eve (1 samples, 0.88%)</title><rect x="206.7" y="576" width="10.3" height="10.0" fill="rgb(222,124,5)" rx="2" ry="2" />
+<text  x="209.67" y="584" ></text>
+</g>
+<g >
+<title>do_mmap (1 samples, 0.88%)</title><rect x="51.4" y="422" width="10.4" height="10.0" fill="rgb(215,119,53)" rx="2" ry="2" />
+<text  x="54.40" y="430" ></text>
+</g>
+<g >
+<title>finish_task_switch (1 samples, 0.88%)</title><rect x="123.9" y="510" width="10.3" height="10.0" fill="rgb(239,154,35)" rx="2" ry="2" />
+<text  x="126.86" y="518" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="1148.6" y="279" width="10.3" height="10.0" fill="rgb(244,123,9)" rx="2" ry="2" />
+<text  x="1151.60" y="287" ></text>
+</g>
+<g >
+<title>dbs_work_handler (1 samples, 0.88%)</title><rect x="144.6" y="521" width="10.3" height="10.0" fill="rgb(232,137,54)" rx="2" ry="2" />
+<text  x="147.56" y="529" ></text>
+</g>
+<g >
+<title>exit_mmap (1 samples, 0.88%)</title><rect x="744.9" y="499" width="10.4" height="10.0" fill="rgb(220,97,26)" rx="2" ry="2" />
+<text  x="747.91" y="507" ></text>
+</g>
+<g >
+<title>do_page_fault (1 samples, 0.88%)</title><rect x="662.1" y="499" width="10.4" height="10.0" fill="rgb(205,227,53)" rx="2" ry="2" />
+<text  x="665.11" y="507" ></text>
+</g>
+<g >
+<title>el0_ia (2 samples, 1.75%)</title><rect x="434.4" y="554" width="20.7" height="10.0" fill="rgb(244,154,30)" rx="2" ry="2" />
+<text  x="437.39" y="562" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="1138.2" y="334" width="10.4" height="10.0" fill="rgb(210,77,39)" rx="2" ry="2" />
+<text  x="1141.25" y="342" ></text>
+</g>
+<g >
+<title>vm_mmap (1 samples, 0.88%)</title><rect x="51.4" y="444" width="10.4" height="10.0" fill="rgb(240,128,22)" rx="2" ry="2" />
+<text  x="54.40" y="452" ></text>
+</g>
+<g >
+<title>elf_map (1 samples, 0.88%)</title><rect x="51.4" y="455" width="10.4" height="10.0" fill="rgb(216,123,8)" rx="2" ry="2" />
+<text  x="54.40" y="463" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="10.0" y="499" width="10.4" height="10.0" fill="rgb(225,154,6)" rx="2" ry="2" />
+<text  x="13.00" y="507" ></text>
+</g>
+<g >
+<title>raspberrypi_fw_set_rate (1 samples, 0.88%)</title><rect x="144.6" y="433" width="10.3" height="10.0" fill="rgb(231,27,54)" rx="2" ry="2" />
+<text  x="147.56" y="441" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="20.4" y="466" width="10.3" height="10.0" fill="rgb(254,52,50)" rx="2" ry="2" />
+<text  x="23.35" y="474" ></text>
+</g>
+<g >
+<title>exit_mmap (1 samples, 0.88%)</title><rect x="72.1" y="499" width="10.4" height="10.0" fill="rgb(206,79,48)" rx="2" ry="2" />
+<text  x="75.11" y="507" ></text>
+</g>
+<g >
+<title>sh (39 samples, 34.21%)</title><rect x="351.6" y="576" width="403.7" height="10.0" fill="rgb(244,174,48)" rx="2" ry="2" />
+<text  x="354.58" y="584" >sh</text>
+</g>
+<g >
+<title>do_brk_flags (1 samples, 0.88%)</title><rect x="641.4" y="488" width="10.4" height="10.0" fill="rgb(240,85,35)" rx="2" ry="2" />
+<text  x="644.40" y="496" ></text>
+</g>
+<g >
+<title>__do_execve_file (1 samples, 0.88%)</title><rect x="289.5" y="521" width="10.3" height="10.0" fill="rgb(209,10,16)" rx="2" ry="2" />
+<text  x="292.47" y="529" ></text>
+</g>
+<g >
+<title>[netifd] (1 samples, 0.88%)</title><rect x="268.8" y="455" width="10.3" height="10.0" fill="rgb(240,188,53)" rx="2" ry="2" />
+<text  x="271.77" y="463" ></text>
+</g>
+<g >
+<title>do_group_exit (1 samples, 0.88%)</title><rect x="744.9" y="532" width="10.4" height="10.0" fill="rgb(248,115,41)" rx="2" ry="2" />
+<text  x="747.91" y="540" ></text>
+</g>
+<g >
+<title>lru_add_drain (1 samples, 0.88%)</title><rect x="465.4" y="455" width="10.4" height="10.0" fill="rgb(239,112,3)" rx="2" ry="2" />
+<text  x="468.44" y="463" ></text>
+</g>
+<g >
+<title>__handle_mm_fault (1 samples, 0.88%)</title><rect x="662.1" y="477" width="10.4" height="10.0" fill="rgb(226,175,28)" rx="2" ry="2" />
+<text  x="665.11" y="485" ></text>
+</g>
+<g >
+<title>vma_interval_tree_insert (1 samples, 0.88%)</title><rect x="869.1" y="411" width="10.4" height="10.0" fill="rgb(214,14,2)" rx="2" ry="2" />
+<text  x="872.12" y="419" ></text>
+</g>
+<g >
+<title>__handle_mm_fault (1 samples, 0.88%)</title><rect x="651.8" y="488" width="10.3" height="10.0" fill="rgb(246,189,34)" rx="2" ry="2" />
+<text  x="654.75" y="496" ></text>
+</g>
+<g >
+<title>swapper (10 samples, 8.77%)</title><rect x="755.3" y="576" width="103.5" height="10.0" fill="rgb(241,14,53)" rx="2" ry="2" />
+<text  x="758.26" y="584" >swapper</text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.88%)</title><rect x="641.4" y="521" width="10.4" height="10.0" fill="rgb(247,225,41)" rx="2" ry="2" />
+<text  x="644.40" y="529" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.88%)</title><rect x="258.4" y="433" width="10.4" height="10.0" fill="rgb(211,162,46)" rx="2" ry="2" />
+<text  x="261.42" y="441" ></text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 0.88%)</title><rect x="320.5" y="565" width="10.4" height="10.0" fill="rgb(227,44,5)" rx="2" ry="2" />
+<text  x="323.53" y="573" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="10.0" y="521" width="10.4" height="10.0" fill="rgb(252,149,49)" rx="2" ry="2" />
+<text  x="13.00" y="529" ></text>
+</g>
+<g >
+<title>do_wp_page (1 samples, 0.88%)</title><rect x="920.9" y="477" width="10.3" height="10.0" fill="rgb(241,187,3)" rx="2" ry="2" />
+<text  x="923.88" y="485" ></text>
+</g>
+<g >
+<title>[libc.so] (8 samples, 7.02%)</title><rect x="620.7" y="543" width="82.8" height="10.0" fill="rgb(216,144,15)" rx="2" ry="2" />
+<text  x="623.70" y="551" >[libc.so]</text>
+</g>
+<g >
+<title>kernel_wait4 (1 samples, 0.88%)</title><rect x="20.4" y="411" width="10.3" height="10.0" fill="rgb(222,90,43)" rx="2" ry="2" />
+<text  x="23.35" y="419" ></text>
+</g>
+<g >
+<title>el0_svc_handler (4 samples, 3.51%)</title><rect x="455.1" y="543" width="41.4" height="10.0" fill="rgb(254,47,46)" rx="2" ry="2" />
+<text  x="458.09" y="551" >el0..</text>
+</g>
+<g >
+<title>__do_execve_file (2 samples, 1.75%)</title><rect x="869.1" y="521" width="20.7" height="10.0" fill="rgb(220,71,6)" rx="2" ry="2" />
+<text  x="872.12" y="529" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 1.75%)</title><rect x="30.7" y="554" width="20.7" height="10.0" fill="rgb(244,167,3)" rx="2" ry="2" />
+<text  x="33.70" y="562" ></text>
+</g>
+<g >
+<title>kthread (1 samples, 0.88%)</title><rect x="206.7" y="554" width="10.3" height="10.0" fill="rgb(214,66,0)" rx="2" ry="2" />
+<text  x="209.67" y="562" ></text>
+</g>
+<g >
+<title>filemap_map_pages (1 samples, 0.88%)</title><rect x="734.6" y="466" width="10.3" height="10.0" fill="rgb(243,53,38)" rx="2" ry="2" />
+<text  x="737.56" y="474" ></text>
+</g>
+<g >
+<title>mmput (4 samples, 3.51%)</title><rect x="455.1" y="477" width="41.4" height="10.0" fill="rgb(248,150,40)" rx="2" ry="2" />
+<text  x="458.09" y="485" >mmput</text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 1.75%)</title><rect x="869.1" y="565" width="20.7" height="10.0" fill="rgb(243,6,6)" rx="2" ry="2" />
+<text  x="872.12" y="573" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.88%)</title><rect x="279.1" y="565" width="10.4" height="10.0" fill="rgb(240,133,26)" rx="2" ry="2" />
+<text  x="282.12" y="573" ></text>
+</g>
+<g >
+<title>finish_task_switch (1 samples, 0.88%)</title><rect x="196.3" y="510" width="10.4" height="10.0" fill="rgb(233,131,36)" rx="2" ry="2" />
+<text  x="199.32" y="518" ></text>
+</g>
+<g >
+<title>get_user_arg_ptr (1 samples, 0.88%)</title><rect x="268.8" y="378" width="10.3" height="10.0" fill="rgb(251,36,38)" rx="2" ry="2" />
+<text  x="271.77" y="386" ></text>
+</g>
+<g >
+<title>usb_stor_control_thread (2 samples, 1.75%)</title><rect x="889.8" y="543" width="20.7" height="10.0" fill="rgb(238,181,38)" rx="2" ry="2" />
+<text  x="892.82" y="551" ></text>
+</g>
+<g >
+<title>[libubus.so.20210215] (2 samples, 1.75%)</title><rect x="258.4" y="499" width="20.7" height="10.0" fill="rgb(226,38,6)" rx="2" ry="2" />
+<text  x="261.42" y="507" ></text>
+</g>
+<g >
+<title>__arm64_sys_wait4 (1 samples, 0.88%)</title><rect x="20.4" y="433" width="10.3" height="10.0" fill="rgb(211,170,21)" rx="2" ry="2" />
+<text  x="23.35" y="441" ></text>
+</g>
+<g >
+<title>page_remove_rmap (1 samples, 0.88%)</title><rect x="486.1" y="422" width="10.4" height="10.0" fill="rgb(210,29,42)" rx="2" ry="2" />
+<text  x="489.14" y="430" ></text>
+</g>
+<g >
+<title>__handle_mm_fault (2 samples, 1.75%)</title><rect x="434.4" y="488" width="20.7" height="10.0" fill="rgb(233,34,54)" rx="2" ry="2" />
+<text  x="437.39" y="496" ></text>
+</g>
+<g >
+<title>load_script (1 samples, 0.88%)</title><rect x="51.4" y="499" width="10.4" height="10.0" fill="rgb(210,203,11)" rx="2" ry="2" />
+<text  x="54.40" y="507" ></text>
+</g>
+<g >
+<title>__cpufreq_driver_target (1 samples, 0.88%)</title><rect x="144.6" y="499" width="10.3" height="10.0" fill="rgb(214,144,6)" rx="2" ry="2" />
+<text  x="147.56" y="507" ></text>
+</g>
+<g >
+<title>do_mem_abort (1 samples, 0.88%)</title><rect x="920.9" y="521" width="10.3" height="10.0" fill="rgb(209,27,36)" rx="2" ry="2" />
+<text  x="923.88" y="529" ></text>
+</g>
+<g >
+<title>do_mmap (1 samples, 0.88%)</title><rect x="341.2" y="433" width="10.4" height="10.0" fill="rgb(245,117,37)" rx="2" ry="2" />
+<text  x="344.23" y="441" ></text>
+</g>
+<g >
+<title>__vma_link_file (1 samples, 0.88%)</title><rect x="51.4" y="389" width="10.4" height="10.0" fill="rgb(243,181,27)" rx="2" ry="2" />
+<text  x="54.40" y="397" ></text>
+</g>
+<g >
+<title>d_hash_and_lookup (1 samples, 0.88%)</title><rect x="20.4" y="356" width="10.3" height="10.0" fill="rgb(223,63,19)" rx="2" ry="2" />
+<text  x="23.35" y="364" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="279.1" y="488" width="10.4" height="10.0" fill="rgb(215,222,47)" rx="2" ry="2" />
+<text  x="282.12" y="496" ></text>
+</g>
+<g >
+<title>wait_for_completion_io (1 samples, 0.88%)</title><rect x="206.7" y="455" width="10.3" height="10.0" fill="rgb(240,46,39)" rx="2" ry="2" />
+<text  x="209.67" y="463" ></text>
+</g>
+<g >
+<title>do_mem_abort (1 samples, 0.88%)</title><rect x="424.0" y="543" width="10.4" height="10.0" fill="rgb(248,67,50)" rx="2" ry="2" />
+<text  x="427.04" y="551" ></text>
+</g>
+<g >
+<title>[vim] (4 samples, 3.51%)</title><rect x="1148.6" y="334" width="41.4" height="10.0" fill="rgb(229,146,41)" rx="2" ry="2" />
+<text  x="1151.60" y="342" >[vim]</text>
+</g>
+<g >
+<title>[netifd] (1 samples, 0.88%)</title><rect x="268.8" y="466" width="10.3" height="10.0" fill="rgb(236,111,19)" rx="2" ry="2" />
+<text  x="271.77" y="474" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="20.4" y="521" width="10.3" height="10.0" fill="rgb(253,18,28)" rx="2" ry="2" />
+<text  x="23.35" y="529" ></text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.88%)</title><rect x="10.0" y="367" width="10.4" height="10.0" fill="rgb(245,202,0)" rx="2" ry="2" />
+<text  x="13.00" y="375" ></text>
+</g>
+<g >
+<title>[libc.so] (25 samples, 21.93%)</title><rect x="931.2" y="554" width="258.8" height="10.0" fill="rgb(237,121,31)" rx="2" ry="2" />
+<text  x="934.23" y="562" >[libc.so]</text>
+</g>
+<g >
+<title>do_idle (10 samples, 8.77%)</title><rect x="755.3" y="521" width="103.5" height="10.0" fill="rgb(215,104,44)" rx="2" ry="2" />
+<text  x="758.26" y="529" >do_idle</text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="268" width="10.4" height="10.0" fill="rgb(217,198,49)" rx="2" ry="2" />
+<text  x="1182.65" y="276" ></text>
+</g>
+<g >
+<title>submit_bh_wbc (1 samples, 0.88%)</title><rect x="227.4" y="378" width="10.3" height="10.0" fill="rgb(220,90,27)" rx="2" ry="2" />
+<text  x="230.37" y="386" ></text>
+</g>
+<g >
+<title>load_elf_binary (4 samples, 3.51%)</title><rect x="455.1" y="499" width="41.4" height="10.0" fill="rgb(246,117,32)" rx="2" ry="2" />
+<text  x="458.09" y="507" >loa..</text>
+</g>
+<g >
+<title>do_page_fault (1 samples, 0.88%)</title><rect x="41.1" y="510" width="10.3" height="10.0" fill="rgb(251,60,51)" rx="2" ry="2" />
+<text  x="44.05" y="518" ></text>
+</g>
+<g >
+<title>filemap_map_pages (1 samples, 0.88%)</title><rect x="41.1" y="477" width="10.3" height="10.0" fill="rgb(243,74,3)" rx="2" ry="2" />
+<text  x="44.05" y="485" ></text>
+</g>
+<g >
+<title>scsi_test_unit_ready (1 samples, 0.88%)</title><rect x="206.7" y="488" width="10.3" height="10.0" fill="rgb(224,201,53)" rx="2" ry="2" />
+<text  x="209.67" y="496" ></text>
+</g>
+<g >
+<title>[vim] (20 samples, 17.54%)</title><rect x="983.0" y="433" width="207.0" height="10.0" fill="rgb(238,156,34)" rx="2" ry="2" />
+<text  x="985.98" y="441" >[vim]</text>
+</g>
+<g >
+<title>load_elf_binary (1 samples, 0.88%)</title><rect x="51.4" y="466" width="10.4" height="10.0" fill="rgb(212,115,26)" rx="2" ry="2" />
+<text  x="54.40" y="474" ></text>
+</g>
+<g >
+<title>[libc.so] (4 samples, 3.51%)</title><rect x="237.7" y="554" width="41.4" height="10.0" fill="rgb(221,36,1)" rx="2" ry="2" />
+<text  x="240.72" y="562" >[li..</text>
+</g>
+<g >
+<title>kworker/0:2-eve (2 samples, 1.75%)</title><rect x="186.0" y="576" width="20.7" height="10.0" fill="rgb(214,138,25)" rx="2" ry="2" />
+<text  x="188.96" y="584" ></text>
+</g>
+<g >
+<title>do_translation_fault (1 samples, 0.88%)</title><rect x="41.1" y="521" width="10.3" height="10.0" fill="rgb(205,53,49)" rx="2" ry="2" />
+<text  x="44.05" y="529" ></text>
+</g>
+<g >
+<title>[busybox] (1 samples, 0.88%)</title><rect x="610.4" y="532" width="10.3" height="10.0" fill="rgb(221,121,2)" rx="2" ry="2" />
+<text  x="613.35" y="540" ></text>
+</g>
+<g >
+<title>ubus (2 samples, 1.75%)</title><rect x="869.1" y="576" width="20.7" height="10.0" fill="rgb(215,15,19)" rx="2" ry="2" />
+<text  x="872.12" y="584" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (2 samples, 1.75%)</title><rect x="299.8" y="532" width="20.7" height="10.0" fill="rgb(236,188,36)" rx="2" ry="2" />
+<text  x="302.82" y="540" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="858.8" y="554" width="10.3" height="10.0" fill="rgb(239,228,13)" rx="2" ry="2" />
+<text  x="861.77" y="562" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="51.4" y="565" width="10.4" height="10.0" fill="rgb(243,159,28)" rx="2" ry="2" />
+<text  x="54.40" y="573" ></text>
+</g>
+<g >
+<title>rcu_idle_exit (1 samples, 0.88%)</title><rect x="765.6" y="510" width="10.4" height="10.0" fill="rgb(206,131,38)" rx="2" ry="2" />
+<text  x="768.61" y="518" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="983.0" y="422" width="10.3" height="10.0" fill="rgb(210,41,50)" rx="2" ry="2" />
+<text  x="985.98" y="430" ></text>
+</g>
+<g >
+<title>el0_svc (3 samples, 2.63%)</title><rect x="672.5" y="532" width="31.0" height="10.0" fill="rgb(206,67,40)" rx="2" ry="2" />
+<text  x="675.46" y="540" >el..</text>
+</g>
+<g >
+<title>__writepage (1 samples, 0.88%)</title><rect x="227.4" y="422" width="10.3" height="10.0" fill="rgb(239,153,46)" rx="2" ry="2" />
+<text  x="230.37" y="430" ></text>
+</g>
+<g >
+<title>arch_call_rest_init (10 samples, 8.77%)</title><rect x="755.3" y="554" width="103.5" height="10.0" fill="rgb(220,126,14)" rx="2" ry="2" />
+<text  x="758.26" y="562" >arch_call_re..</text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.88%)</title><rect x="92.8" y="488" width="10.4" height="10.0" fill="rgb(219,23,27)" rx="2" ry="2" />
+<text  x="95.81" y="496" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="30.7" y="532" width="10.4" height="10.0" fill="rgb(250,49,34)" rx="2" ry="2" />
+<text  x="33.70" y="540" ></text>
+</g>
+<g >
+<title>[unknown] (2 samples, 1.75%)</title><rect x="299.8" y="565" width="20.7" height="10.0" fill="rgb(242,197,32)" rx="2" ry="2" />
+<text  x="302.82" y="573" ></text>
+</g>
+<g >
+<title>ksoftirqd/0 (2 samples, 1.75%)</title><rect x="113.5" y="576" width="20.7" height="10.0" fill="rgb(221,220,37)" rx="2" ry="2" />
+<text  x="116.51" y="584" ></text>
+</g>
+<g >
+<title>exit_mmap (1 samples, 0.88%)</title><rect x="289.5" y="433" width="10.3" height="10.0" fill="rgb(223,208,30)" rx="2" ry="2" />
+<text  x="292.47" y="441" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="82.5" y="565" width="10.3" height="10.0" fill="rgb(243,84,8)" rx="2" ry="2" />
+<text  x="85.46" y="573" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="931.2" y="521" width="10.4" height="10.0" fill="rgb(238,221,12)" rx="2" ry="2" />
+<text  x="934.23" y="529" ></text>
+</g>
+<g >
+<title>__writeback_inodes_wb (1 samples, 0.88%)</title><rect x="227.4" y="499" width="10.3" height="10.0" fill="rgb(219,177,6)" rx="2" ry="2" />
+<text  x="230.37" y="507" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="983.0" y="400" width="10.3" height="10.0" fill="rgb(233,132,47)" rx="2" ry="2" />
+<text  x="985.98" y="408" ></text>
+</g>
+<g >
+<title>el0_da (1 samples, 0.88%)</title><rect x="424.0" y="554" width="10.4" height="10.0" fill="rgb(217,107,26)" rx="2" ry="2" />
+<text  x="427.04" y="562" ></text>
+</g>
+<g >
+<title>unlock_page (1 samples, 0.88%)</title><rect x="444.7" y="466" width="10.4" height="10.0" fill="rgb(235,148,44)" rx="2" ry="2" />
+<text  x="447.74" y="474" ></text>
+</g>
+<g >
+<title>__do_munmap (1 samples, 0.88%)</title><rect x="341.2" y="411" width="10.4" height="10.0" fill="rgb(206,80,2)" rx="2" ry="2" />
+<text  x="344.23" y="419" ></text>
+</g>
+<g >
+<title>do_wp_page (1 samples, 0.88%)</title><rect x="424.0" y="499" width="10.4" height="10.0" fill="rgb(207,129,48)" rx="2" ry="2" />
+<text  x="427.04" y="507" ></text>
+</g>
+<g >
+<title>[busybox] (22 samples, 19.30%)</title><rect x="496.5" y="554" width="227.7" height="10.0" fill="rgb(244,120,51)" rx="2" ry="2" />
+<text  x="499.49" y="562" >[busybox]</text>
+</g>
+<g >
+<title>el0_da (1 samples, 0.88%)</title><rect x="920.9" y="532" width="10.3" height="10.0" fill="rgb(211,81,18)" rx="2" ry="2" />
+<text  x="923.88" y="540" ></text>
+</g>
+<g >
+<title>__handle_mm_fault (1 samples, 0.88%)</title><rect x="713.9" y="477" width="10.3" height="10.0" fill="rgb(224,74,43)" rx="2" ry="2" />
+<text  x="716.86" y="485" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="920.9" y="543" width="10.3" height="10.0" fill="rgb(216,206,28)" rx="2" ry="2" />
+<text  x="923.88" y="551" ></text>
+</g>
+<g >
+<title>[odhcpd] (1 samples, 0.88%)</title><rect x="279.1" y="521" width="10.4" height="10.0" fill="rgb(235,28,14)" rx="2" ry="2" />
+<text  x="282.12" y="529" ></text>
+</g>
+<g >
+<title>__scsi_execute (1 samples, 0.88%)</title><rect x="206.7" y="477" width="10.3" height="10.0" fill="rgb(215,139,24)" rx="2" ry="2" />
+<text  x="209.67" y="485" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 1.75%)</title><rect x="92.8" y="554" width="20.7" height="10.0" fill="rgb(221,190,36)" rx="2" ry="2" />
+<text  x="95.81" y="562" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="310.2" y="499" width="10.3" height="10.0" fill="rgb(225,10,53)" rx="2" ry="2" />
+<text  x="313.18" y="507" ></text>
+</g>
+<g >
+<title>process_one_work (1 samples, 0.88%)</title><rect x="206.7" y="532" width="10.3" height="10.0" fill="rgb(212,141,6)" rx="2" ry="2" />
+<text  x="209.67" y="540" ></text>
+</g>
+<g >
+<title>[vim] (19 samples, 16.67%)</title><rect x="993.3" y="422" width="196.7" height="10.0" fill="rgb(209,9,51)" rx="2" ry="2" />
+<text  x="996.33" y="430" >[vim]</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="1138.2" y="323" width="10.4" height="10.0" fill="rgb(218,89,13)" rx="2" ry="2" />
+<text  x="1141.25" y="331" ></text>
+</g>
+<g >
+<title>blkdev_writepage (1 samples, 0.88%)</title><rect x="227.4" y="411" width="10.3" height="10.0" fill="rgb(230,89,40)" rx="2" ry="2" />
+<text  x="230.37" y="419" ></text>
+</g>
+<g >
+<title>finish_task_switch (1 samples, 0.88%)</title><rect x="144.6" y="334" width="10.3" height="10.0" fill="rgb(210,34,40)" rx="2" ry="2" />
+<text  x="147.56" y="342" ></text>
+</g>
+<g >
+<title>__do_execve_file (1 samples, 0.88%)</title><rect x="82.5" y="521" width="10.3" height="10.0" fill="rgb(221,96,36)" rx="2" ry="2" />
+<text  x="85.46" y="529" ></text>
+</g>
+<g >
+<title>__schedule (1 samples, 0.88%)</title><rect x="144.6" y="345" width="10.3" height="10.0" fill="rgb(232,210,38)" rx="2" ry="2" />
+<text  x="147.56" y="353" ></text>
+</g>
+<g >
+<title>[vim] (22 samples, 19.30%)</title><rect x="962.3" y="455" width="227.7" height="10.0" fill="rgb(239,35,26)" rx="2" ry="2" />
+<text  x="965.28" y="463" >[vim]</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="20.4" y="477" width="10.3" height="10.0" fill="rgb(244,186,48)" rx="2" ry="2" />
+<text  x="23.35" y="485" ></text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.88%)</title><rect x="289.5" y="554" width="10.3" height="10.0" fill="rgb(207,71,16)" rx="2" ry="2" />
+<text  x="292.47" y="562" ></text>
+</g>
+<g >
+<title>el0_ia (1 samples, 0.88%)</title><rect x="734.6" y="543" width="10.3" height="10.0" fill="rgb(235,23,45)" rx="2" ry="2" />
+<text  x="737.56" y="551" ></text>
+</g>
+<g >
+<title>__arm64_sys_brk (1 samples, 0.88%)</title><rect x="1138.2" y="290" width="10.4" height="10.0" fill="rgb(224,134,12)" rx="2" ry="2" />
+<text  x="1141.25" y="298" ></text>
+</g>
+<g >
+<title>do_el0_ia_bp_hardening (2 samples, 1.75%)</title><rect x="434.4" y="543" width="20.7" height="10.0" fill="rgb(252,130,26)" rx="2" ry="2" />
+<text  x="437.39" y="551" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="37" width="10.4" height="10.0" fill="rgb(210,26,40)" rx="2" ry="2" />
+<text  x="1182.65" y="45" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="931.2" y="543" width="10.4" height="10.0" fill="rgb(229,34,48)" rx="2" ry="2" />
+<text  x="934.23" y="551" ></text>
+</g>
+<g >
+<title>clk_core_set_rate_nolock (1 samples, 0.88%)</title><rect x="144.6" y="455" width="10.3" height="10.0" fill="rgb(210,71,8)" rx="2" ry="2" />
+<text  x="147.56" y="463" ></text>
+</g>
+<g >
+<title>schedule_idle (5 samples, 4.39%)</title><rect x="776.0" y="510" width="51.7" height="10.0" fill="rgb(234,32,26)" rx="2" ry="2" />
+<text  x="778.96" y="518" >sched..</text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="224" width="10.4" height="10.0" fill="rgb(244,2,49)" rx="2" ry="2" />
+<text  x="1182.65" y="232" ></text>
+</g>
+<g >
+<title>__block_write_full_page (1 samples, 0.88%)</title><rect x="227.4" y="389" width="10.3" height="10.0" fill="rgb(221,129,28)" rx="2" ry="2" />
+<text  x="230.37" y="397" ></text>
+</g>
+<g >
+<title>worker_thread (1 samples, 0.88%)</title><rect x="206.7" y="543" width="10.3" height="10.0" fill="rgb(213,191,50)" rx="2" ry="2" />
+<text  x="209.67" y="551" ></text>
+</g>
+<g >
+<title>do_iter_write (1 samples, 0.88%)</title><rect x="61.8" y="433" width="10.3" height="10.0" fill="rgb(232,66,50)" rx="2" ry="2" />
+<text  x="64.75" y="441" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="158" width="10.4" height="10.0" fill="rgb(231,121,4)" rx="2" ry="2" />
+<text  x="1182.65" y="166" ></text>
+</g>
+<g >
+<title>mmap_region (1 samples, 0.88%)</title><rect x="869.1" y="444" width="10.4" height="10.0" fill="rgb(234,133,3)" rx="2" ry="2" />
+<text  x="872.12" y="452" ></text>
+</g>
+<g >
+<title>remove_vma (1 samples, 0.88%)</title><rect x="475.8" y="455" width="10.3" height="10.0" fill="rgb(221,89,11)" rx="2" ry="2" />
+<text  x="478.79" y="463" ></text>
+</g>
+<g >
+<title>do_iter_readv_writev (1 samples, 0.88%)</title><rect x="61.8" y="422" width="10.3" height="10.0" fill="rgb(254,154,7)" rx="2" ry="2" />
+<text  x="64.75" y="430" ></text>
+</g>
+<g >
+<title>get_user_arg_ptr (1 samples, 0.88%)</title><rect x="693.2" y="488" width="10.3" height="10.0" fill="rgb(239,193,0)" rx="2" ry="2" />
+<text  x="696.16" y="496" ></text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.88%)</title><rect x="268.8" y="422" width="10.3" height="10.0" fill="rgb(215,67,54)" rx="2" ry="2" />
+<text  x="271.77" y="430" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="92" width="10.4" height="10.0" fill="rgb(211,208,39)" rx="2" ry="2" />
+<text  x="1182.65" y="100" ></text>
+</g>
+<g >
+<title>iptable_mangle_hook (1 samples, 0.88%)</title><rect x="61.8" y="268" width="10.3" height="10.0" fill="rgb(224,229,41)" rx="2" ry="2" />
+<text  x="64.75" y="276" ></text>
+</g>
+<g >
+<title>unmap_vmas (1 samples, 0.88%)</title><rect x="72.1" y="488" width="10.4" height="10.0" fill="rgb(207,123,17)" rx="2" ry="2" />
+<text  x="75.11" y="496" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 1.75%)</title><rect x="330.9" y="554" width="20.7" height="10.0" fill="rgb(225,27,53)" rx="2" ry="2" />
+<text  x="333.88" y="562" ></text>
+</g>
+<g >
+<title>sched_fork (1 samples, 0.88%)</title><rect x="682.8" y="477" width="10.4" height="10.0" fill="rgb(221,189,47)" rx="2" ry="2" />
+<text  x="685.81" y="485" ></text>
+</g>
+<g >
+<title>__arm64_sys_execve (1 samples, 0.88%)</title><rect x="10.0" y="345" width="10.4" height="10.0" fill="rgb(248,57,21)" rx="2" ry="2" />
+<text  x="13.00" y="353" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="125" width="10.4" height="10.0" fill="rgb(235,17,5)" rx="2" ry="2" />
+<text  x="1182.65" y="133" ></text>
+</g>
+<g >
+<title>kthread (5 samples, 4.39%)</title><rect x="134.2" y="554" width="51.8" height="10.0" fill="rgb(253,204,38)" rx="2" ry="2" />
+<text  x="137.21" y="562" >kthread</text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.88%)</title><rect x="72.1" y="565" width="10.4" height="10.0" fill="rgb(230,90,10)" rx="2" ry="2" />
+<text  x="75.11" y="573" ></text>
+</g>
+<g >
+<title>search_binary_handler.part.52 (1 samples, 0.88%)</title><rect x="51.4" y="477" width="10.4" height="10.0" fill="rgb(215,203,24)" rx="2" ry="2" />
+<text  x="54.40" y="485" ></text>
+</g>
+<g >
+<title>kworker/u8:2-ev (2 samples, 1.75%)</title><rect x="217.0" y="576" width="20.7" height="10.0" fill="rgb(228,54,50)" rx="2" ry="2" />
+<text  x="220.02" y="584" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="103" width="10.4" height="10.0" fill="rgb(233,171,53)" rx="2" ry="2" />
+<text  x="1182.65" y="111" ></text>
+</g>
+<g >
+<title>schedule (1 samples, 0.88%)</title><rect x="123.9" y="532" width="10.3" height="10.0" fill="rgb(245,150,15)" rx="2" ry="2" />
+<text  x="126.86" y="540" ></text>
+</g>
+<g >
+<title>unmap_vmas (1 samples, 0.88%)</title><rect x="486.1" y="455" width="10.4" height="10.0" fill="rgb(216,210,19)" rx="2" ry="2" />
+<text  x="489.14" y="463" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="10.0" y="422" width="10.4" height="10.0" fill="rgb(245,18,21)" rx="2" ry="2" />
+<text  x="13.00" y="430" ></text>
+</g>
+<g >
+<title>bcmgenet_mii_wait (2 samples, 1.75%)</title><rect x="154.9" y="444" width="20.7" height="10.0" fill="rgb(234,25,3)" rx="2" ry="2" />
+<text  x="157.91" y="452" ></text>
+</g>
+<g >
+<title>el0_svc (2 samples, 1.75%)</title><rect x="869.1" y="554" width="20.7" height="10.0" fill="rgb(226,217,10)" rx="2" ry="2" />
+<text  x="872.12" y="562" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="393.0" y="543" width="10.3" height="10.0" fill="rgb(224,216,13)" rx="2" ry="2" />
+<text  x="395.98" y="551" ></text>
+</g>
+<g >
+<title>strnlen_user (1 samples, 0.88%)</title><rect x="910.5" y="488" width="10.4" height="10.0" fill="rgb(250,172,51)" rx="2" ry="2" />
+<text  x="913.53" y="496" ></text>
+</g>
+<g >
+<title>[dropbear] (1 samples, 0.88%)</title><rect x="61.8" y="532" width="10.3" height="10.0" fill="rgb(246,137,34)" rx="2" ry="2" />
+<text  x="64.75" y="540" ></text>
+</g>
+<g >
+<title>usb_stor_bulk_transfer_buf (2 samples, 1.75%)</title><rect x="889.8" y="499" width="20.7" height="10.0" fill="rgb(216,198,33)" rx="2" ry="2" />
+<text  x="892.82" y="507" ></text>
+</g>
+<g >
+<title>alloc_set_pte (1 samples, 0.88%)</title><rect x="734.6" y="455" width="10.3" height="10.0" fill="rgb(244,197,31)" rx="2" ry="2" />
+<text  x="737.56" y="463" ></text>
+</g>
+<g >
+<title>do_exit (1 samples, 0.88%)</title><rect x="744.9" y="521" width="10.4" height="10.0" fill="rgb(237,165,2)" rx="2" ry="2" />
+<text  x="747.91" y="529" ></text>
+</g>
+<g >
+<title>write_cache_pages (1 samples, 0.88%)</title><rect x="227.4" y="433" width="10.3" height="10.0" fill="rgb(208,117,46)" rx="2" ry="2" />
+<text  x="230.37" y="441" ></text>
+</g>
+<g >
+<title>remove_vma (1 samples, 0.88%)</title><rect x="341.2" y="400" width="10.4" height="10.0" fill="rgb(242,228,53)" rx="2" ry="2" />
+<text  x="344.23" y="408" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="61.8" y="554" width="10.3" height="10.0" fill="rgb(209,227,35)" rx="2" ry="2" />
+<text  x="64.75" y="562" ></text>
+</g>
+<g >
+<title>fput_many (1 samples, 0.88%)</title><rect x="341.2" y="378" width="10.4" height="10.0" fill="rgb(230,21,4)" rx="2" ry="2" />
+<text  x="344.23" y="386" ></text>
+</g>
+<g >
+<title>do_mmap (1 samples, 0.88%)</title><rect x="869.1" y="455" width="10.4" height="10.0" fill="rgb(230,13,2)" rx="2" ry="2" />
+<text  x="872.12" y="463" ></text>
+</g>
+<g >
+<title>[unknown] (25 samples, 21.93%)</title><rect x="931.2" y="565" width="258.8" height="10.0" fill="rgb(248,158,9)" rx="2" ry="2" />
+<text  x="934.23" y="573" >[unknown]</text>
+</g>
+<g >
+<title>rcu_sched (1 samples, 0.88%)</title><rect x="320.5" y="576" width="10.4" height="10.0" fill="rgb(225,118,0)" rx="2" ry="2" />
+<text  x="323.53" y="584" ></text>
+</g>
+<g >
+<title>vm_area_free (1 samples, 0.88%)</title><rect x="475.8" y="444" width="10.3" height="10.0" fill="rgb(240,154,14)" rx="2" ry="2" />
+<text  x="478.79" y="452" ></text>
+</g>
+<g >
+<title>mmput (1 samples, 0.88%)</title><rect x="72.1" y="510" width="10.4" height="10.0" fill="rgb(235,34,25)" rx="2" ry="2" />
+<text  x="75.11" y="518" ></text>
+</g>
+<g >
+<title>vfs_writev (1 samples, 0.88%)</title><rect x="61.8" y="444" width="10.3" height="10.0" fill="rgb(235,121,35)" rx="2" ry="2" />
+<text  x="64.75" y="452" ></text>
+</g>
+<g >
+<title>page_add_file_rmap (1 samples, 0.88%)</title><rect x="434.4" y="455" width="10.3" height="10.0" fill="rgb(240,224,52)" rx="2" ry="2" />
+<text  x="437.39" y="463" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.88%)</title><rect x="1138.2" y="301" width="10.4" height="10.0" fill="rgb(221,71,26)" rx="2" ry="2" />
+<text  x="1141.25" y="309" ></text>
+</g>
+<g >
+<title>copy_page (1 samples, 0.88%)</title><rect x="424.0" y="477" width="10.4" height="10.0" fill="rgb(231,208,14)" rx="2" ry="2" />
+<text  x="427.04" y="485" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="1055.4" y="389" width="10.4" height="10.0" fill="rgb(250,171,27)" rx="2" ry="2" />
+<text  x="1058.44" y="397" ></text>
+</g>
+<g >
+<title>start_kernel (10 samples, 8.77%)</title><rect x="755.3" y="565" width="103.5" height="10.0" fill="rgb(247,78,26)" rx="2" ry="2" />
+<text  x="758.26" y="573" >start_kernel</text>
+</g>
+<g >
+<title>kthread (2 samples, 1.75%)</title><rect x="186.0" y="554" width="20.7" height="10.0" fill="rgb(246,122,23)" rx="2" ry="2" />
+<text  x="188.96" y="562" ></text>
+</g>
+<g >
+<title>ip_local_out (1 samples, 0.88%)</title><rect x="61.8" y="301" width="10.3" height="10.0" fill="rgb(241,188,43)" rx="2" ry="2" />
+<text  x="64.75" y="309" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="246" width="10.4" height="10.0" fill="rgb(243,153,12)" rx="2" ry="2" />
+<text  x="1182.65" y="254" ></text>
+</g>
+<g >
+<title>tasklet_action_common.isra.19 (1 samples, 0.88%)</title><rect x="113.5" y="499" width="10.4" height="10.0" fill="rgb(224,17,34)" rx="2" ry="2" />
+<text  x="116.51" y="507" ></text>
+</g>
+<g >
+<title>__do_execve_file (1 samples, 0.88%)</title><rect x="10.0" y="334" width="10.4" height="10.0" fill="rgb(220,206,52)" rx="2" ry="2" />
+<text  x="13.00" y="342" ></text>
+</g>
+<g >
+<title>__arm64_sys_execve (1 samples, 0.88%)</title><rect x="289.5" y="532" width="10.3" height="10.0" fill="rgb(238,137,38)" rx="2" ry="2" />
+<text  x="292.47" y="540" ></text>
+</g>
+<g >
+<title>[odhcpd] (1 samples, 0.88%)</title><rect x="279.1" y="543" width="10.4" height="10.0" fill="rgb(217,224,4)" rx="2" ry="2" />
+<text  x="282.12" y="551" ></text>
+</g>
+<g >
+<title>jsonfilter (2 samples, 1.75%)</title><rect x="92.8" y="576" width="20.7" height="10.0" fill="rgb(248,44,17)" rx="2" ry="2" />
+<text  x="95.81" y="584" ></text>
+</g>
+<g >
+<title>mmput (1 samples, 0.88%)</title><rect x="744.9" y="510" width="10.4" height="10.0" fill="rgb(205,188,23)" rx="2" ry="2" />
+<text  x="747.91" y="518" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="279.1" y="554" width="10.4" height="10.0" fill="rgb(239,83,12)" rx="2" ry="2" />
+<text  x="282.12" y="562" ></text>
+</g>
+<g >
+<title>ret_from_fork (2 samples, 1.75%)</title><rect x="217.0" y="565" width="20.7" height="10.0" fill="rgb(205,130,37)" rx="2" ry="2" />
+<text  x="220.02" y="573" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="30.7" y="510" width="10.4" height="10.0" fill="rgb(252,189,9)" rx="2" ry="2" />
+<text  x="33.70" y="518" ></text>
+</g>
+<g >
+<title>filemap_map_pages (1 samples, 0.88%)</title><rect x="310.2" y="411" width="10.3" height="10.0" fill="rgb(208,164,48)" rx="2" ry="2" />
+<text  x="313.18" y="419" ></text>
+</g>
+<g >
+<title>[dropbear] (1 samples, 0.88%)</title><rect x="61.8" y="543" width="10.3" height="10.0" fill="rgb(226,141,54)" rx="2" ry="2" />
+<text  x="64.75" y="551" ></text>
+</g>
+<g >
+<title>flush_old_exec (4 samples, 3.51%)</title><rect x="455.1" y="488" width="41.4" height="10.0" fill="rgb(211,58,20)" rx="2" ry="2" />
+<text  x="458.09" y="496" >flu..</text>
+</g>
+<g >
+<title>[unknown] (2 samples, 1.75%)</title><rect x="30.7" y="565" width="20.7" height="10.0" fill="rgb(244,143,20)" rx="2" ry="2" />
+<text  x="33.70" y="573" ></text>
+</g>
+<g >
+<title>validate_data (2 samples, 1.75%)</title><rect x="910.5" y="576" width="20.7" height="10.0" fill="rgb(229,201,32)" rx="2" ry="2" />
+<text  x="913.53" y="584" ></text>
+</g>
+<g >
+<title>vm_mmap_pgoff (1 samples, 0.88%)</title><rect x="51.4" y="433" width="10.4" height="10.0" fill="rgb(206,167,17)" rx="2" ry="2" />
+<text  x="54.40" y="441" ></text>
+</g>
+<g >
+<title>handle_mm_fault (1 samples, 0.88%)</title><rect x="413.7" y="488" width="10.3" height="10.0" fill="rgb(212,216,31)" rx="2" ry="2" />
+<text  x="416.68" y="496" ></text>
+</g>
+<g >
+<title>__ip_local_out (1 samples, 0.88%)</title><rect x="61.8" y="290" width="10.3" height="10.0" fill="rgb(226,223,36)" rx="2" ry="2" />
+<text  x="64.75" y="298" ></text>
+</g>
+<g >
+<title>[libncursesw.so.6.2] (1 samples, 0.88%)</title><rect x="941.6" y="499" width="10.3" height="10.0" fill="rgb(215,84,54)" rx="2" ry="2" />
+<text  x="944.58" y="507" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 1.75%)</title><rect x="1096.8" y="345" width="20.7" height="10.0" fill="rgb(225,189,31)" rx="2" ry="2" />
+<text  x="1099.84" y="353" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="1034.7" y="389" width="10.4" height="10.0" fill="rgb(238,57,35)" rx="2" ry="2" />
+<text  x="1037.74" y="397" ></text>
+</g>
+<g >
+<title>inet_sendmsg (1 samples, 0.88%)</title><rect x="61.8" y="400" width="10.3" height="10.0" fill="rgb(215,6,11)" rx="2" ry="2" />
+<text  x="64.75" y="408" ></text>
+</g>
+<g >
+<title>copy_process (2 samples, 1.75%)</title><rect x="672.5" y="488" width="20.7" height="10.0" fill="rgb(207,55,9)" rx="2" ry="2" />
+<text  x="675.46" y="496" ></text>
+</g>
+<g >
+<title>__arm64_sys_mmap (1 samples, 0.88%)</title><rect x="341.2" y="466" width="10.4" height="10.0" fill="rgb(242,101,48)" rx="2" ry="2" />
+<text  x="344.23" y="474" ></text>
+</g>
+<g >
+<title>do_mem_abort (1 samples, 0.88%)</title><rect x="41.1" y="532" width="10.3" height="10.0" fill="rgb(205,215,19)" rx="2" ry="2" />
+<text  x="44.05" y="540" ></text>
+</g>
+<g >
+<title>flush_old_exec (1 samples, 0.88%)</title><rect x="289.5" y="455" width="10.3" height="10.0" fill="rgb(246,208,20)" rx="2" ry="2" />
+<text  x="292.47" y="463" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="10.0" y="565" width="10.4" height="10.0" fill="rgb(222,110,39)" rx="2" ry="2" />
+<text  x="13.00" y="573" ></text>
+</g>
+<g >
+<title>__arm64_sys_exit_group (1 samples, 0.88%)</title><rect x="72.1" y="543" width="10.4" height="10.0" fill="rgb(254,131,5)" rx="2" ry="2" />
+<text  x="75.11" y="551" ></text>
+</g>
+<g >
+<title>[busybox] (10 samples, 8.77%)</title><rect x="351.6" y="565" width="103.5" height="10.0" fill="rgb(206,188,48)" rx="2" ry="2" />
+<text  x="354.58" y="573" >[busybox]</text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="20.4" y="543" width="10.3" height="10.0" fill="rgb(219,134,51)" rx="2" ry="2" />
+<text  x="23.35" y="551" ></text>
+</g>
+<g >
+<title>load_elf_binary (1 samples, 0.88%)</title><rect x="910.5" y="499" width="10.4" height="10.0" fill="rgb(246,7,8)" rx="2" ry="2" />
+<text  x="913.53" y="507" ></text>
+</g>
+<g >
+<title>do_translation_fault (1 samples, 0.88%)</title><rect x="662.1" y="510" width="10.4" height="10.0" fill="rgb(215,224,34)" rx="2" ry="2" />
+<text  x="665.11" y="518" ></text>
+</g>
+<g >
+<title>sd_check_events (1 samples, 0.88%)</title><rect x="206.7" y="499" width="10.3" height="10.0" fill="rgb(238,154,25)" rx="2" ry="2" />
+<text  x="209.67" y="507" ></text>
+</g>
+<g >
+<title>[libnl-tiny.so] (1 samples, 0.88%)</title><rect x="279.1" y="510" width="10.4" height="10.0" fill="rgb(226,83,46)" rx="2" ry="2" />
+<text  x="282.12" y="518" ></text>
+</g>
+<g >
+<title>smpboot_thread_fn (2 samples, 1.75%)</title><rect x="113.5" y="543" width="20.7" height="10.0" fill="rgb(221,77,52)" rx="2" ry="2" />
+<text  x="116.51" y="551" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="10.0" y="532" width="10.4" height="10.0" fill="rgb(243,25,15)" rx="2" ry="2" />
+<text  x="13.00" y="540" ></text>
+</g>
+<g >
+<title>finish_task_switch (5 samples, 4.39%)</title><rect x="776.0" y="488" width="51.7" height="10.0" fill="rgb(233,104,0)" rx="2" ry="2" />
+<text  x="778.96" y="496" >finis..</text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.88%)</title><rect x="51.4" y="554" width="10.4" height="10.0" fill="rgb(233,217,9)" rx="2" ry="2" />
+<text  x="54.40" y="562" ></text>
+</g>
+<g >
+<title>sock_write_iter (1 samples, 0.88%)</title><rect x="61.8" y="411" width="10.3" height="10.0" fill="rgb(220,158,41)" rx="2" ry="2" />
+<text  x="64.75" y="419" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="20.4" y="532" width="10.3" height="10.0" fill="rgb(250,184,17)" rx="2" ry="2" />
+<text  x="23.35" y="540" ></text>
+</g>
+<g >
+<title>kmem_cache_free (1 samples, 0.88%)</title><rect x="289.5" y="400" width="10.3" height="10.0" fill="rgb(214,171,9)" rx="2" ry="2" />
+<text  x="292.47" y="408" ></text>
+</g>
+<g >
+<title>[vim] (24 samples, 21.05%)</title><rect x="941.6" y="521" width="248.4" height="10.0" fill="rgb(247,177,22)" rx="2" ry="2" />
+<text  x="944.58" y="529" >[vim]</text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="10.0" y="543" width="10.4" height="10.0" fill="rgb(230,199,1)" rx="2" ry="2" />
+<text  x="13.00" y="551" ></text>
+</g>
+<g >
+<title>handle_mm_fault (1 samples, 0.88%)</title><rect x="41.1" y="499" width="10.3" height="10.0" fill="rgb(218,176,33)" rx="2" ry="2" />
+<text  x="44.05" y="507" ></text>
+</g>
+<g >
+<title>do_mem_abort (1 samples, 0.88%)</title><rect x="413.7" y="521" width="10.3" height="10.0" fill="rgb(249,202,10)" rx="2" ry="2" />
+<text  x="416.68" y="529" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.88%)</title><rect x="20.4" y="444" width="10.3" height="10.0" fill="rgb(210,9,42)" rx="2" ry="2" />
+<text  x="23.35" y="452" ></text>
+</g>
+<g >
+<title>search_binary_handler.part.52 (1 samples, 0.88%)</title><rect x="289.5" y="510" width="10.3" height="10.0" fill="rgb(247,140,42)" rx="2" ry="2" />
+<text  x="292.47" y="518" ></text>
+</g>
+<g >
+<title>filemap_map_pages (1 samples, 0.88%)</title><rect x="413.7" y="466" width="10.3" height="10.0" fill="rgb(250,87,27)" rx="2" ry="2" />
+<text  x="416.68" y="474" ></text>
+</g>
+<g >
+<title>do_el0_ia_bp_hardening (1 samples, 0.88%)</title><rect x="734.6" y="532" width="10.3" height="10.0" fill="rgb(221,75,53)" rx="2" ry="2" />
+<text  x="737.56" y="540" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="180" width="10.4" height="10.0" fill="rgb(218,196,6)" rx="2" ry="2" />
+<text  x="1182.65" y="188" ></text>
+</g>
+<g >
+<title>do_group_exit (1 samples, 0.88%)</title><rect x="72.1" y="532" width="10.4" height="10.0" fill="rgb(227,65,11)" rx="2" ry="2" />
+<text  x="75.11" y="540" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.88%)</title><rect x="258.4" y="455" width="10.4" height="10.0" fill="rgb(246,16,18)" rx="2" ry="2" />
+<text  x="261.42" y="463" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="10.0" y="433" width="10.4" height="10.0" fill="rgb(251,154,51)" rx="2" ry="2" />
+<text  x="13.00" y="441" ></text>
+</g>
+<g >
+<title>do_page_fault (1 samples, 0.88%)</title><rect x="424.0" y="532" width="10.4" height="10.0" fill="rgb(222,197,12)" rx="2" ry="2" />
+<text  x="427.04" y="540" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.88%)</title><rect x="61.8" y="565" width="10.3" height="10.0" fill="rgb(248,17,30)" rx="2" ry="2" />
+<text  x="64.75" y="573" ></text>
+</g>
+<g >
+<title>ret_from_fork (5 samples, 4.39%)</title><rect x="134.2" y="565" width="51.8" height="10.0" fill="rgb(225,147,36)" rx="2" ry="2" />
+<text  x="137.21" y="573" >ret_f..</text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 1.75%)</title><rect x="330.9" y="499" width="20.7" height="10.0" fill="rgb(221,47,33)" rx="2" ry="2" />
+<text  x="333.88" y="507" ></text>
+</g>
+<g >
+<title>__schedule (1 samples, 0.88%)</title><rect x="320.5" y="510" width="10.4" height="10.0" fill="rgb(205,39,25)" rx="2" ry="2" />
+<text  x="323.53" y="518" ></text>
+</g>
+<g >
+<title>[libc.so] (4 samples, 3.51%)</title><rect x="455.1" y="565" width="41.4" height="10.0" fill="rgb(211,67,52)" rx="2" ry="2" />
+<text  x="458.09" y="573" >[li..</text>
+</g>
+<g >
+<title>unmap_page_range (1 samples, 0.88%)</title><rect x="72.1" y="466" width="10.4" height="10.0" fill="rgb(219,163,27)" rx="2" ry="2" />
+<text  x="75.11" y="474" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.88%)</title><rect x="51.4" y="543" width="10.4" height="10.0" fill="rgb(235,26,2)" rx="2" ry="2" />
+<text  x="54.40" y="551" ></text>
+</g>
+<g >
+<title>__schedule (1 samples, 0.88%)</title><rect x="123.9" y="521" width="10.3" height="10.0" fill="rgb(217,201,7)" rx="2" ry="2" />
+<text  x="126.86" y="529" ></text>
+</g>
+<g >
+<title>el0_da (1 samples, 0.88%)</title><rect x="703.5" y="543" width="10.4" height="10.0" fill="rgb(205,98,35)" rx="2" ry="2" />
+<text  x="706.51" y="551" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.88%)</title><rect x="910.5" y="543" width="10.4" height="10.0" fill="rgb(228,25,53)" rx="2" ry="2" />
+<text  x="913.53" y="551" ></text>
+</g>
+<g >
+<title>__arm64_sys_writev (1 samples, 0.88%)</title><rect x="92.8" y="466" width="10.4" height="10.0" fill="rgb(243,4,25)" rx="2" ry="2" />
+<text  x="95.81" y="474" ></text>
+</g>
+<g >
+<title>process_one_work (3 samples, 2.63%)</title><rect x="144.6" y="532" width="31.0" height="10.0" fill="rgb(249,13,25)" rx="2" ry="2" />
+<text  x="147.56" y="540" >pr..</text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="147" width="10.4" height="10.0" fill="rgb(235,97,2)" rx="2" ry="2" />
+<text  x="1182.65" y="155" ></text>
+</g>
+<g >
+<title>[unknown] (2 samples, 1.75%)</title><rect x="330.9" y="565" width="20.7" height="10.0" fill="rgb(219,10,51)" rx="2" ry="2" />
+<text  x="333.88" y="573" ></text>
+</g>
+<g >
+<title>__arm64_sys_execve (2 samples, 1.75%)</title><rect x="869.1" y="532" width="20.7" height="10.0" fill="rgb(239,212,48)" rx="2" ry="2" />
+<text  x="872.12" y="540" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="30.7" y="543" width="10.4" height="10.0" fill="rgb(228,172,50)" rx="2" ry="2" />
+<text  x="33.70" y="551" ></text>
+</g>
+<g >
+<title>[vim] (10 samples, 8.77%)</title><rect x="1086.5" y="356" width="103.5" height="10.0" fill="rgb(221,86,23)" rx="2" ry="2" />
+<text  x="1089.49" y="364" >[vim]</text>
+</g>
+<g >
+<title>submit_bio (1 samples, 0.88%)</title><rect x="227.4" y="367" width="10.3" height="10.0" fill="rgb(208,172,45)" rx="2" ry="2" />
+<text  x="230.37" y="375" ></text>
+</g>
+<g >
+<title>usb_hcd_submit_urb (1 samples, 0.88%)</title><rect x="900.2" y="466" width="10.3" height="10.0" fill="rgb(222,105,52)" rx="2" ry="2" />
+<text  x="903.18" y="474" ></text>
+</g>
+<g >
+<title>[vim] (18 samples, 15.79%)</title><rect x="1003.7" y="411" width="186.3" height="10.0" fill="rgb(246,186,8)" rx="2" ry="2" />
+<text  x="1006.68" y="419" >[vim]</text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.88%)</title><rect x="279.1" y="532" width="10.4" height="10.0" fill="rgb(252,160,16)" rx="2" ry="2" />
+<text  x="282.12" y="540" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="61.8" y="499" width="10.3" height="10.0" fill="rgb(232,99,33)" rx="2" ry="2" />
+<text  x="64.75" y="507" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="59" width="10.4" height="10.0" fill="rgb(222,125,2)" rx="2" ry="2" />
+<text  x="1182.65" y="67" ></text>
+</g>
+<g >
+<title>dropbear (1 samples, 0.88%)</title><rect x="61.8" y="576" width="10.3" height="10.0" fill="rgb(222,39,19)" rx="2" ry="2" />
+<text  x="64.75" y="584" ></text>
+</g>
+<g >
+<title>__handle_mm_fault (1 samples, 0.88%)</title><rect x="424.0" y="510" width="10.4" height="10.0" fill="rgb(241,22,31)" rx="2" ry="2" />
+<text  x="427.04" y="518" ></text>
+</g>
+<g >
+<title>[odhcpd] (1 samples, 0.88%)</title><rect x="279.1" y="499" width="10.4" height="10.0" fill="rgb(221,78,36)" rx="2" ry="2" />
+<text  x="282.12" y="507" ></text>
+</g>
+<g >
+<title>[busybox] (5 samples, 4.39%)</title><rect x="568.9" y="543" width="51.8" height="10.0" fill="rgb(217,174,3)" rx="2" ry="2" />
+<text  x="571.95" y="551" >[busy..</text>
+</g>
+<g >
+<title>mmput (1 samples, 0.88%)</title><rect x="289.5" y="444" width="10.3" height="10.0" fill="rgb(250,68,32)" rx="2" ry="2" />
+<text  x="292.47" y="452" ></text>
+</g>
+<g >
+<title>wp_page_copy (1 samples, 0.88%)</title><rect x="651.8" y="466" width="10.3" height="10.0" fill="rgb(210,173,45)" rx="2" ry="2" />
+<text  x="654.75" y="474" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="289.5" y="565" width="10.3" height="10.0" fill="rgb(230,96,51)" rx="2" ry="2" />
+<text  x="292.47" y="573" ></text>
+</g>
+<g >
+<title>kmem_cache_free (1 samples, 0.88%)</title><rect x="475.8" y="433" width="10.3" height="10.0" fill="rgb(233,193,53)" rx="2" ry="2" />
+<text  x="478.79" y="441" ></text>
+</g>
+<g >
+<title>do_epoll_wait (1 samples, 0.88%)</title><rect x="237.7" y="477" width="10.4" height="10.0" fill="rgb(249,20,23)" rx="2" ry="2" />
+<text  x="240.72" y="485" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="10.0" y="389" width="10.4" height="10.0" fill="rgb(213,199,7)" rx="2" ry="2" />
+<text  x="13.00" y="397" ></text>
+</g>
+<g >
+<title>wait_for_completion_timeout (1 samples, 0.88%)</title><rect x="144.6" y="378" width="10.3" height="10.0" fill="rgb(235,24,5)" rx="2" ry="2" />
+<text  x="147.56" y="386" ></text>
+</g>
+<g >
+<title>procd (3 samples, 2.63%)</title><rect x="289.5" y="576" width="31.0" height="10.0" fill="rgb(238,219,9)" rx="2" ry="2" />
+<text  x="292.47" y="584" >pr..</text>
+</g>
+<g >
+<title>wp_page_copy (1 samples, 0.88%)</title><rect x="424.0" y="488" width="10.4" height="10.0" fill="rgb(206,219,48)" rx="2" ry="2" />
+<text  x="427.04" y="496" ></text>
+</g>
+<g >
+<title>do_page_fault (1 samples, 0.88%)</title><rect x="713.9" y="499" width="10.3" height="10.0" fill="rgb(253,97,47)" rx="2" ry="2" />
+<text  x="716.86" y="507" ></text>
+</g>
+<g >
+<title>do_iter_write (1 samples, 0.88%)</title><rect x="92.8" y="433" width="10.4" height="10.0" fill="rgb(243,83,36)" rx="2" ry="2" />
+<text  x="95.81" y="441" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="393.0" y="532" width="10.3" height="10.0" fill="rgb(222,147,19)" rx="2" ry="2" />
+<text  x="395.98" y="540" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="81" width="10.4" height="10.0" fill="rgb(207,75,5)" rx="2" ry="2" />
+<text  x="1182.65" y="89" ></text>
+</g>
+<g >
+<title>memcpy (1 samples, 0.88%)</title><rect x="672.5" y="477" width="10.3" height="10.0" fill="rgb(231,9,22)" rx="2" ry="2" />
+<text  x="675.46" y="485" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="910.5" y="565" width="10.4" height="10.0" fill="rgb(216,182,43)" rx="2" ry="2" />
+<text  x="913.53" y="573" ></text>
+</g>
+<g >
+<title>wp_page_copy (1 samples, 0.88%)</title><rect x="920.9" y="466" width="10.3" height="10.0" fill="rgb(241,163,52)" rx="2" ry="2" />
+<text  x="923.88" y="474" ></text>
+</g>
+<g >
+<title>schedule_timeout (1 samples, 0.88%)</title><rect x="165.3" y="433" width="10.3" height="10.0" fill="rgb(228,181,15)" rx="2" ry="2" />
+<text  x="168.26" y="441" ></text>
+</g>
+<g >
+<title>[unknown] (2 samples, 1.75%)</title><rect x="92.8" y="565" width="20.7" height="10.0" fill="rgb(205,165,32)" rx="2" ry="2" />
+<text  x="95.81" y="573" ></text>
+</g>
+<g >
+<title>dhcpv6.script (1 samples, 0.88%)</title><rect x="51.4" y="576" width="10.4" height="10.0" fill="rgb(245,157,5)" rx="2" ry="2" />
+<text  x="54.40" y="584" ></text>
+</g>
+<g >
+<title>[vim] (3 samples, 2.63%)</title><rect x="1158.9" y="290" width="31.1" height="10.0" fill="rgb(225,134,15)" rx="2" ry="2" />
+<text  x="1161.95" y="298" >[v..</text>
+</g>
+<g >
+<title>[vim] (12 samples, 10.53%)</title><rect x="1065.8" y="389" width="124.2" height="10.0" fill="rgb(212,60,30)" rx="2" ry="2" />
+<text  x="1068.79" y="397" >[vim]</text>
+</g>
+<g >
+<title>vm_area_free (1 samples, 0.88%)</title><rect x="289.5" y="411" width="10.3" height="10.0" fill="rgb(240,78,50)" rx="2" ry="2" />
+<text  x="292.47" y="419" ></text>
+</g>
+<g >
+<title>[libubus.so.20210215] (2 samples, 1.75%)</title><rect x="258.4" y="521" width="20.7" height="10.0" fill="rgb(253,92,47)" rx="2" ry="2" />
+<text  x="261.42" y="529" ></text>
+</g>
+<g >
+<title>fw3 (1 samples, 0.88%)</title><rect x="72.1" y="576" width="10.4" height="10.0" fill="rgb(223,74,12)" rx="2" ry="2" />
+<text  x="75.11" y="584" ></text>
+</g>
+<g >
+<title>vma_link (1 samples, 0.88%)</title><rect x="869.1" y="433" width="10.4" height="10.0" fill="rgb(213,107,16)" rx="2" ry="2" />
+<text  x="872.12" y="441" ></text>
+</g>
+<g >
+<title>ret_from_fork (2 samples, 1.75%)</title><rect x="113.5" y="565" width="20.7" height="10.0" fill="rgb(233,93,22)" rx="2" ry="2" />
+<text  x="116.51" y="573" ></text>
+</g>
+<g >
+<title>[vim] (23 samples, 20.18%)</title><rect x="951.9" y="510" width="238.1" height="10.0" fill="rgb(222,133,29)" rx="2" ry="2" />
+<text  x="954.93" y="518" >[vim]</text>
+</g>
+<g >
+<title>netifd (4 samples, 3.51%)</title><rect x="237.7" y="576" width="41.4" height="10.0" fill="rgb(205,212,31)" rx="2" ry="2" />
+<text  x="240.72" y="584" >net..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="1169.3" y="268" width="10.3" height="10.0" fill="rgb(209,126,23)" rx="2" ry="2" />
+<text  x="1172.30" y="276" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="92.8" y="499" width="10.4" height="10.0" fill="rgb(230,163,12)" rx="2" ry="2" />
+<text  x="95.81" y="507" ></text>
+</g>
+<g >
+<title>do_exit (1 samples, 0.88%)</title><rect x="72.1" y="521" width="10.4" height="10.0" fill="rgb(228,30,42)" rx="2" ry="2" />
+<text  x="75.11" y="529" ></text>
+</g>
+<g >
+<title>handle_mm_fault (2 samples, 1.75%)</title><rect x="434.4" y="499" width="20.7" height="10.0" fill="rgb(206,108,38)" rx="2" ry="2" />
+<text  x="437.39" y="507" ></text>
+</g>
+<g >
+<title>vfs_writev (1 samples, 0.88%)</title><rect x="92.8" y="444" width="10.4" height="10.0" fill="rgb(233,96,30)" rx="2" ry="2" />
+<text  x="95.81" y="452" ></text>
+</g>
+<g >
+<title>unlink_file_vma (1 samples, 0.88%)</title><rect x="455.1" y="444" width="10.3" height="10.0" fill="rgb(244,98,21)" rx="2" ry="2" />
+<text  x="458.09" y="452" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="103.2" y="499" width="10.3" height="10.0" fill="rgb(213,79,24)" rx="2" ry="2" />
+<text  x="106.16" y="507" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 1.75%)</title><rect x="299.8" y="554" width="20.7" height="10.0" fill="rgb(216,131,2)" rx="2" ry="2" />
+<text  x="302.82" y="562" ></text>
+</g>
+<g >
+<title>d_lookup (1 samples, 0.88%)</title><rect x="20.4" y="345" width="10.3" height="10.0" fill="rgb(245,224,5)" rx="2" ry="2" />
+<text  x="23.35" y="353" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.88%)</title><rect x="858.8" y="565" width="10.3" height="10.0" fill="rgb(226,84,38)" rx="2" ry="2" />
+<text  x="861.77" y="573" ></text>
+</g>
+<g >
+<title>strnlen_user (1 samples, 0.88%)</title><rect x="82.5" y="488" width="10.3" height="10.0" fill="rgb(213,8,35)" rx="2" ry="2" />
+<text  x="85.46" y="496" ></text>
+</g>
+<g >
+<title>[jsonfilter] (1 samples, 0.88%)</title><rect x="92.8" y="543" width="10.4" height="10.0" fill="rgb(227,201,42)" rx="2" ry="2" />
+<text  x="95.81" y="551" ></text>
+</g>
+<g >
+<title>schedule (1 samples, 0.88%)</title><rect x="320.5" y="521" width="10.4" height="10.0" fill="rgb(234,217,8)" rx="2" ry="2" />
+<text  x="323.53" y="529" ></text>
+</g>
+<g >
+<title>clk_change_rate (1 samples, 0.88%)</title><rect x="144.6" y="444" width="10.3" height="10.0" fill="rgb(246,168,33)" rx="2" ry="2" />
+<text  x="147.56" y="452" ></text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.88%)</title><rect x="744.9" y="565" width="10.4" height="10.0" fill="rgb(209,61,45)" rx="2" ry="2" />
+<text  x="747.91" y="573" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="931.2" y="532" width="10.4" height="10.0" fill="rgb(245,175,53)" rx="2" ry="2" />
+<text  x="934.23" y="540" ></text>
+</g>
+<g >
+<title>[unknown] (4 samples, 3.51%)</title><rect x="237.7" y="565" width="41.4" height="10.0" fill="rgb(232,46,9)" rx="2" ry="2" />
+<text  x="240.72" y="573" >[un..</text>
+</g>
+<g >
+<title>blkdev_writepages (1 samples, 0.88%)</title><rect x="227.4" y="455" width="10.3" height="10.0" fill="rgb(216,33,42)" rx="2" ry="2" />
+<text  x="230.37" y="463" ></text>
+</g>
+<g >
+<title>mmap_region (1 samples, 0.88%)</title><rect x="341.2" y="422" width="10.4" height="10.0" fill="rgb(238,48,50)" rx="2" ry="2" />
+<text  x="344.23" y="430" ></text>
+</g>
+<g >
+<title>do_writev (1 samples, 0.88%)</title><rect x="61.8" y="455" width="10.3" height="10.0" fill="rgb(224,138,12)" rx="2" ry="2" />
+<text  x="64.75" y="463" ></text>
+</g>
+<g >
+<title>__arm64_sys_execve (1 samples, 0.88%)</title><rect x="268.8" y="400" width="10.3" height="10.0" fill="rgb(211,119,1)" rx="2" ry="2" />
+<text  x="271.77" y="408" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="30.7" y="521" width="10.4" height="10.0" fill="rgb(231,137,21)" rx="2" ry="2" />
+<text  x="33.70" y="529" ></text>
+</g>
+<g >
+<title>nf_hook_slow (1 samples, 0.88%)</title><rect x="61.8" y="279" width="10.3" height="10.0" fill="rgb(227,35,26)" rx="2" ry="2" />
+<text  x="64.75" y="287" ></text>
+</g>
+<g >
+<title>[vim] (23 samples, 20.18%)</title><rect x="951.9" y="477" width="238.1" height="10.0" fill="rgb(233,185,34)" rx="2" ry="2" />
+<text  x="954.93" y="485" >[vim]</text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.88%)</title><rect x="910.5" y="554" width="10.4" height="10.0" fill="rgb(216,178,47)" rx="2" ry="2" />
+<text  x="913.53" y="562" ></text>
+</g>
+<g >
+<title>all (114 samples, 100%)</title><rect x="10.0" y="587" width="1180.0" height="10.0" fill="rgb(246,173,22)" rx="2" ry="2" />
+<text  x="13.00" y="595" ></text>
+</g>
+<g >
+<title>schedule_timeout (1 samples, 0.88%)</title><rect x="320.5" y="532" width="10.4" height="10.0" fill="rgb(252,44,43)" rx="2" ry="2" />
+<text  x="323.53" y="540" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.88%)</title><rect x="10.0" y="356" width="10.4" height="10.0" fill="rgb(231,14,30)" rx="2" ry="2" />
+<text  x="13.00" y="364" ></text>
+</g>
+<g >
+<title>unimac_mdio_read (2 samples, 1.75%)</title><rect x="154.9" y="455" width="20.7" height="10.0" fill="rgb(211,2,24)" rx="2" ry="2" />
+<text  x="157.91" y="463" ></text>
+</g>
+<g >
+<title>mutex_lock (1 samples, 0.88%)</title><rect x="92.8" y="400" width="10.4" height="10.0" fill="rgb(238,181,3)" rx="2" ry="2" />
+<text  x="95.81" y="408" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="858.8" y="543" width="10.3" height="10.0" fill="rgb(205,82,27)" rx="2" ry="2" />
+<text  x="861.77" y="551" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="10.0" y="411" width="10.4" height="10.0" fill="rgb(232,67,36)" rx="2" ry="2" />
+<text  x="13.00" y="419" ></text>
+</g>
+<g >
+<title>__arm64_sys_execve (1 samples, 0.88%)</title><rect x="693.2" y="510" width="10.3" height="10.0" fill="rgb(215,198,0)" rx="2" ry="2" />
+<text  x="696.16" y="518" ></text>
+</g>
+<g >
+<title>wb_writeback (1 samples, 0.88%)</title><rect x="227.4" y="510" width="10.3" height="10.0" fill="rgb(225,53,48)" rx="2" ry="2" />
+<text  x="230.37" y="518" ></text>
+</g>
+<g >
+<title>search_binary_handler.part.52 (2 samples, 1.75%)</title><rect x="869.1" y="510" width="20.7" height="10.0" fill="rgb(244,117,22)" rx="2" ry="2" />
+<text  x="872.12" y="518" ></text>
+</g>
+<g >
+<title>[vim] (4 samples, 3.51%)</title><rect x="1148.6" y="323" width="41.4" height="10.0" fill="rgb(232,223,9)" rx="2" ry="2" />
+<text  x="1151.60" y="331" >[vim]</text>
+</g>
+<g >
+<title>[dropbear] (1 samples, 0.88%)</title><rect x="61.8" y="521" width="10.3" height="10.0" fill="rgb(254,51,16)" rx="2" ry="2" />
+<text  x="64.75" y="529" ></text>
+</g>
+<g >
+<title>tcp_sendmsg_locked (1 samples, 0.88%)</title><rect x="61.8" y="378" width="10.3" height="10.0" fill="rgb(233,142,31)" rx="2" ry="2" />
+<text  x="64.75" y="386" ></text>
+</g>
+<g >
+<title>__remove_shared_vm_struct (1 samples, 0.88%)</title><rect x="455.1" y="433" width="10.3" height="10.0" fill="rgb(238,55,15)" rx="2" ry="2" />
+<text  x="458.09" y="441" ></text>
+</g>
+<g >
+<title>generic_writepages (1 samples, 0.88%)</title><rect x="227.4" y="444" width="10.3" height="10.0" fill="rgb(249,214,16)" rx="2" ry="2" />
+<text  x="230.37" y="452" ></text>
+</g>
+<g >
+<title>[vim] (24 samples, 21.05%)</title><rect x="941.6" y="543" width="248.4" height="10.0" fill="rgb(212,40,22)" rx="2" ry="2" />
+<text  x="944.58" y="551" >[vim]</text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 1.75%)</title><rect x="330.9" y="521" width="20.7" height="10.0" fill="rgb(216,164,22)" rx="2" ry="2" />
+<text  x="333.88" y="529" ></text>
+</g>
+<g >
+<title>el0_svc_handler (2 samples, 1.75%)</title><rect x="869.1" y="543" width="20.7" height="10.0" fill="rgb(214,18,27)" rx="2" ry="2" />
+<text  x="872.12" y="551" ></text>
+</g>
+<g >
+<title>[[vdso]] (1 samples, 0.88%)</title><rect x="1107.2" y="323" width="10.3" height="10.0" fill="rgb(223,141,41)" rx="2" ry="2" />
+<text  x="1110.19" y="331" ></text>
+</g>
+<g >
+<title>timespec64_add_safe (1 samples, 0.88%)</title><rect x="237.7" y="466" width="10.4" height="10.0" fill="rgb(240,225,11)" rx="2" ry="2" />
+<text  x="240.72" y="474" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.88%)</title><rect x="258.4" y="466" width="10.4" height="10.0" fill="rgb(226,149,26)" rx="2" ry="2" />
+<text  x="261.42" y="474" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="237.7" y="521" width="10.4" height="10.0" fill="rgb(228,149,46)" rx="2" ry="2" />
+<text  x="240.72" y="529" ></text>
+</g>
+<g >
+<title>[vim] (4 samples, 3.51%)</title><rect x="1148.6" y="312" width="41.4" height="10.0" fill="rgb(253,153,19)" rx="2" ry="2" />
+<text  x="1151.60" y="320" >[vim]</text>
+</g>
+<g >
+<title>mdiobus_read (2 samples, 1.75%)</title><rect x="154.9" y="477" width="20.7" height="10.0" fill="rgb(221,38,29)" rx="2" ry="2" />
+<text  x="157.91" y="485" ></text>
+</g>
+<g >
+<title>search_binary_handler.part.52 (1 samples, 0.88%)</title><rect x="82.5" y="510" width="10.3" height="10.0" fill="rgb(250,55,39)" rx="2" ry="2" />
+<text  x="85.46" y="518" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="103.2" y="543" width="10.3" height="10.0" fill="rgb(210,103,41)" rx="2" ry="2" />
+<text  x="106.16" y="551" ></text>
+</g>
+<g >
+<title>[vim] (7 samples, 6.14%)</title><rect x="1117.5" y="345" width="72.5" height="10.0" fill="rgb(252,140,28)" rx="2" ry="2" />
+<text  x="1120.54" y="353" >[vim]</text>
+</g>
+<g >
+<title>do_mem_abort (1 samples, 0.88%)</title><rect x="713.9" y="521" width="10.3" height="10.0" fill="rgb(210,70,9)" rx="2" ry="2" />
+<text  x="716.86" y="529" ></text>
+</g>
+<g >
+<title>worker_thread (5 samples, 4.39%)</title><rect x="134.2" y="543" width="51.8" height="10.0" fill="rgb(245,91,34)" rx="2" ry="2" />
+<text  x="137.21" y="551" >worke..</text>
+</g>
+<g >
+<title>tcp_write_xmit (1 samples, 0.88%)</title><rect x="61.8" y="345" width="10.3" height="10.0" fill="rgb(253,25,6)" rx="2" ry="2" />
+<text  x="64.75" y="353" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="920.9" y="554" width="10.3" height="10.0" fill="rgb(216,71,9)" rx="2" ry="2" />
+<text  x="923.88" y="562" ></text>
+</g>
+<g >
+<title>disk_check_events (1 samples, 0.88%)</title><rect x="206.7" y="510" width="10.3" height="10.0" fill="rgb(250,229,8)" rx="2" ry="2" />
+<text  x="209.67" y="518" ></text>
+</g>
+<g >
+<title>[unknown] (24 samples, 21.05%)</title><rect x="496.5" y="565" width="248.4" height="10.0" fill="rgb(227,123,2)" rx="2" ry="2" />
+<text  x="499.49" y="573" >[unknown]</text>
+</g>
+<g >
+<title>[libncursesw.so.6.2] (1 samples, 0.88%)</title><rect x="941.6" y="488" width="10.3" height="10.0" fill="rgb(216,107,10)" rx="2" ry="2" />
+<text  x="944.58" y="496" ></text>
+</g>
+<g >
+<title>[vim] (23 samples, 20.18%)</title><rect x="951.9" y="488" width="238.1" height="10.0" fill="rgb(239,33,46)" rx="2" ry="2" />
+<text  x="954.93" y="496" >[vim]</text>
+</g>
+<g >
+<title>do_mem_abort (2 samples, 1.75%)</title><rect x="434.4" y="532" width="20.7" height="10.0" fill="rgb(226,85,25)" rx="2" ry="2" />
+<text  x="437.39" y="540" ></text>
+</g>
+<g >
+<title>kthread (2 samples, 1.75%)</title><rect x="889.8" y="554" width="20.7" height="10.0" fill="rgb(222,96,36)" rx="2" ry="2" />
+<text  x="892.82" y="562" ></text>
+</g>
+<g >
+<title>usb_stor_invoke_transport (2 samples, 1.75%)</title><rect x="889.8" y="521" width="20.7" height="10.0" fill="rgb(248,218,24)" rx="2" ry="2" />
+<text  x="892.82" y="529" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="92.8" y="521" width="10.4" height="10.0" fill="rgb(250,20,34)" rx="2" ry="2" />
+<text  x="95.81" y="529" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 1.75%)</title><rect x="330.9" y="543" width="20.7" height="10.0" fill="rgb(252,158,1)" rx="2" ry="2" />
+<text  x="333.88" y="551" ></text>
+</g>
+<g >
+<title>run_ksoftirqd (1 samples, 0.88%)</title><rect x="113.5" y="532" width="10.4" height="10.0" fill="rgb(248,122,25)" rx="2" ry="2" />
+<text  x="116.51" y="540" ></text>
+</g>
+<g >
+<title>__writeback_single_inode (1 samples, 0.88%)</title><rect x="227.4" y="477" width="10.3" height="10.0" fill="rgb(235,62,22)" rx="2" ry="2" />
+<text  x="230.37" y="485" ></text>
+</g>
+<g >
+<title>rcu_gp_kthread (1 samples, 0.88%)</title><rect x="320.5" y="543" width="10.4" height="10.0" fill="rgb(230,36,9)" rx="2" ry="2" />
+<text  x="323.53" y="551" ></text>
+</g>
+<g >
+<title>__ip_queue_xmit (1 samples, 0.88%)</title><rect x="61.8" y="312" width="10.3" height="10.0" fill="rgb(251,139,53)" rx="2" ry="2" />
+<text  x="64.75" y="320" ></text>
+</g>
+<g >
+<title>__softirqentry_text_start (1 samples, 0.88%)</title><rect x="113.5" y="521" width="10.4" height="10.0" fill="rgb(214,223,10)" rx="2" ry="2" />
+<text  x="116.51" y="529" ></text>
+</g>
+<g >
+<title>vma_merge (1 samples, 0.88%)</title><rect x="641.4" y="477" width="10.4" height="10.0" fill="rgb(232,142,42)" rx="2" ry="2" />
+<text  x="644.40" y="485" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="1107.2" y="334" width="10.3" height="10.0" fill="rgb(209,159,50)" rx="2" ry="2" />
+<text  x="1110.19" y="342" ></text>
+</g>
+<g >
+<title>search_binary_handler.part.52 (1 samples, 0.88%)</title><rect x="910.5" y="510" width="10.4" height="10.0" fill="rgb(208,220,22)" rx="2" ry="2" />
+<text  x="913.53" y="518" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="268.8" y="444" width="10.3" height="10.0" fill="rgb(252,134,47)" rx="2" ry="2" />
+<text  x="271.77" y="452" ></text>
+</g>
+<g >
+<title>__schedule (1 samples, 0.88%)</title><rect x="196.3" y="521" width="10.4" height="10.0" fill="rgb(211,227,9)" rx="2" ry="2" />
+<text  x="199.32" y="529" ></text>
+</g>
+<g >
+<title>do_mem_abort (2 samples, 1.75%)</title><rect x="651.8" y="521" width="20.7" height="10.0" fill="rgb(215,110,12)" rx="2" ry="2" />
+<text  x="654.75" y="529" ></text>
+</g>
+<g >
+<title>wait_consider_task (1 samples, 0.88%)</title><rect x="20.4" y="389" width="10.3" height="10.0" fill="rgb(207,21,19)" rx="2" ry="2" />
+<text  x="23.35" y="397" ></text>
+</g>
+<g >
+<title>__vma_link_file (1 samples, 0.88%)</title><rect x="869.1" y="422" width="10.4" height="10.0" fill="rgb(211,134,33)" rx="2" ry="2" />
+<text  x="872.12" y="430" ></text>
+</g>
+<g >
+<title>handle_mm_fault (1 samples, 0.88%)</title><rect x="920.9" y="499" width="10.3" height="10.0" fill="rgb(242,228,36)" rx="2" ry="2" />
+<text  x="923.88" y="507" ></text>
+</g>
+<g >
+<title>usb_stor_msg_common (1 samples, 0.88%)</title><rect x="900.2" y="488" width="10.3" height="10.0" fill="rgb(215,79,53)" rx="2" ry="2" />
+<text  x="903.18" y="496" ></text>
+</g>
+<g >
+<title>finish_task_switch (1 samples, 0.88%)</title><rect x="320.5" y="499" width="10.4" height="10.0" fill="rgb(237,104,36)" rx="2" ry="2" />
+<text  x="323.53" y="507" ></text>
+</g>
+<g >
+<title>__vma_adjust (1 samples, 0.88%)</title><rect x="641.4" y="466" width="10.4" height="10.0" fill="rgb(213,120,22)" rx="2" ry="2" />
+<text  x="644.40" y="474" ></text>
+</g>
+<g >
+<title>get_user_pages_remote (1 samples, 0.88%)</title><rect x="10.0" y="312" width="10.4" height="10.0" fill="rgb(213,167,7)" rx="2" ry="2" />
+<text  x="13.00" y="320" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="983.0" y="389" width="10.3" height="10.0" fill="rgb(225,24,23)" rx="2" ry="2" />
+<text  x="985.98" y="397" ></text>
+</g>
+<g >
+<title>schedule (1 samples, 0.88%)</title><rect x="144.6" y="356" width="10.3" height="10.0" fill="rgb(238,93,25)" rx="2" ry="2" />
+<text  x="147.56" y="364" ></text>
+</g>
+<g >
+<title>__handle_mm_fault (1 samples, 0.88%)</title><rect x="41.1" y="488" width="10.3" height="10.0" fill="rgb(236,215,44)" rx="2" ry="2" />
+<text  x="44.05" y="496" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="10.0" y="378" width="10.4" height="10.0" fill="rgb(229,78,47)" rx="2" ry="2" />
+<text  x="13.00" y="386" ></text>
+</g>
+<g >
+<title>free_pgtables (1 samples, 0.88%)</title><rect x="455.1" y="455" width="10.3" height="10.0" fill="rgb(229,70,4)" rx="2" ry="2" />
+<text  x="458.09" y="463" ></text>
+</g>
+<g >
+<title>sysntpd (1 samples, 0.88%)</title><rect x="858.8" y="576" width="10.3" height="10.0" fill="rgb(214,133,34)" rx="2" ry="2" />
+<text  x="861.77" y="584" ></text>
+</g>
+<g >
+<title>vm_mmap_pgoff (1 samples, 0.88%)</title><rect x="341.2" y="444" width="10.4" height="10.0" fill="rgb(209,11,45)" rx="2" ry="2" />
+<text  x="344.23" y="452" ></text>
+</g>
+<g >
+<title>el0_da (2 samples, 1.75%)</title><rect x="651.8" y="532" width="20.7" height="10.0" fill="rgb(243,1,22)" rx="2" ry="2" />
+<text  x="654.75" y="540" ></text>
+</g>
+<g >
+<title>__slab_free.isra.94 (1 samples, 0.88%)</title><rect x="475.8" y="422" width="10.3" height="10.0" fill="rgb(213,221,21)" rx="2" ry="2" />
+<text  x="478.79" y="430" ></text>
+</g>
+<g >
+<title>__alloc_pages_nodemask (1 samples, 0.88%)</title><rect x="662.1" y="466" width="10.4" height="10.0" fill="rgb(206,44,10)" rx="2" ry="2" />
+<text  x="665.11" y="474" ></text>
+</g>
+<g >
+<title>free_pgd_range (1 samples, 0.88%)</title><rect x="744.9" y="477" width="10.4" height="10.0" fill="rgb(205,160,3)" rx="2" ry="2" />
+<text  x="747.91" y="485" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="103.2" y="521" width="10.3" height="10.0" fill="rgb(242,39,30)" rx="2" ry="2" />
+<text  x="106.16" y="529" ></text>
+</g>
+<g >
+<title>proc_flush_task (1 samples, 0.88%)</title><rect x="20.4" y="367" width="10.3" height="10.0" fill="rgb(224,166,14)" rx="2" ry="2" />
+<text  x="23.35" y="375" ></text>
+</g>
+<g >
+<title>[libncursesw.so.6.2] (1 samples, 0.88%)</title><rect x="941.6" y="510" width="10.3" height="10.0" fill="rgb(230,208,26)" rx="2" ry="2" />
+<text  x="944.58" y="518" ></text>
+</g>
+<g >
+<title>__mod_node_page_state (1 samples, 0.88%)</title><rect x="72.1" y="455" width="10.4" height="10.0" fill="rgb(218,59,44)" rx="2" ry="2" />
+<text  x="75.11" y="463" ></text>
+</g>
+<g >
+<title>[unknown] (1 samples, 0.88%)</title><rect x="20.4" y="565" width="10.3" height="10.0" fill="rgb(248,182,23)" rx="2" ry="2" />
+<text  x="23.35" y="573" ></text>
+</g>
+<g >
+<title>mbox_send_message (1 samples, 0.88%)</title><rect x="144.6" y="389" width="10.3" height="10.0" fill="rgb(234,90,41)" rx="2" ry="2" />
+<text  x="147.56" y="397" ></text>
+</g>
+<g >
+<title>cat (2 samples, 1.75%)</title><rect x="30.7" y="576" width="20.7" height="10.0" fill="rgb(250,92,53)" rx="2" ry="2" />
+<text  x="33.70" y="584" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="983.0" y="411" width="10.3" height="10.0" fill="rgb(235,61,1)" rx="2" ry="2" />
+<text  x="985.98" y="419" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="114" width="10.4" height="10.0" fill="rgb(212,226,52)" rx="2" ry="2" />
+<text  x="1182.65" y="122" ></text>
+</g>
+<g >
+<title>__handle_mm_fault (1 samples, 0.88%)</title><rect x="920.9" y="488" width="10.3" height="10.0" fill="rgb(235,105,6)" rx="2" ry="2" />
+<text  x="923.88" y="496" ></text>
+</g>
+<g >
+<title>tick_nohz_idle_enter (1 samples, 0.88%)</title><rect x="827.7" y="510" width="10.4" height="10.0" fill="rgb(248,215,51)" rx="2" ry="2" />
+<text  x="830.72" y="518" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="20.4" y="510" width="10.3" height="10.0" fill="rgb(224,173,40)" rx="2" ry="2" />
+<text  x="23.35" y="518" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.88%)</title><rect x="72.1" y="554" width="10.4" height="10.0" fill="rgb(214,196,26)" rx="2" ry="2" />
+<text  x="75.11" y="562" ></text>
+</g>
+<g >
+<title>el0_ia (1 samples, 0.88%)</title><rect x="713.9" y="543" width="10.3" height="10.0" fill="rgb(216,115,8)" rx="2" ry="2" />
+<text  x="716.86" y="551" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.88%)</title><rect x="268.8" y="411" width="10.3" height="10.0" fill="rgb(216,114,10)" rx="2" ry="2" />
+<text  x="271.77" y="419" ></text>
+</g>
+<g >
+<title>el0_svc (1 samples, 0.88%)</title><rect x="1138.2" y="312" width="10.4" height="10.0" fill="rgb(220,208,25)" rx="2" ry="2" />
+<text  x="1141.25" y="320" ></text>
+</g>
+<g >
+<title>worker_thread (2 samples, 1.75%)</title><rect x="217.0" y="543" width="20.7" height="10.0" fill="rgb(214,84,42)" rx="2" ry="2" />
+<text  x="220.02" y="551" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="48" width="10.4" height="10.0" fill="rgb(243,142,46)" rx="2" ry="2" />
+<text  x="1182.65" y="56" ></text>
+</g>
+<g >
+<title>block_write_full_page (1 samples, 0.88%)</title><rect x="227.4" y="400" width="10.3" height="10.0" fill="rgb(228,77,22)" rx="2" ry="2" />
+<text  x="230.37" y="408" ></text>
+</g>
+<g >
+<title>kthread (2 samples, 1.75%)</title><rect x="113.5" y="554" width="20.7" height="10.0" fill="rgb(224,41,48)" rx="2" ry="2" />
+<text  x="116.51" y="562" ></text>
+</g>
+<g >
+<title>[netifd] (2 samples, 1.75%)</title><rect x="258.4" y="488" width="20.7" height="10.0" fill="rgb(209,17,1)" rx="2" ry="2" />
+<text  x="261.42" y="496" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="202" width="10.4" height="10.0" fill="rgb(250,14,15)" rx="2" ry="2" />
+<text  x="1182.65" y="210" ></text>
+</g>
+<g >
+<title>[libc.so] (3 samples, 2.63%)</title><rect x="393.0" y="554" width="31.0" height="10.0" fill="rgb(246,31,41)" rx="2" ry="2" />
+<text  x="395.98" y="562" >[l..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="92.8" y="510" width="10.4" height="10.0" fill="rgb(228,3,26)" rx="2" ry="2" />
+<text  x="95.81" y="518" ></text>
+</g>
+<g >
+<title>do_page_fault (1 samples, 0.88%)</title><rect x="920.9" y="510" width="10.3" height="10.0" fill="rgb(248,173,50)" rx="2" ry="2" />
+<text  x="923.88" y="518" ></text>
+</g>
+<g >
+<title>free_pgtables (1 samples, 0.88%)</title><rect x="744.9" y="488" width="10.4" height="10.0" fill="rgb(222,222,17)" rx="2" ry="2" />
+<text  x="747.91" y="496" ></text>
+</g>
+<g >
+<title>handle_mm_fault (1 samples, 0.88%)</title><rect x="662.1" y="488" width="10.4" height="10.0" fill="rgb(253,203,28)" rx="2" ry="2" />
+<text  x="665.11" y="496" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="235" width="10.4" height="10.0" fill="rgb(212,203,32)" rx="2" ry="2" />
+<text  x="1182.65" y="243" ></text>
+</g>
+<g >
+<title>ksys_mmap_pgoff (1 samples, 0.88%)</title><rect x="341.2" y="455" width="10.4" height="10.0" fill="rgb(243,199,21)" rx="2" ry="2" />
+<text  x="344.23" y="463" ></text>
+</g>
+<g >
+<title>__arm64_sys_clone (2 samples, 1.75%)</title><rect x="672.5" y="510" width="20.7" height="10.0" fill="rgb(205,32,43)" rx="2" ry="2" />
+<text  x="675.46" y="518" ></text>
+</g>
+<g >
+<title>filemap_map_pages (2 samples, 1.75%)</title><rect x="434.4" y="477" width="20.7" height="10.0" fill="rgb(210,140,49)" rx="2" ry="2" />
+<text  x="437.39" y="485" ></text>
+</g>
+<g >
+<title>usb_submit_urb (1 samples, 0.88%)</title><rect x="900.2" y="477" width="10.3" height="10.0" fill="rgb(209,34,40)" rx="2" ry="2" />
+<text  x="903.18" y="485" ></text>
+</g>
+<g >
+<title>writeback_sb_inodes (1 samples, 0.88%)</title><rect x="227.4" y="488" width="10.3" height="10.0" fill="rgb(246,85,37)" rx="2" ry="2" />
+<text  x="230.37" y="496" ></text>
+</g>
+<g >
+<title>[vim] (1 samples, 0.88%)</title><rect x="1179.6" y="213" width="10.4" height="10.0" fill="rgb(210,40,46)" rx="2" ry="2" />
+<text  x="1182.65" y="221" ></text>
+</g>
+<g >
+<title>do_wp_page (1 samples, 0.88%)</title><rect x="651.8" y="477" width="10.3" height="10.0" fill="rgb(232,37,49)" rx="2" ry="2" />
+<text  x="654.75" y="485" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="103.2" y="510" width="10.3" height="10.0" fill="rgb(230,7,42)" rx="2" ry="2" />
+<text  x="106.16" y="518" ></text>
+</g>
+<g >
+<title>clk_set_rate (1 samples, 0.88%)</title><rect x="144.6" y="466" width="10.3" height="10.0" fill="rgb(236,169,11)" rx="2" ry="2" />
+<text  x="147.56" y="474" ></text>
+</g>
+<g >
+<title>copy_page (1 samples, 0.88%)</title><rect x="651.8" y="455" width="10.3" height="10.0" fill="rgb(222,15,45)" rx="2" ry="2" />
+<text  x="654.75" y="463" ></text>
+</g>
+<g >
+<title>handle_mm_fault (1 samples, 0.88%)</title><rect x="310.2" y="433" width="10.3" height="10.0" fill="rgb(248,225,34)" rx="2" ry="2" />
+<text  x="313.18" y="441" ></text>
+</g>
+<g >
+<title>[bash] (1 samples, 0.88%)</title><rect x="10.0" y="510" width="10.4" height="10.0" fill="rgb(245,221,8)" rx="2" ry="2" />
+<text  x="13.00" y="518" ></text>
+</g>
+<g >
+<title>unmap_single_vma (1 samples, 0.88%)</title><rect x="486.1" y="444" width="10.4" height="10.0" fill="rgb(250,187,13)" rx="2" ry="2" />
+<text  x="489.14" y="452" ></text>
+</g>
+<g >
+<title>vim (25 samples, 21.93%)</title><rect x="931.2" y="576" width="258.8" height="10.0" fill="rgb(250,220,33)" rx="2" ry="2" />
+<text  x="934.23" y="584" >vim</text>
+</g>
+<g >
+<title>__d_lookup (1 samples, 0.88%)</title><rect x="20.4" y="334" width="10.3" height="10.0" fill="rgb(211,167,29)" rx="2" ry="2" />
+<text  x="23.35" y="342" ></text>
+</g>
+<g >
+<title>handle_mm_fault (1 samples, 0.88%)</title><rect x="713.9" y="488" width="10.3" height="10.0" fill="rgb(237,121,45)" rx="2" ry="2" />
+<text  x="716.86" y="496" ></text>
+</g>
+<g >
+<title>do_el0_ia_bp_hardening (1 samples, 0.88%)</title><rect x="310.2" y="477" width="10.3" height="10.0" fill="rgb(205,101,29)" rx="2" ry="2" />
+<text  x="313.18" y="485" ></text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 0.88%)</title><rect x="248.1" y="521" width="10.3" height="10.0" fill="rgb(228,82,36)" rx="2" ry="2" />
+<text  x="251.07" y="529" ></text>
+</g>
+<g >
+<title>el0_ia (2 samples, 1.75%)</title><rect x="403.3" y="543" width="20.7" height="10.0" fill="rgb(207,229,46)" rx="2" ry="2" />
+<text  x="406.33" y="551" ></text>
+</g>
+<g >
+<title>[procd] (2 samples, 1.75%)</title><rect x="299.8" y="543" width="20.7" height="10.0" fill="rgb(245,3,38)" rx="2" ry="2" />
+<text  x="302.82" y="551" ></text>
+</g>
+<g >
+<title>do_el0_ia_bp_hardening (1 samples, 0.88%)</title><rect x="713.9" y="532" width="10.3" height="10.0" fill="rgb(218,172,24)" rx="2" ry="2" />
+<text  x="716.86" y="540" ></text>
+</g>
+<g >
+<title>usb_stor_Bulk_transport (2 samples, 1.75%)</title><rect x="889.8" y="510" width="20.7" height="10.0" fill="rgb(234,163,24)" rx="2" ry="2" />
+<text  x="892.82" y="518" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="268.8" y="433" width="10.3" height="10.0" fill="rgb(220,117,13)" rx="2" ry="2" />
+<text  x="271.77" y="441" ></text>
+</g>
+<g >
+<title>vm_mmap_pgoff (1 samples, 0.88%)</title><rect x="869.1" y="466" width="10.4" height="10.0" fill="rgb(226,200,25)" rx="2" ry="2" />
+<text  x="872.12" y="474" ></text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 1.75%)</title><rect x="330.9" y="510" width="20.7" height="10.0" fill="rgb(221,224,34)" rx="2" ry="2" />
+<text  x="333.88" y="518" ></text>
+</g>
+<g >
+<title>schedule_timeout (1 samples, 0.88%)</title><rect x="144.6" y="367" width="10.3" height="10.0" fill="rgb(227,92,35)" rx="2" ry="2" />
+<text  x="147.56" y="375" ></text>
+</g>
+<g >
+<title>kthread (2 samples, 1.75%)</title><rect x="217.0" y="554" width="20.7" height="10.0" fill="rgb(243,19,35)" rx="2" ry="2" />
+<text  x="220.02" y="562" ></text>
+</g>
+<g >
+<title>load_elf_binary (2 samples, 1.75%)</title><rect x="869.1" y="499" width="20.7" height="10.0" fill="rgb(227,75,49)" rx="2" ry="2" />
+<text  x="872.12" y="507" ></text>
+</g>
+<g >
+<title>jshn (1 samples, 0.88%)</title><rect x="82.5" y="576" width="10.3" height="10.0" fill="rgb(250,58,49)" rx="2" ry="2" />
+<text  x="85.46" y="584" ></text>
+</g>
+<g >
+<title>page_add_file_rmap (1 samples, 0.88%)</title><rect x="734.6" y="444" width="10.3" height="10.0" fill="rgb(206,209,31)" rx="2" ry="2" />
+<text  x="737.56" y="452" ></text>
+</g>
+<g >
+<title>bottom_half (1 samples, 0.88%)</title><rect x="113.5" y="488" width="10.4" height="10.0" fill="rgb(240,109,46)" rx="2" ry="2" />
+<text  x="116.51" y="496" ></text>
+</g>
+<g >
+<title>vma_interval_tree_insert (1 samples, 0.88%)</title><rect x="51.4" y="378" width="10.4" height="10.0" fill="rgb(251,71,18)" rx="2" ry="2" />
+<text  x="54.40" y="386" ></text>
+</g>
+<g >
+<title>[vim] (22 samples, 19.30%)</title><rect x="962.3" y="444" width="227.7" height="10.0" fill="rgb(243,14,8)" rx="2" ry="2" />
+<text  x="965.28" y="452" >[vim]</text>
+</g>
+<g >
+<title>do_page_fault (1 samples, 0.88%)</title><rect x="651.8" y="510" width="10.3" height="10.0" fill="rgb(245,101,42)" rx="2" ry="2" />
+<text  x="654.75" y="518" ></text>
+</g>
+<g >
+<title>__arm64_sys_writev (1 samples, 0.88%)</title><rect x="61.8" y="466" width="10.3" height="10.0" fill="rgb(215,42,42)" rx="2" ry="2" />
+<text  x="64.75" y="474" ></text>
+</g>
+<g >
+<title>__do_execve_file (4 samples, 3.51%)</title><rect x="455.1" y="521" width="41.4" height="10.0" fill="rgb(229,139,52)" rx="2" ry="2" />
+<text  x="458.09" y="529" >__d..</text>
+</g>
+<g >
+<title>ip_queue_xmit (1 samples, 0.88%)</title><rect x="61.8" y="323" width="10.3" height="10.0" fill="rgb(214,17,5)" rx="2" ry="2" />
+<text  x="64.75" y="331" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="1148.6" y="290" width="10.3" height="10.0" fill="rgb(222,205,47)" rx="2" ry="2" />
+<text  x="1151.60" y="298" ></text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 0.88%)</title><rect x="61.8" y="510" width="10.3" height="10.0" fill="rgb(254,2,33)" rx="2" ry="2" />
+<text  x="64.75" y="518" ></text>
+</g>
+<g >
+<title>usb-storage (2 samples, 1.75%)</title><rect x="889.8" y="576" width="20.7" height="10.0" fill="rgb(215,152,42)" rx="2" ry="2" />
+<text  x="892.82" y="584" ></text>
+</g>
+<g >
+<title>load_script (1 samples, 0.88%)</title><rect x="289.5" y="499" width="10.3" height="10.0" fill="rgb(245,115,42)" rx="2" ry="2" />
+<text  x="292.47" y="507" ></text>
+</g>
+<g >
+<title>do_mem_abort (1 samples, 0.88%)</title><rect x="310.2" y="466" width="10.3" height="10.0" fill="rgb(213,32,37)" rx="2" ry="2" />
+<text  x="313.18" y="474" ></text>
+</g>
+<g >
+<title>__handle_mm_fault (1 samples, 0.88%)</title><rect x="413.7" y="477" width="10.3" height="10.0" fill="rgb(212,205,8)" rx="2" ry="2" />
+<text  x="416.68" y="485" ></text>
+</g>
+<g >
+<title>[vim] (11 samples, 9.65%)</title><rect x="1076.1" y="378" width="113.9" height="10.0" fill="rgb(210,207,0)" rx="2" ry="2" />
+<text  x="1079.14" y="386" >[vim]</text>
+</g>
+<g >
+<title>__tcp_transmit_skb (1 samples, 0.88%)</title><rect x="61.8" y="334" width="10.3" height="10.0" fill="rgb(223,48,12)" rx="2" ry="2" />
+<text  x="64.75" y="342" ></text>
+</g>
+<g >
+<title>alloc_set_pte (1 samples, 0.88%)</title><rect x="434.4" y="466" width="10.3" height="10.0" fill="rgb(244,226,6)" rx="2" ry="2" />
+<text  x="437.39" y="474" ></text>
+</g>
+<g >
+<title>od_dbs_update (1 samples, 0.88%)</title><rect x="144.6" y="510" width="10.3" height="10.0" fill="rgb(247,36,20)" rx="2" ry="2" />
+<text  x="147.56" y="518" ></text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 0.88%)</title><rect x="341.2" y="477" width="10.4" height="10.0" fill="rgb(243,129,43)" rx="2" ry="2" />
+<text  x="344.23" y="485" ></text>
+</g>
+<g >
+<title>_do_fork (2 samples, 1.75%)</title><rect x="672.5" y="499" width="20.7" height="10.0" fill="rgb(244,20,4)" rx="2" ry="2" />
+<text  x="675.46" y="507" ></text>
+</g>
+</g>
+</svg>

@@ -1,0 +1,740 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" width="1200" height="323" onload="init(evt)" viewBox="0 0 1200 323" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id="background" y1="0" y2="1" x1="0" x2="0" >
+		<stop stop-color="#eeeeee" offset="5%" />
+		<stop stop-color="#eeeeb0" offset="95%" />
+	</linearGradient>
+</defs>
+<style type="text/css">
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type="text/ecmascript">
+<![CDATA[
+	"use strict";
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById("details").firstChild;
+		searchbtn = document.getElementById("search");
+		ignorecaseBtn = document.getElementById("ignorecase");
+		unzoombtn = document.getElementById("unzoom");
+		matchedtxt = document.getElementById("matched");
+		svg = document.getElementsByTagName("svg")[0];
+		searching = 0;
+		currentSearchTerm = null;
+	}
+
+	window.addEventListener("click", function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == "a") {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains("parent")) unzoom();
+			zoom(target);
+		}
+		else if (e.target.id == "unzoom") unzoom();
+		else if (e.target.id == "search") search_prompt();
+		else if (e.target.id == "ignorecase") toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener("mouseover", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = "Function: " + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener("mouseout", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	window.addEventListener("keydown",function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+	}, false)
+
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener("keydown",function (e) {
+		if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+		return;
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == "frames") return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes["_orig_" + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute("_orig_" + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes["_orig_"+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes["_orig_" + attr].value;
+		e.removeAttribute("_orig_"+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, "title").firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, "rect");
+		var t = find_child(e, "text");
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, "title").textContent.replace(/\([^(]*\)$/,"");
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = "";
+			return;
+		}
+
+		t.textContent = txt;
+		// Fit in full text width
+		if (/^ *$/.test(txt) || t.getSubStringLength(0, txt.length) < w)
+			return;
+
+		for (var x = txt.length - 2; x > 0; x--) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + "..";
+				return;
+			}
+		}
+		t.textContent = "";
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, "x");
+			orig_load(e, "width");
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == "text")
+					e.attributes.x.value = find_child(e.parentNode, "rect[x]").attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, "rect").attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove("hide");
+
+		var el = document.getElementById("frames").children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, "rect").attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add("parent");
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add("hide");
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add("hide");
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom() {
+		unzoombtn.classList.add("hide");
+		var el = document.getElementById("frames").children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove("parent");
+			el[i].classList.remove("hide");
+			zoom_reset(el[i]);
+			update_text(el[i]);
+		}
+		search();
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add("show");
+		} else {
+			ignorecaseBtn.classList.remove("show");
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll("#frames rect");
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], "fill")
+		}
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt("Enter a search term (regexp " +
+			    "allowed, eg: ^ext4_)"
+			    + (ignorecase ? ", ignoring case" : "")
+			    + "\nPress Ctrl-i to toggle case sensitivity", "");
+			if (term != null) {
+				currentSearchTerm = term;
+				search();
+			}
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove("show");
+			searchbtn.firstChild.nodeValue = "Search"
+			matchedtxt.classList.add("hide");
+			matchedtxt.firstChild.nodeValue = ""
+		}
+	}
+	function search(term) {
+		if (currentSearchTerm === null) return;
+		var term = currentSearchTerm;
+
+		var re = new RegExp(term, ignorecase ? 'i' : '');
+		var el = document.getElementById("frames").children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, "rect");
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, "fill");
+				rect.attributes.fill.value = "rgb(230,0,230)";
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+
+		searchbtn.classList.add("show");
+		searchbtn.firstChild.nodeValue = "Reset Search";
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove("hide");
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = "Matched: " + pct + "%";
+	}
+]]>
+</script>
+<rect x="0.0" y="0" width="1200.0" height="323.0" fill="url(#background)"  />
+<text id="title" x="600.00" y="24" >rpi-dca6325631_SNAPSHOT_20210418-0646_pagefault.fR</text>
+<text id="details" x="10.00" y="306" > </text>
+<text id="unzoom" x="10.00" y="24" class="hide">Reset Zoom</text>
+<text id="search" x="1090.00" y="24" >Search</text>
+<text id="ignorecase" x="1174.00" y="24" >ic</text>
+<text id="matched" x="1090.00" y="306" > </text>
+<g id="frames">
+<g >
+<title>kthread (1 samples, 6.67%)</title><rect x="482.0" y="59" width="78.7" height="10.0" fill="rgb(220,198,48)" rx="2" ry="2" />
+<text  x="485.00" y="67" >kthread</text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 6.67%)</title><rect x="482.0" y="48" width="78.7" height="10.0" fill="rgb(233,227,1)" rx="2" ry="2" />
+<text  x="485.00" y="56" >ret_from_..</text>
+</g>
+<g >
+<title>kthread (4 samples, 26.67%)</title><rect x="560.7" y="235" width="314.6" height="10.0" fill="rgb(208,73,1)" rx="2" ry="2" />
+<text  x="563.67" y="243" >kthread</text>
+</g>
+<g >
+<title>__noinstr_text_start (2 samples, 13.33%)</title><rect x="875.3" y="224" width="157.4" height="10.0" fill="rgb(237,190,32)" rx="2" ry="2" />
+<text  x="878.33" y="232" >__noinstr_text_start</text>
+</g>
+<g >
+<title>futex_wait_queue_me (1 samples, 6.67%)</title><rect x="167.3" y="246" width="78.7" height="10.0" fill="rgb(217,77,46)" rx="2" ry="2" />
+<text  x="170.33" y="254" >futex_wai..</text>
+</g>
+<g >
+<title>schedule_timeout (2 samples, 13.33%)</title><rect x="403.3" y="246" width="157.4" height="10.0" fill="rgb(252,47,11)" rx="2" ry="2" />
+<text  x="406.33" y="254" >schedule_timeout</text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 6.67%)</title><rect x="403.3" y="213" width="78.7" height="10.0" fill="rgb(220,40,28)" rx="2" ry="2" />
+<text  x="406.33" y="221" >ret_from_..</text>
+</g>
+<g >
+<title>[libustream-ssl.so] (1 samples, 6.67%)</title><rect x="88.7" y="202" width="78.6" height="10.0" fill="rgb(207,136,18)" rx="2" ry="2" />
+<text  x="91.67" y="210" >[libustre..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 6.67%)</title><rect x="88.7" y="158" width="78.6" height="10.0" fill="rgb(247,22,0)" rx="2" ry="2" />
+<text  x="91.67" y="166" >[libc.so]</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 6.67%)</title><rect x="167.3" y="169" width="78.7" height="10.0" fill="rgb(253,179,41)" rx="2" ry="2" />
+<text  x="170.33" y="177" >[libc.so]</text>
+</g>
+<g >
+<title>do_epoll_wait (2 samples, 13.33%)</title><rect x="246.0" y="213" width="157.3" height="10.0" fill="rgb(245,161,40)" rx="2" ry="2" />
+<text  x="249.00" y="221" >do_epoll_wait</text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 6.67%)</title><rect x="88.7" y="191" width="78.6" height="10.0" fill="rgb(228,218,51)" rx="2" ry="2" />
+<text  x="91.67" y="199" >[libubox...</text>
+</g>
+<g >
+<title>__arm64_sys_epoll_pwait (2 samples, 13.33%)</title><rect x="246.0" y="202" width="157.3" height="10.0" fill="rgb(206,170,49)" rx="2" ry="2" />
+<text  x="249.00" y="210" >__arm64_sys_epoll_pw..</text>
+</g>
+<g >
+<title>[libustream-ssl.so] (1 samples, 6.67%)</title><rect x="88.7" y="213" width="78.6" height="10.0" fill="rgb(237,116,34)" rx="2" ry="2" />
+<text  x="91.67" y="221" >[libustre..</text>
+</g>
+<g >
+<title>od_dbs_update (1 samples, 6.67%)</title><rect x="482.0" y="103" width="78.7" height="10.0" fill="rgb(219,223,33)" rx="2" ry="2" />
+<text  x="485.00" y="111" >od_dbs_up..</text>
+</g>
+<g >
+<title>schedule_idle (4 samples, 26.67%)</title><rect x="875.3" y="268" width="314.7" height="10.0" fill="rgb(230,180,5)" rx="2" ry="2" />
+<text  x="878.33" y="276" >schedule_idle</text>
+</g>
+<g >
+<title>schedule_hrtimeout_range_clock (2 samples, 13.33%)</title><rect x="246.0" y="246" width="157.3" height="10.0" fill="rgb(211,109,3)" rx="2" ry="2" />
+<text  x="249.00" y="254" >schedule_hrtimeout_r..</text>
+</g>
+<g >
+<title>swapper (2 samples, 13.33%)</title><rect x="875.3" y="191" width="157.4" height="10.0" fill="rgb(209,201,36)" rx="2" ry="2" />
+<text  x="878.33" y="199" >swapper</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 6.67%)</title><rect x="167.3" y="136" width="78.7" height="10.0" fill="rgb(232,140,27)" rx="2" ry="2" />
+<text  x="170.33" y="144" >[libc.so]</text>
+</g>
+<g >
+<title>kworker/1:1-eve (1 samples, 6.67%)</title><rect x="718.0" y="213" width="78.7" height="10.0" fill="rgb(232,152,29)" rx="2" ry="2" />
+<text  x="721.00" y="221" >kworker/1..</text>
+</g>
+<g >
+<title>[dnsmasq] (1 samples, 6.67%)</title><rect x="10.0" y="202" width="78.7" height="10.0" fill="rgb(206,39,47)" rx="2" ry="2" />
+<text  x="13.00" y="210" >[dnsmasq]</text>
+</g>
+<g >
+<title>rpi_firmware_property (1 samples, 6.67%)</title><rect x="482.0" y="191" width="78.7" height="10.0" fill="rgb(205,150,41)" rx="2" ry="2" />
+<text  x="485.00" y="199" >rpi_firmw..</text>
+</g>
+<g >
+<title>dnsmasq (1 samples, 6.67%)</title><rect x="10.0" y="169" width="78.7" height="10.0" fill="rgb(208,180,26)" rx="2" ry="2" />
+<text  x="13.00" y="177" >dnsmasq</text>
+</g>
+<g >
+<title>worker_thread (4 samples, 26.67%)</title><rect x="560.7" y="246" width="314.6" height="10.0" fill="rgb(216,211,20)" rx="2" ry="2" />
+<text  x="563.67" y="254" >worker_thread</text>
+</g>
+<g >
+<title>el0_svc_handler (1 samples, 6.67%)</title><rect x="167.3" y="202" width="78.7" height="10.0" fill="rgb(213,222,52)" rx="2" ry="2" />
+<text  x="170.33" y="210" >el0_svc_h..</text>
+</g>
+<g >
+<title>[dnsmasq] (1 samples, 6.67%)</title><rect x="10.0" y="213" width="78.7" height="10.0" fill="rgb(248,2,33)" rx="2" ry="2" />
+<text  x="13.00" y="221" >[dnsmasq]</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 6.67%)</title><rect x="167.3" y="180" width="78.7" height="10.0" fill="rgb(205,136,2)" rx="2" ry="2" />
+<text  x="170.33" y="188" >[libc.so]</text>
+</g>
+<g >
+<title>clk_set_rate (1 samples, 6.67%)</title><rect x="482.0" y="147" width="78.7" height="10.0" fill="rgb(229,130,41)" rx="2" ry="2" />
+<text  x="485.00" y="155" >clk_set_r..</text>
+</g>
+<g >
+<title>[unknown] (1 samples, 6.67%)</title><rect x="10.0" y="180" width="78.7" height="10.0" fill="rgb(247,188,37)" rx="2" ry="2" />
+<text  x="13.00" y="188" >[unknown]</text>
+</g>
+<g >
+<title>rcu_gp_kthread (1 samples, 6.67%)</title><rect x="403.3" y="235" width="78.7" height="10.0" fill="rgb(235,59,23)" rx="2" ry="2" />
+<text  x="406.33" y="243" >rcu_gp_kt..</text>
+</g>
+<g >
+<title>el0_svc_handler (2 samples, 13.33%)</title><rect x="246.0" y="191" width="157.3" height="10.0" fill="rgb(245,66,15)" rx="2" ry="2" />
+<text  x="249.00" y="199" >el0_svc_handler</text>
+</g>
+<g >
+<title>clk_change_rate (1 samples, 6.67%)</title><rect x="482.0" y="169" width="78.7" height="10.0" fill="rgb(217,85,37)" rx="2" ry="2" />
+<text  x="485.00" y="177" >clk_chang..</text>
+</g>
+<g >
+<title>[libubox.so.20210302] (2 samples, 13.33%)</title><rect x="246.0" y="158" width="157.3" height="10.0" fill="rgb(240,165,34)" rx="2" ry="2" />
+<text  x="249.00" y="166" >[libubox.so.20210302]</text>
+</g>
+<g >
+<title>dbs_work_handler (1 samples, 6.67%)</title><rect x="482.0" y="92" width="78.7" height="10.0" fill="rgb(230,65,25)" rx="2" ry="2" />
+<text  x="485.00" y="100" >dbs_work_..</text>
+</g>
+<g >
+<title>[libubox.so.20210302] (1 samples, 6.67%)</title><rect x="88.7" y="180" width="78.6" height="10.0" fill="rgb(209,50,12)" rx="2" ry="2" />
+<text  x="91.67" y="188" >[libubox...</text>
+</g>
+<g >
+<title>start_kernel (2 samples, 13.33%)</title><rect x="875.3" y="202" width="157.4" height="10.0" fill="rgb(251,124,39)" rx="2" ry="2" />
+<text  x="878.33" y="210" >start_kernel</text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 6.67%)</title><rect x="324.7" y="147" width="78.6" height="10.0" fill="rgb(225,13,28)" rx="2" ry="2" />
+<text  x="327.67" y="155" >[uhttpd]</text>
+</g>
+<g >
+<title>[collectd] (1 samples, 6.67%)</title><rect x="167.3" y="147" width="78.7" height="10.0" fill="rgb(236,223,34)" rx="2" ry="2" />
+<text  x="170.33" y="155" >[collectd]</text>
+</g>
+<g >
+<title>raspberrypi_fw_set_rate (1 samples, 6.67%)</title><rect x="482.0" y="180" width="78.7" height="10.0" fill="rgb(235,146,46)" rx="2" ry="2" />
+<text  x="485.00" y="188" >raspberry..</text>
+</g>
+<g >
+<title>[unknown] (1 samples, 6.67%)</title><rect x="167.3" y="114" width="78.7" height="10.0" fill="rgb(245,159,6)" rx="2" ry="2" />
+<text  x="170.33" y="122" >[unknown]</text>
+</g>
+<g >
+<title>ep_poll (2 samples, 13.33%)</title><rect x="246.0" y="224" width="157.3" height="10.0" fill="rgb(249,104,40)" rx="2" ry="2" />
+<text  x="249.00" y="232" >ep_poll</text>
+</g>
+<g >
+<title>do_idle (4 samples, 26.67%)</title><rect x="875.3" y="246" width="314.7" height="10.0" fill="rgb(235,173,18)" rx="2" ry="2" />
+<text  x="878.33" y="254" >do_idle</text>
+</g>
+<g >
+<title>__arm64_sys_futex (1 samples, 6.67%)</title><rect x="167.3" y="213" width="78.7" height="10.0" fill="rgb(239,150,1)" rx="2" ry="2" />
+<text  x="170.33" y="221" >__arm64_s..</text>
+</g>
+<g >
+<title>rpi_firmware_transaction (1 samples, 6.67%)</title><rect x="482.0" y="213" width="78.7" height="10.0" fill="rgb(250,49,18)" rx="2" ry="2" />
+<text  x="485.00" y="221" >rpi_firmw..</text>
+</g>
+<g >
+<title>process_one_work (1 samples, 6.67%)</title><rect x="482.0" y="81" width="78.7" height="10.0" fill="rgb(233,54,45)" rx="2" ry="2" />
+<text  x="485.00" y="89" >process_o..</text>
+</g>
+<g >
+<title>dev_pm_opp_set_rate (1 samples, 6.67%)</title><rect x="482.0" y="136" width="78.7" height="10.0" fill="rgb(248,18,54)" rx="2" ry="2" />
+<text  x="485.00" y="144" >dev_pm_op..</text>
+</g>
+<g >
+<title>[unknown] (1 samples, 6.67%)</title><rect x="88.7" y="147" width="78.6" height="10.0" fill="rgb(223,90,13)" rx="2" ry="2" />
+<text  x="91.67" y="155" >[unknown]</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 6.67%)</title><rect x="10.0" y="191" width="78.7" height="10.0" fill="rgb(213,151,42)" rx="2" ry="2" />
+<text  x="13.00" y="199" >[libc.so]</text>
+</g>
+<g >
+<title>__cpufreq_driver_target (1 samples, 6.67%)</title><rect x="482.0" y="114" width="78.7" height="10.0" fill="rgb(252,18,8)" rx="2" ry="2" />
+<text  x="485.00" y="122" >__cpufreq..</text>
+</g>
+<g >
+<title>schedule_hrtimeout_range (2 samples, 13.33%)</title><rect x="246.0" y="235" width="157.3" height="10.0" fill="rgb(206,30,19)" rx="2" ry="2" />
+<text  x="249.00" y="243" >schedule_hrtimeout_r..</text>
+</g>
+<g >
+<title>schedule (11 samples, 73.33%)</title><rect x="10.0" y="257" width="865.3" height="10.0" fill="rgb(238,108,32)" rx="2" ry="2" />
+<text  x="13.00" y="265" >schedule</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 6.67%)</title><rect x="167.3" y="125" width="78.7" height="10.0" fill="rgb(215,5,1)" rx="2" ry="2" />
+<text  x="170.33" y="133" >[libc.so]</text>
+</g>
+<g >
+<title>clk_core_set_rate_nolock (1 samples, 6.67%)</title><rect x="482.0" y="158" width="78.7" height="10.0" fill="rgb(254,48,7)" rx="2" ry="2" />
+<text  x="485.00" y="166" >clk_core_..</text>
+</g>
+<g >
+<title>[netifd] (1 samples, 6.67%)</title><rect x="246.0" y="147" width="78.7" height="10.0" fill="rgb(215,25,26)" rx="2" ry="2" />
+<text  x="249.00" y="155" >[netifd]</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 6.67%)</title><rect x="324.7" y="136" width="78.6" height="10.0" fill="rgb(236,152,7)" rx="2" ry="2" />
+<text  x="327.67" y="144" >[libc.so]</text>
+</g>
+<g >
+<title>futex_wait (1 samples, 6.67%)</title><rect x="167.3" y="235" width="78.7" height="10.0" fill="rgb(247,149,6)" rx="2" ry="2" />
+<text  x="170.33" y="243" >futex_wait</text>
+</g>
+<g >
+<title>swapper (2 samples, 13.33%)</title><rect x="1032.7" y="213" width="157.3" height="10.0" fill="rgb(232,34,13)" rx="2" ry="2" />
+<text  x="1035.67" y="221" >swapper</text>
+</g>
+<g >
+<title>set_target (1 samples, 6.67%)</title><rect x="482.0" y="125" width="78.7" height="10.0" fill="rgb(238,47,49)" rx="2" ry="2" />
+<text  x="485.00" y="133" >set_target</text>
+</g>
+<g >
+<title>[unknown] (1 samples, 6.67%)</title><rect x="246.0" y="125" width="78.7" height="10.0" fill="rgb(234,218,38)" rx="2" ry="2" />
+<text  x="249.00" y="133" >[unknown]</text>
+</g>
+<g >
+<title>[dnsmasq] (1 samples, 6.67%)</title><rect x="10.0" y="224" width="78.7" height="10.0" fill="rgb(240,63,8)" rx="2" ry="2" />
+<text  x="13.00" y="232" >[dnsmasq]</text>
+</g>
+<g >
+<title>schedule (11 samples, 73.33%)</title><rect x="10.0" y="268" width="865.3" height="10.0" fill="rgb(230,61,21)" rx="2" ry="2" />
+<text  x="13.00" y="276" >schedule</text>
+</g>
+<g >
+<title>mbox_send_message (1 samples, 6.67%)</title><rect x="482.0" y="224" width="78.7" height="10.0" fill="rgb(243,32,20)" rx="2" ry="2" />
+<text  x="485.00" y="232" >mbox_send..</text>
+</g>
+<g >
+<title>el0_svc (2 samples, 13.33%)</title><rect x="246.0" y="180" width="157.3" height="10.0" fill="rgb(225,222,30)" rx="2" ry="2" />
+<text  x="249.00" y="188" >el0_svc</text>
+</g>
+<g >
+<title>kworker/3:2-eve (1 samples, 6.67%)</title><rect x="796.7" y="213" width="78.6" height="10.0" fill="rgb(210,98,31)" rx="2" ry="2" />
+<text  x="799.67" y="221" >kworker/3..</text>
+</g>
+<g >
+<title>[libc.so] (2 samples, 13.33%)</title><rect x="246.0" y="169" width="157.3" height="10.0" fill="rgb(223,113,4)" rx="2" ry="2" />
+<text  x="249.00" y="177" >[libc.so]</text>
+</g>
+<g >
+<title>kworker/0:3-eve (2 samples, 13.33%)</title><rect x="560.7" y="213" width="157.3" height="10.0" fill="rgb(232,193,0)" rx="2" ry="2" />
+<text  x="563.67" y="221" >kworker/0:3-eve</text>
+</g>
+<g >
+<title>netifd (1 samples, 6.67%)</title><rect x="246.0" y="114" width="78.7" height="10.0" fill="rgb(229,106,33)" rx="2" ry="2" />
+<text  x="249.00" y="122" >netifd</text>
+</g>
+<g >
+<title>do_notify_resume (2 samples, 13.33%)</title><rect x="10.0" y="246" width="157.3" height="10.0" fill="rgb(224,217,43)" rx="2" ry="2" />
+<text  x="13.00" y="254" >do_notify_resume</text>
+</g>
+<g >
+<title>do_futex (1 samples, 6.67%)</title><rect x="167.3" y="224" width="78.7" height="10.0" fill="rgb(254,52,17)" rx="2" ry="2" />
+<text  x="170.33" y="232" >do_futex</text>
+</g>
+<g >
+<title>ret_from_fork (4 samples, 26.67%)</title><rect x="560.7" y="224" width="314.6" height="10.0" fill="rgb(209,59,20)" rx="2" ry="2" />
+<text  x="563.67" y="232" >ret_from_fork</text>
+</g>
+<g >
+<title>el0_svc (1 samples, 6.67%)</title><rect x="167.3" y="191" width="78.7" height="10.0" fill="rgb(209,160,19)" rx="2" ry="2" />
+<text  x="170.33" y="199" >el0_svc</text>
+</g>
+<g >
+<title>all (15 samples, 100%)</title><rect x="10.0" y="279" width="1180.0" height="10.0" fill="rgb(219,173,44)" rx="2" ry="2" />
+<text  x="13.00" y="287" ></text>
+</g>
+<g >
+<title>kthread (1 samples, 6.67%)</title><rect x="403.3" y="224" width="78.7" height="10.0" fill="rgb(250,152,50)" rx="2" ry="2" />
+<text  x="406.33" y="232" >kthread</text>
+</g>
+<g >
+<title>uhttpd (1 samples, 6.67%)</title><rect x="324.7" y="114" width="78.6" height="10.0" fill="rgb(225,22,14)" rx="2" ry="2" />
+<text  x="327.67" y="122" >uhttpd</text>
+</g>
+<g >
+<title>cpu_startup_entry (4 samples, 26.67%)</title><rect x="875.3" y="235" width="314.7" height="10.0" fill="rgb(238,95,11)" rx="2" ry="2" />
+<text  x="878.33" y="243" >cpu_startup_entry</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 6.67%)</title><rect x="167.3" y="158" width="78.7" height="10.0" fill="rgb(209,176,32)" rx="2" ry="2" />
+<text  x="170.33" y="166" >[libc.so]</text>
+</g>
+<g >
+<title>uhttpd (1 samples, 6.67%)</title><rect x="88.7" y="136" width="78.6" height="10.0" fill="rgb(217,148,37)" rx="2" ry="2" />
+<text  x="91.67" y="144" >uhttpd</text>
+</g>
+<g >
+<title>secondary_start_kernel (2 samples, 13.33%)</title><rect x="1032.7" y="224" width="157.3" height="10.0" fill="rgb(206,94,5)" rx="2" ry="2" />
+<text  x="1035.67" y="232" >secondary_start_kernel</text>
+</g>
+<g >
+<title>kworker/0:3-eve (1 samples, 6.67%)</title><rect x="482.0" y="37" width="78.7" height="10.0" fill="rgb(243,148,31)" rx="2" ry="2" />
+<text  x="485.00" y="45" >kworker/0..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 6.67%)</title><rect x="246.0" y="136" width="78.7" height="10.0" fill="rgb(253,40,5)" rx="2" ry="2" />
+<text  x="249.00" y="144" >[libc.so]</text>
+</g>
+<g >
+<title>writer#4 (1 samples, 6.67%)</title><rect x="167.3" y="103" width="78.7" height="10.0" fill="rgb(220,159,49)" rx="2" ry="2" />
+<text  x="170.33" y="111" >writer#4</text>
+</g>
+<g >
+<title>[uhttpd] (1 samples, 6.67%)</title><rect x="88.7" y="169" width="78.6" height="10.0" fill="rgb(225,76,34)" rx="2" ry="2" />
+<text  x="91.67" y="177" >[uhttpd]</text>
+</g>
+<g >
+<title>wait_for_completion_timeout (1 samples, 6.67%)</title><rect x="482.0" y="235" width="78.7" height="10.0" fill="rgb(211,132,1)" rx="2" ry="2" />
+<text  x="485.00" y="243" >wait_for_..</text>
+</g>
+<g >
+<title>[libwolfssl.so.4.7.0.66253b90] (1 samples, 6.67%)</title><rect x="88.7" y="224" width="78.6" height="10.0" fill="rgb(241,50,29)" rx="2" ry="2" />
+<text  x="91.67" y="232" >[libwolfs..</text>
+</g>
+<g >
+<title>worker_thread (1 samples, 6.67%)</title><rect x="482.0" y="70" width="78.7" height="10.0" fill="rgb(245,149,6)" rx="2" ry="2" />
+<text  x="485.00" y="78" >worker_th..</text>
+</g>
+<g >
+<title>work_pending (2 samples, 13.33%)</title><rect x="10.0" y="235" width="157.3" height="10.0" fill="rgb(252,225,13)" rx="2" ry="2" />
+<text  x="13.00" y="243" >work_pending</text>
+</g>
+<g >
+<title>[unknown] (1 samples, 6.67%)</title><rect x="324.7" y="125" width="78.6" height="10.0" fill="rgb(232,67,24)" rx="2" ry="2" />
+<text  x="327.67" y="133" >[unknown]</text>
+</g>
+<g >
+<title>schedule_idle (4 samples, 26.67%)</title><rect x="875.3" y="257" width="314.7" height="10.0" fill="rgb(211,95,9)" rx="2" ry="2" />
+<text  x="878.33" y="265" >schedule_idle</text>
+</g>
+<g >
+<title>rpi_firmware_property_list (1 samples, 6.67%)</title><rect x="482.0" y="202" width="78.7" height="10.0" fill="rgb(235,119,53)" rx="2" ry="2" />
+<text  x="485.00" y="210" >rpi_firmw..</text>
+</g>
+<g >
+<title>arch_call_rest_init (2 samples, 13.33%)</title><rect x="875.3" y="213" width="157.4" height="10.0" fill="rgb(224,221,10)" rx="2" ry="2" />
+<text  x="878.33" y="221" >arch_call_rest_init</text>
+</g>
+<g >
+<title>rcu_sched (1 samples, 6.67%)</title><rect x="403.3" y="202" width="78.7" height="10.0" fill="rgb(249,81,18)" rx="2" ry="2" />
+<text  x="406.33" y="210" >rcu_sched</text>
+</g>
+</g>
+</svg>

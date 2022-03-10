@@ -1,0 +1,792 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" width="1200" height="345" onload="init(evt)" viewBox="0 0 1200 345" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id="background" y1="0" y2="1" x1="0" x2="0" >
+		<stop stop-color="#eeeeee" offset="5%" />
+		<stop stop-color="#eeeeb0" offset="95%" />
+	</linearGradient>
+</defs>
+<style type="text/css">
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type="text/ecmascript">
+<![CDATA[
+	"use strict";
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById("details").firstChild;
+		searchbtn = document.getElementById("search");
+		ignorecaseBtn = document.getElementById("ignorecase");
+		unzoombtn = document.getElementById("unzoom");
+		matchedtxt = document.getElementById("matched");
+		svg = document.getElementsByTagName("svg")[0];
+		searching = 0;
+		currentSearchTerm = null;
+	}
+
+	window.addEventListener("click", function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == "a") {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains("parent")) unzoom();
+			zoom(target);
+		}
+		else if (e.target.id == "unzoom") unzoom();
+		else if (e.target.id == "search") search_prompt();
+		else if (e.target.id == "ignorecase") toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener("mouseover", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = "Function: " + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener("mouseout", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	window.addEventListener("keydown",function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+	}, false)
+
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener("keydown",function (e) {
+		if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+		return;
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == "frames") return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes["_orig_" + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute("_orig_" + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes["_orig_"+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes["_orig_" + attr].value;
+		e.removeAttribute("_orig_"+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, "title").firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, "rect");
+		var t = find_child(e, "text");
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, "title").textContent.replace(/\([^(]*\)$/,"");
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = "";
+			return;
+		}
+
+		t.textContent = txt;
+		// Fit in full text width
+		if (/^ *$/.test(txt) || t.getSubStringLength(0, txt.length) < w)
+			return;
+
+		for (var x = txt.length - 2; x > 0; x--) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + "..";
+				return;
+			}
+		}
+		t.textContent = "";
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, "x");
+			orig_load(e, "width");
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == "text")
+					e.attributes.x.value = find_child(e.parentNode, "rect[x]").attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, "rect").attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove("hide");
+
+		var el = document.getElementById("frames").children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, "rect").attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add("parent");
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add("hide");
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add("hide");
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom() {
+		unzoombtn.classList.add("hide");
+		var el = document.getElementById("frames").children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove("parent");
+			el[i].classList.remove("hide");
+			zoom_reset(el[i]);
+			update_text(el[i]);
+		}
+		search();
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add("show");
+		} else {
+			ignorecaseBtn.classList.remove("show");
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll("#frames rect");
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], "fill")
+		}
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt("Enter a search term (regexp " +
+			    "allowed, eg: ^ext4_)"
+			    + (ignorecase ? ", ignoring case" : "")
+			    + "\nPress Ctrl-i to toggle case sensitivity", "");
+			if (term != null) {
+				currentSearchTerm = term;
+				search();
+			}
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove("show");
+			searchbtn.firstChild.nodeValue = "Search"
+			matchedtxt.classList.add("hide");
+			matchedtxt.firstChild.nodeValue = ""
+		}
+	}
+	function search(term) {
+		if (currentSearchTerm === null) return;
+		var term = currentSearchTerm;
+
+		var re = new RegExp(term, ignorecase ? 'i' : '');
+		var el = document.getElementById("frames").children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, "rect");
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, "fill");
+				rect.attributes.fill.value = "rgb(230,0,230)";
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+
+		searchbtn.classList.add("show");
+		searchbtn.firstChild.nodeValue = "Reset Search";
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove("hide");
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = "Matched: " + pct + "%";
+	}
+]]>
+</script>
+<rect x="0.0" y="0" width="1200.0" height="345.0" fill="url(#background)"  />
+<text id="title" x="600.00" y="24" >rpi-dca6325631_SNAPSHOT_20210418-0331_everything.fR</text>
+<text id="details" x="10.00" y="328" > </text>
+<text id="unzoom" x="10.00" y="24" class="hide">Reset Zoom</text>
+<text id="search" x="1090.00" y="24" >Search</text>
+<text id="ignorecase" x="1174.00" y="24" >ic</text>
+<text id="matched" x="1090.00" y="328" > </text>
+<g id="frames">
+<g >
+<title>rcu_idle_exit (2 samples, 11.76%)</title><rect x="842.9" y="290" width="138.9" height="10.0" fill="rgb(249,50,43)" rx="2" ry="2" />
+<text  x="845.94" y="298" >rcu_idle_exit</text>
+</g>
+<g >
+<title>start_kernel (2 samples, 11.76%)</title><rect x="495.9" y="213" width="138.8" height="10.0" fill="rgb(219,113,1)" rx="2" ry="2" />
+<text  x="498.88" y="221" >start_kernel</text>
+</g>
+<g >
+<title>[unknown] (1 samples, 5.88%)</title><rect x="357.1" y="202" width="69.4" height="10.0" fill="rgb(228,32,26)" rx="2" ry="2" />
+<text  x="360.06" y="210" >[unknown]</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 5.88%)</title><rect x="357.1" y="235" width="69.4" height="10.0" fill="rgb(222,82,42)" rx="2" ry="2" />
+<text  x="360.06" y="243" >[libc.so]</text>
+</g>
+<g >
+<title>__noinstr_text_start (1 samples, 5.88%)</title><rect x="287.6" y="202" width="69.5" height="10.0" fill="rgb(242,151,24)" rx="2" ry="2" />
+<text  x="290.65" y="210" >__noins..</text>
+</g>
+<g >
+<title>worker_thread (1 samples, 5.88%)</title><rect x="773.5" y="70" width="69.4" height="10.0" fill="rgb(253,185,21)" rx="2" ry="2" />
+<text  x="776.53" y="78" >worker_..</text>
+</g>
+<g >
+<title>gic_handle_irq (1 samples, 5.88%)</title><rect x="287.6" y="257" width="69.5" height="10.0" fill="rgb(242,93,37)" rx="2" ry="2" />
+<text  x="290.65" y="265" >gic_han..</text>
+</g>
+<g >
+<title>cpu_startup_entry (2 samples, 11.76%)</title><rect x="1051.2" y="268" width="138.8" height="10.0" fill="rgb(241,58,51)" rx="2" ry="2" />
+<text  x="1054.18" y="276" >cpu_startup_entry</text>
+</g>
+<g >
+<title>arch_call_rest_init (1 samples, 5.88%)</title><rect x="287.6" y="191" width="69.5" height="10.0" fill="rgb(234,80,3)" rx="2" ry="2" />
+<text  x="290.65" y="199" >arch_ca..</text>
+</g>
+<g >
+<title>[dnsmasq] (1 samples, 5.88%)</title><rect x="10.0" y="279" width="69.4" height="10.0" fill="rgb(241,188,5)" rx="2" ry="2" />
+<text  x="13.00" y="287" >[dnsmasq]</text>
+</g>
+<g >
+<title>__noinstr_text_start (2 samples, 11.76%)</title><rect x="495.9" y="235" width="138.8" height="10.0" fill="rgb(217,182,28)" rx="2" ry="2" />
+<text  x="498.88" y="243" >__noinstr_text_st..</text>
+</g>
+<g >
+<title>finish_task_switch (6 samples, 35.29%)</title><rect x="357.1" y="290" width="416.4" height="10.0" fill="rgb(218,53,21)" rx="2" ry="2" />
+<text  x="360.06" y="298" >finish_task_switch</text>
+</g>
+<g >
+<title>do_notify_resume (1 samples, 5.88%)</title><rect x="981.8" y="279" width="69.4" height="10.0" fill="rgb(230,51,19)" rx="2" ry="2" />
+<text  x="984.76" y="287" >do_noti..</text>
+</g>
+<g >
+<title>arch_call_rest_init (1 samples, 5.88%)</title><rect x="842.9" y="246" width="69.5" height="10.0" fill="rgb(249,227,6)" rx="2" ry="2" />
+<text  x="845.94" y="254" >arch_ca..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 5.88%)</title><rect x="981.8" y="257" width="69.4" height="10.0" fill="rgb(207,52,1)" rx="2" ry="2" />
+<text  x="984.76" y="265" >[libc.so]</text>
+</g>
+<g >
+<title>__noinstr_text_start (1 samples, 5.88%)</title><rect x="842.9" y="257" width="69.5" height="10.0" fill="rgb(212,129,45)" rx="2" ry="2" />
+<text  x="845.94" y="265" >__noins..</text>
+</g>
+<g >
+<title>blk_finish_plug (1 samples, 5.88%)</title><rect x="773.5" y="114" width="69.4" height="10.0" fill="rgb(237,162,54)" rx="2" ry="2" />
+<text  x="776.53" y="122" >blk_fin..</text>
+</g>
+<g >
+<title>tick_nohz_idle_exit (2 samples, 11.76%)</title><rect x="1051.2" y="290" width="138.8" height="10.0" fill="rgb(246,209,47)" rx="2" ry="2" />
+<text  x="1054.18" y="298" >tick_nohz_idle_exit</text>
+</g>
+<g >
+<title>schedule_tail (1 samples, 5.88%)</title><rect x="704.1" y="279" width="69.4" height="10.0" fill="rgb(226,141,39)" rx="2" ry="2" />
+<text  x="707.12" y="287" >schedul..</text>
+</g>
+<g >
+<title>[bash] (1 samples, 5.88%)</title><rect x="981.8" y="213" width="69.4" height="10.0" fill="rgb(212,223,36)" rx="2" ry="2" />
+<text  x="984.76" y="221" >[bash]</text>
+</g>
+<g >
+<title>work_pending (1 samples, 5.88%)</title><rect x="981.8" y="268" width="69.4" height="10.0" fill="rgb(252,148,22)" rx="2" ry="2" />
+<text  x="984.76" y="276" >work_pe..</text>
+</g>
+<g >
+<title>cpu_startup_entry (3 samples, 17.65%)</title><rect x="495.9" y="246" width="208.2" height="10.0" fill="rgb(216,64,23)" rx="2" ry="2" />
+<text  x="498.88" y="254" >cpu_startup_entry</text>
+</g>
+<g >
+<title>__softirqentry_text_start (1 samples, 5.88%)</title><rect x="287.6" y="290" width="69.5" height="10.0" fill="rgb(208,212,35)" rx="2" ry="2" />
+<text  x="290.65" y="298" >__softi..</text>
+</g>
+<g >
+<title>[dnsmasq] (3 samples, 17.65%)</title><rect x="79.4" y="279" width="208.2" height="10.0" fill="rgb(213,111,10)" rx="2" ry="2" />
+<text  x="82.41" y="287" >[dnsmasq]</text>
+</g>
+<g >
+<title>dnsmasq (1 samples, 5.88%)</title><rect x="10.0" y="224" width="69.4" height="10.0" fill="rgb(236,149,16)" rx="2" ry="2" />
+<text  x="13.00" y="232" >dnsmasq</text>
+</g>
+<g >
+<title>__mmc_send_status (1 samples, 5.88%)</title><rect x="773.5" y="246" width="69.4" height="10.0" fill="rgb(205,215,36)" rx="2" ry="2" />
+<text  x="776.53" y="254" >__mmc_s..</text>
+</g>
+<g >
+<title>secondary_start_kernel (1 samples, 5.88%)</title><rect x="912.4" y="257" width="69.4" height="10.0" fill="rgb(250,36,45)" rx="2" ry="2" />
+<text  x="915.35" y="265" >seconda..</text>
+</g>
+<g >
+<title>process_one_work (1 samples, 5.88%)</title><rect x="773.5" y="81" width="69.4" height="10.0" fill="rgb(230,110,42)" rx="2" ry="2" />
+<text  x="776.53" y="89" >process..</text>
+</g>
+<g >
+<title>arch_call_rest_init (2 samples, 11.76%)</title><rect x="495.9" y="224" width="138.8" height="10.0" fill="rgb(212,41,37)" rx="2" ry="2" />
+<text  x="498.88" y="232" >arch_call_rest_init</text>
+</g>
+<g >
+<title>start_kernel (1 samples, 5.88%)</title><rect x="287.6" y="180" width="69.5" height="10.0" fill="rgb(231,80,49)" rx="2" ry="2" />
+<text  x="290.65" y="188" >start_k..</text>
+</g>
+<g >
+<title>mmc_start_request (1 samples, 5.88%)</title><rect x="773.5" y="279" width="69.4" height="10.0" fill="rgb(223,33,22)" rx="2" ry="2" />
+<text  x="776.53" y="287" >mmc_sta..</text>
+</g>
+<g >
+<title>do_notify_resume (1 samples, 5.88%)</title><rect x="357.1" y="257" width="69.4" height="10.0" fill="rgb(240,219,23)" rx="2" ry="2" />
+<text  x="360.06" y="265" >do_noti..</text>
+</g>
+<g >
+<title>do_idle (3 samples, 17.65%)</title><rect x="495.9" y="257" width="208.2" height="10.0" fill="rgb(231,59,51)" rx="2" ry="2" />
+<text  x="498.88" y="265" >do_idle</text>
+</g>
+<g >
+<title>[unknown] (3 samples, 17.65%)</title><rect x="79.4" y="235" width="208.2" height="10.0" fill="rgb(228,226,0)" rx="2" ry="2" />
+<text  x="82.41" y="243" >[unknown]</text>
+</g>
+<g >
+<title>dnsmasq (3 samples, 17.65%)</title><rect x="79.4" y="224" width="208.2" height="10.0" fill="rgb(248,144,32)" rx="2" ry="2" />
+<text  x="82.41" y="232" >dnsmasq</text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 5.88%)</title><rect x="426.5" y="235" width="69.4" height="10.0" fill="rgb(205,94,46)" rx="2" ry="2" />
+<text  x="429.47" y="243" >ret_fro..</text>
+</g>
+<g >
+<title>start_kernel (1 samples, 5.88%)</title><rect x="842.9" y="235" width="69.5" height="10.0" fill="rgb(248,67,9)" rx="2" ry="2" />
+<text  x="845.94" y="243" >start_k..</text>
+</g>
+<g >
+<title>blk_flush_plug_list (1 samples, 5.88%)</title><rect x="773.5" y="125" width="69.4" height="10.0" fill="rgb(226,10,20)" rx="2" ry="2" />
+<text  x="776.53" y="133" >blk_flu..</text>
+</g>
+<g >
+<title>swapper (2 samples, 11.76%)</title><rect x="1051.2" y="246" width="138.8" height="10.0" fill="rgb(206,83,5)" rx="2" ry="2" />
+<text  x="1054.18" y="254" >swapper</text>
+</g>
+<g >
+<title>[dnsmasq] (1 samples, 5.88%)</title><rect x="10.0" y="268" width="69.4" height="10.0" fill="rgb(212,162,27)" rx="2" ry="2" />
+<text  x="13.00" y="276" >[dnsmasq]</text>
+</g>
+<g >
+<title>mmc_blk_mq_issue_rq (1 samples, 5.88%)</title><rect x="773.5" y="202" width="69.4" height="10.0" fill="rgb(205,87,45)" rx="2" ry="2" />
+<text  x="776.53" y="210" >mmc_blk..</text>
+</g>
+<g >
+<title>swapper (1 samples, 5.88%)</title><rect x="912.4" y="246" width="69.4" height="10.0" fill="rgb(213,52,31)" rx="2" ry="2" />
+<text  x="915.35" y="254" >swapper</text>
+</g>
+<g >
+<title>cpu_startup_entry (2 samples, 11.76%)</title><rect x="842.9" y="268" width="138.9" height="10.0" fill="rgb(224,10,47)" rx="2" ry="2" />
+<text  x="845.94" y="276" >cpu_startup_entry</text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 5.88%)</title><rect x="773.5" y="48" width="69.4" height="10.0" fill="rgb(225,204,37)" rx="2" ry="2" />
+<text  x="776.53" y="56" >ret_fro..</text>
+</g>
+<g >
+<title>secondary_start_kernel (2 samples, 11.76%)</title><rect x="1051.2" y="257" width="138.8" height="10.0" fill="rgb(209,103,44)" rx="2" ry="2" />
+<text  x="1054.18" y="265" >secondary_start_k..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 5.88%)</title><rect x="704.1" y="257" width="69.4" height="10.0" fill="rgb(210,88,40)" rx="2" ry="2" />
+<text  x="707.12" y="265" >[libc.so]</text>
+</g>
+<g >
+<title>__blk_mq_try_issue_directly (1 samples, 5.88%)</title><rect x="773.5" y="180" width="69.4" height="10.0" fill="rgb(245,168,51)" rx="2" ry="2" />
+<text  x="776.53" y="188" >__blk_m..</text>
+</g>
+<g >
+<title>mmc_blk_mq_complete_prev_req.part.37 (1 samples, 5.88%)</title><rect x="773.5" y="224" width="69.4" height="10.0" fill="rgb(239,97,21)" rx="2" ry="2" />
+<text  x="776.53" y="232" >mmc_blk..</text>
+</g>
+<g >
+<title>[unknown] (1 samples, 5.88%)</title><rect x="10.0" y="235" width="69.4" height="10.0" fill="rgb(219,141,1)" rx="2" ry="2" />
+<text  x="13.00" y="243" >[unknown]</text>
+</g>
+<g >
+<title>secondary_start_kernel (1 samples, 5.88%)</title><rect x="634.7" y="235" width="69.4" height="10.0" fill="rgb(247,205,27)" rx="2" ry="2" />
+<text  x="637.71" y="243" >seconda..</text>
+</g>
+<g >
+<title>bash (1 samples, 5.88%)</title><rect x="981.8" y="169" width="69.4" height="10.0" fill="rgb(254,83,29)" rx="2" ry="2" />
+<text  x="984.76" y="177" >bash</text>
+</g>
+<g >
+<title>rcu_idle_exit (1 samples, 5.88%)</title><rect x="287.6" y="235" width="69.5" height="10.0" fill="rgb(236,116,45)" rx="2" ry="2" />
+<text  x="290.65" y="243" >rcu_idl..</text>
+</g>
+<g >
+<title>worker_thread (1 samples, 5.88%)</title><rect x="426.5" y="257" width="69.4" height="10.0" fill="rgb(224,98,43)" rx="2" ry="2" />
+<text  x="429.47" y="265" >worker_..</text>
+</g>
+<g >
+<title>setup_rt_frame (1 samples, 5.88%)</title><rect x="981.8" y="290" width="69.4" height="10.0" fill="rgb(254,72,26)" rx="2" ry="2" />
+<text  x="984.76" y="298" >setup_r..</text>
+</g>
+<g >
+<title>[dnsmasq] (3 samples, 17.65%)</title><rect x="79.4" y="268" width="208.2" height="10.0" fill="rgb(254,211,39)" rx="2" ry="2" />
+<text  x="82.41" y="276" >[dnsmasq]</text>
+</g>
+<g >
+<title>[bash] (1 samples, 5.88%)</title><rect x="981.8" y="235" width="69.4" height="10.0" fill="rgb(207,224,13)" rx="2" ry="2" />
+<text  x="984.76" y="243" >[bash]</text>
+</g>
+<g >
+<title>wb_workfn (1 samples, 5.88%)</title><rect x="773.5" y="92" width="69.4" height="10.0" fill="rgb(221,206,30)" rx="2" ry="2" />
+<text  x="776.53" y="100" >wb_workfn</text>
+</g>
+<g >
+<title>wb_writeback (1 samples, 5.88%)</title><rect x="773.5" y="103" width="69.4" height="10.0" fill="rgb(254,166,53)" rx="2" ry="2" />
+<text  x="776.53" y="111" >wb_writ..</text>
+</g>
+<g >
+<title>irq_exit (1 samples, 5.88%)</title><rect x="287.6" y="279" width="69.5" height="10.0" fill="rgb(247,194,41)" rx="2" ry="2" />
+<text  x="290.65" y="287" >irq_exit</text>
+</g>
+<g >
+<title>[busybox] (1 samples, 5.88%)</title><rect x="357.1" y="213" width="69.4" height="10.0" fill="rgb(217,40,21)" rx="2" ry="2" />
+<text  x="360.06" y="221" >[busybox]</text>
+</g>
+<g >
+<title>[libc.so] (3 samples, 17.65%)</title><rect x="79.4" y="290" width="208.2" height="10.0" fill="rgb(235,166,15)" rx="2" ry="2" />
+<text  x="82.41" y="298" >[libc.so]</text>
+</g>
+<g >
+<title>blk_mq_try_issue_list_directly (1 samples, 5.88%)</title><rect x="773.5" y="158" width="69.4" height="10.0" fill="rgb(252,224,14)" rx="2" ry="2" />
+<text  x="776.53" y="166" >blk_mq_..</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 5.88%)</title><rect x="10.0" y="246" width="69.4" height="10.0" fill="rgb(251,98,12)" rx="2" ry="2" />
+<text  x="13.00" y="254" >[libc.so]</text>
+</g>
+<g >
+<title>mmc_blk_rw_wait (1 samples, 5.88%)</title><rect x="773.5" y="213" width="69.4" height="10.0" fill="rgb(209,185,29)" rx="2" ry="2" />
+<text  x="776.53" y="221" >mmc_blk..</text>
+</g>
+<g >
+<title>kthread (1 samples, 5.88%)</title><rect x="426.5" y="246" width="69.4" height="10.0" fill="rgb(214,9,38)" rx="2" ry="2" />
+<text  x="429.47" y="254" >kthread</text>
+</g>
+<g >
+<title>__handle_domain_irq (1 samples, 5.88%)</title><rect x="287.6" y="268" width="69.5" height="10.0" fill="rgb(243,175,26)" rx="2" ry="2" />
+<text  x="290.65" y="276" >__handl..</text>
+</g>
+<g >
+<title>mmc_mq_queue_rq (1 samples, 5.88%)</title><rect x="773.5" y="191" width="69.4" height="10.0" fill="rgb(236,59,0)" rx="2" ry="2" />
+<text  x="776.53" y="199" >mmc_mq_..</text>
+</g>
+<g >
+<title>schedule_idle (3 samples, 17.65%)</title><rect x="495.9" y="268" width="208.2" height="10.0" fill="rgb(237,76,35)" rx="2" ry="2" />
+<text  x="498.88" y="276" >schedule_idle</text>
+</g>
+<g >
+<title>[bash] (1 samples, 5.88%)</title><rect x="981.8" y="224" width="69.4" height="10.0" fill="rgb(247,211,50)" rx="2" ry="2" />
+<text  x="984.76" y="232" >[bash]</text>
+</g>
+<g >
+<title>mmc_wait_for_req (1 samples, 5.88%)</title><rect x="773.5" y="268" width="69.4" height="10.0" fill="rgb(210,178,23)" rx="2" ry="2" />
+<text  x="776.53" y="276" >mmc_wai..</text>
+</g>
+<g >
+<title>[bash] (1 samples, 5.88%)</title><rect x="981.8" y="246" width="69.4" height="10.0" fill="rgb(231,55,47)" rx="2" ry="2" />
+<text  x="984.76" y="254" >[bash]</text>
+</g>
+<g >
+<title>[libc.so] (3 samples, 17.65%)</title><rect x="79.4" y="246" width="208.2" height="10.0" fill="rgb(211,200,42)" rx="2" ry="2" />
+<text  x="82.41" y="254" >[libc.so]</text>
+</g>
+<g >
+<title>[libc.so] (1 samples, 5.88%)</title><rect x="357.1" y="224" width="69.4" height="10.0" fill="rgb(217,176,34)" rx="2" ry="2" />
+<text  x="360.06" y="232" >[libc.so]</text>
+</g>
+<g >
+<title>all (17 samples, 100%)</title><rect x="10.0" y="301" width="1180.0" height="10.0" fill="rgb(215,7,28)" rx="2" ry="2" />
+<text  x="13.00" y="309" ></text>
+</g>
+<g >
+<title>ls (1 samples, 5.88%)</title><rect x="357.1" y="191" width="69.4" height="10.0" fill="rgb(215,93,38)" rx="2" ry="2" />
+<text  x="360.06" y="199" >ls</text>
+</g>
+<g >
+<title>ret_from_fork (1 samples, 5.88%)</title><rect x="704.1" y="268" width="69.4" height="10.0" fill="rgb(228,69,27)" rx="2" ry="2" />
+<text  x="707.12" y="276" >ret_fro..</text>
+</g>
+<g >
+<title>[bash] (1 samples, 5.88%)</title><rect x="981.8" y="191" width="69.4" height="10.0" fill="rgb(212,207,51)" rx="2" ry="2" />
+<text  x="984.76" y="199" >[bash]</text>
+</g>
+<g >
+<title>[dnsmasq] (1 samples, 5.88%)</title><rect x="10.0" y="290" width="69.4" height="10.0" fill="rgb(217,159,30)" rx="2" ry="2" />
+<text  x="13.00" y="298" >[dnsmasq]</text>
+</g>
+<g >
+<title>el1_irq (1 samples, 5.88%)</title><rect x="287.6" y="246" width="69.5" height="10.0" fill="rgb(245,68,6)" rx="2" ry="2" />
+<text  x="290.65" y="254" >el1_irq</text>
+</g>
+<g >
+<title>mmc_wait_for_cmd (1 samples, 5.88%)</title><rect x="773.5" y="257" width="69.4" height="10.0" fill="rgb(241,130,45)" rx="2" ry="2" />
+<text  x="776.53" y="265" >mmc_wai..</text>
+</g>
+<g >
+<title>kthread (1 samples, 5.88%)</title><rect x="773.5" y="59" width="69.4" height="10.0" fill="rgb(219,210,39)" rx="2" ry="2" />
+<text  x="776.53" y="67" >kthread</text>
+</g>
+<g >
+<title>do_idle (2 samples, 11.76%)</title><rect x="842.9" y="279" width="138.9" height="10.0" fill="rgb(219,206,0)" rx="2" ry="2" />
+<text  x="845.94" y="287" >do_idle</text>
+</g>
+<g >
+<title>swapper (1 samples, 5.88%)</title><rect x="287.6" y="169" width="69.5" height="10.0" fill="rgb(240,174,44)" rx="2" ry="2" />
+<text  x="290.65" y="177" >swapper</text>
+</g>
+<g >
+<title>[dnsmasq] (1 samples, 5.88%)</title><rect x="10.0" y="257" width="69.4" height="10.0" fill="rgb(229,54,51)" rx="2" ry="2" />
+<text  x="13.00" y="265" >[dnsmasq]</text>
+</g>
+<g >
+<title>kworker/u8:1-ev (1 samples, 5.88%)</title><rect x="773.5" y="37" width="69.4" height="10.0" fill="rgb(249,103,25)" rx="2" ry="2" />
+<text  x="776.53" y="45" >kworker..</text>
+</g>
+<g >
+<title>swapper (1 samples, 5.88%)</title><rect x="634.7" y="224" width="69.4" height="10.0" fill="rgb(220,227,36)" rx="2" ry="2" />
+<text  x="637.71" y="232" >swapper</text>
+</g>
+<g >
+<title>led_trigger_event (1 samples, 5.88%)</title><rect x="773.5" y="290" width="69.4" height="10.0" fill="rgb(213,110,15)" rx="2" ry="2" />
+<text  x="776.53" y="298" >led_tri..</text>
+</g>
+<g >
+<title>swapper (1 samples, 5.88%)</title><rect x="842.9" y="224" width="69.5" height="10.0" fill="rgb(215,215,33)" rx="2" ry="2" />
+<text  x="845.94" y="232" >swapper</text>
+</g>
+<g >
+<title>kworker/1:3-mm_ (1 samples, 5.88%)</title><rect x="426.5" y="224" width="69.4" height="10.0" fill="rgb(234,211,52)" rx="2" ry="2" />
+<text  x="429.47" y="232" >kworker..</text>
+</g>
+<g >
+<title>__schedule (5 samples, 29.41%)</title><rect x="357.1" y="279" width="347.0" height="10.0" fill="rgb(215,203,11)" rx="2" ry="2" />
+<text  x="360.06" y="287" >__schedule</text>
+</g>
+<g >
+<title>do_idle (1 samples, 5.88%)</title><rect x="287.6" y="224" width="69.5" height="10.0" fill="rgb(214,186,45)" rx="2" ry="2" />
+<text  x="290.65" y="232" >do_idle</text>
+</g>
+<g >
+<title>card_busy_detect (1 samples, 5.88%)</title><rect x="773.5" y="235" width="69.4" height="10.0" fill="rgb(238,214,16)" rx="2" ry="2" />
+<text  x="776.53" y="243" >card_bu..</text>
+</g>
+<g >
+<title>bash (1 samples, 5.88%)</title><rect x="704.1" y="246" width="69.4" height="10.0" fill="rgb(229,67,14)" rx="2" ry="2" />
+<text  x="707.12" y="254" >bash</text>
+</g>
+<g >
+<title>blk_mq_flush_plug_list (1 samples, 5.88%)</title><rect x="773.5" y="136" width="69.4" height="10.0" fill="rgb(211,180,15)" rx="2" ry="2" />
+<text  x="776.53" y="144" >blk_mq_..</text>
+</g>
+<g >
+<title>schedule (2 samples, 11.76%)</title><rect x="357.1" y="268" width="138.8" height="10.0" fill="rgb(247,118,6)" rx="2" ry="2" />
+<text  x="360.06" y="276" >schedule</text>
+</g>
+<g >
+<title>swapper (2 samples, 11.76%)</title><rect x="495.9" y="202" width="138.8" height="10.0" fill="rgb(213,55,35)" rx="2" ry="2" />
+<text  x="498.88" y="210" >swapper</text>
+</g>
+<g >
+<title>blk_mq_request_issue_directly (1 samples, 5.88%)</title><rect x="773.5" y="169" width="69.4" height="10.0" fill="rgb(208,115,1)" rx="2" ry="2" />
+<text  x="776.53" y="177" >blk_mq_..</text>
+</g>
+<g >
+<title>[dnsmasq] (3 samples, 17.65%)</title><rect x="79.4" y="257" width="208.2" height="10.0" fill="rgb(249,52,31)" rx="2" ry="2" />
+<text  x="82.41" y="265" >[dnsmasq]</text>
+</g>
+<g >
+<title>cpu_startup_entry (1 samples, 5.88%)</title><rect x="287.6" y="213" width="69.5" height="10.0" fill="rgb(239,2,34)" rx="2" ry="2" />
+<text  x="290.65" y="221" >cpu_sta..</text>
+</g>
+<g >
+<title>work_pending (1 samples, 5.88%)</title><rect x="357.1" y="246" width="69.4" height="10.0" fill="rgb(221,51,26)" rx="2" ry="2" />
+<text  x="360.06" y="254" >work_pe..</text>
+</g>
+<g >
+<title>[bash] (1 samples, 5.88%)</title><rect x="981.8" y="202" width="69.4" height="10.0" fill="rgb(242,181,9)" rx="2" ry="2" />
+<text  x="984.76" y="210" >[bash]</text>
+</g>
+<g >
+<title>do_idle (2 samples, 11.76%)</title><rect x="1051.2" y="279" width="138.8" height="10.0" fill="rgb(244,211,0)" rx="2" ry="2" />
+<text  x="1054.18" y="287" >do_idle</text>
+</g>
+<g >
+<title>blk_mq_sched_insert_requests (1 samples, 5.88%)</title><rect x="773.5" y="147" width="69.4" height="10.0" fill="rgb(216,42,24)" rx="2" ry="2" />
+<text  x="776.53" y="155" >blk_mq_..</text>
+</g>
+<g >
+<title>[bash] (1 samples, 5.88%)</title><rect x="981.8" y="180" width="69.4" height="10.0" fill="rgb(224,154,48)" rx="2" ry="2" />
+<text  x="984.76" y="188" >[bash]</text>
+</g>
+</g>
+</svg>

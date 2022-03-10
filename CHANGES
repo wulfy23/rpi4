@@ -5,16 +5,9 @@
 
     ___________________________________________________   CHANGELOG
 
-
-        5.0.109 -9) sysinfo.sh refactor 'hosts' section (wip)
-        r19003  -11) refactor 351-hwrng be conditional and use /dev/hwrng
-                -13) remove hfs stuff - rarely needed can be postinstalled if needed
-                -13) simple-adblock localfix for ujail
-				-)
-                -)
-                -)
-                -)
-                -)
+        5.0.10x -x) fixes dirty pipe
+        r1907x  -x) remove procd-ujail + seccomp again due to simple-adblock problem
+				-x) wifi firmware to linux-firmware
                 -)
                 -)
                 -)
@@ -25,6 +18,11 @@
                 -)
                 -)
 
+        5.0.109 -9) sysinfo.sh refactor 'hosts' section (wip)
+        r19003  -11) refactor 351-hwrng be conditional and use /dev/hwrng
+                -13) remove hfs stuff - rarely needed can be postinstalled if needed
+                -13) simple-adblock localfix for ujail
+                -17) fix hwrng multi system add
 
         5.0.105 -3) 45311 improve theme fixup resultmsg
         r18913  -3) REMOVEDsee6 populate 'online' log @ /tmp/.booted.online from wan dhcp 'bound-ish' events
