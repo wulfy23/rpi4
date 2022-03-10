@@ -5,24 +5,22 @@
 
         ##################################### RELEASE NOTES
 
-
-        all master builds after r182xx are pretty much fine and there is no
-        real need to update past those build-ids (arguably back to around
-        r17xxx)
-
-		note: there is no ujail(added back r19003 removed post due to simple-adblock issue)
+        note: there is no ujail(added back r19003 removed post due to simple-adblock issue)
               or fw4 on the master builds
               (but I am happy to make one for you if you wish)
 
 
-
-
-
-
-
-
        ############################## kernel 5.10 prior to 5.10.103 (r19075ish) has dirtypipe cve
                                       priv-esc vuln (requires user / application access)
+                                      (build r19075 has 5.10.103)
+
+
+       r19075/5.7.2~+
+       ############################## nft-qos rate no longer displays
+                                      https://github.com/openwrt/luci/issues/5713
+
+
+
 
 
        ############################## docker user installation has issue

@@ -15,11 +15,11 @@ given github issues is available to us
 - https://github.com/wulfy23/rpi4/issues
 
 it's probably the least I can do to attempt to build images which
-contain critical fixes for CVE's and whatsnot
+contain critical fixes for CVE's or key bumps
+
 
 anticipate degradation in master based builds and potential discontinuation of them, leaving only release builds available
 - factory images if present are primarily for use by existing users of the build
-
 
 
 
