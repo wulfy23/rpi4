@@ -44,7 +44,7 @@ if [ -f /bin/bannermsg_do.sh ] && [ ! -z "$DIRTYISSUE" ]; then
 
 
 
-/bin/bannermsg_do.sh msg "023-50321_dirty-pipe-vulterability" "kernel:$DIRTYCHECK is vulnerable to dirtypipe CVE-2022-0847<br>note: priv-esc aka would require user access<br>update to 5.10.103 or newer</b>" 1>/dev/null 2>/dev/null
+/bin/bannermsg_do.sh msg "023-50321_dirty-pipe-vulnerability" "kernel:$DIRTYCHECK vulnerable to dirtypipe CVE-2022-0847<br>note: priv-esc aka would require user access<br>update to kernel 5.10.103 or newer</b>" 1>/dev/null 2>/dev/null
 
 
 fi
