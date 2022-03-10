@@ -10,7 +10,7 @@
               (but I am happy to make one for you if you wish)
 
 
-       ############################## kernel 5.10 prior to 5.10.103 (r19075ish) has dirtypipe cve
+       ############################## kernel 5.10 (master) prior to 5.10.103 (r19075ish) has dirtypipe cve
                                       priv-esc vuln (requires user / application access)
                                       (build r19075 has 5.10.103)
 
