@@ -12,18 +12,15 @@
 
 
 
-       ############################## openssl>1.1.1n CVE-2022-0778
+       ############################## 5.7.9-x_r19171
+            -openssl>1.1.1n CVE-2022-0778
 
-
-
-       ############################## kernel 5.10 (master) prior to 5.10.103 (r19075ish) has dirtypipe cve
-                                      priv-esc vuln (requires user / application access)
-                                      (build r19075 has 5.10.103)
-
-
-       r19075/5.7.5-2~+
-       ############################## nft-qos rate no longer displays
-                                      https://github.com/openwrt/luci/issues/5713
+       ############################## r19075/5.7.5-2~+
+           -nft-qos rate no longer displays
+            https://github.com/openwrt/luci/issues/5713
+           -kernel 5.10 (master) prior to 5.10.103 (r19075ish) has dirtypipe cve
+            priv-esc vuln (requires user / application access)
+            (build r19075 has 5.10.103)
 
 
 

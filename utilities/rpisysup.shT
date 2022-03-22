@@ -242,6 +242,11 @@ Fsub="builds/rpi-4_snapshot_5.7.9-2_r19171_extra"
 Bname="rpi4.64-snapshot-29239-5.7.9-2-r19171-ext4-sys.img.gz"
 
 
+Fsub="builds/rpi-4_snapshot_5.7.9-3_r19171_extra"
+Bname="rpi4.64-snapshot-29250-5.7.9-3-r19171-ext4-sys.img.gz"
+
+
+
 
 		#echo "no stable build available"; exit 0
     ;; ############################################################## ENDSTABLE
@@ -282,6 +287,13 @@ Bname="rpi4.64-snapshot-29236-5.7.5-2-r19075-ext4-sys.img.gz"
 
 Fsub="builds/rpi-4_snapshot_5.7.9-2_r19171_extra"
 Bname="rpi4.64-snapshot-29239-5.7.9-2-r19171-ext4-sys.img.gz"
+
+
+
+Fsub="builds/rpi-4_snapshot_5.7.9-3_r19171_extra"
+Bname="rpi4.64-snapshot-29250-5.7.9-3-r19171-ext4-sys.img.gz"
+
+
 
 
 

@@ -3,30 +3,28 @@
     ___________________________________________________   CHANGELOG
                 
 
-                -11?) rework wwan/ttl 65 logic @ uci/network/hoplimit
+        5.7.9   -2)
+        r19171  -2)
+                -1?) rework wwan/ttl 65 logic @ uci/network/hoplimit
                       i.e.1=65     uci -q set network.3g.hoplimit='1'; uci commit network; ifdown 3g; ifup 3g
                       or           uci -q set network.3g.hoplimit='64'; uci commit network; ifdown 3g; ifup 3g
                       orremove     uci -q set network.3g.hoplimit='0'; uci commit network; ifdown 3g; ifup 3g
-                -11?)
-                -11?)
-                -11?)
+                -3) rpi-perftweaks.sh fixup sloppy errors thankyou synapse!!!
+                    https://github.com/wulfy23/rpi4/issues/17
+
+                -)
+                -)
+                -)
+                -)
+                -)
+                -)
+                -)
 
 
-
-
-        5.7.2   -2) fixes dirty pipe (master kernels <5.10.103 cve)
+        5.7.5   -2) fixes dirty pipe (master kernels <5.10.103 cve)
         r19075  -2) remove procd-ujail + seccomp again due to simple-adblock problem
                 -2) wifi firmware to linux-firmware
-                -)
-                -)
-                -)
-                -)
-                -)
-                -)
-                -)
-                -)
-                -)
-
+        
         5.0.109 -9) sysinfo.sh refactor 'hosts' section (wip)
         r19003  -11) refactor 351-hwrng be conditional and use /dev/hwrng
                 -13) remove hfs stuff - rarely needed can be postinstalled if needed
