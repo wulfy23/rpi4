@@ -1,0 +1,193 @@
+
+
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.r18673-fw3 manifest.r18710 | grep -v kmod
+6c6
+< agetty - 2.37-3
+---
+> agetty - 2.37.3-1
+15c15
+< base-files - 1463-r18673-b21bc3479d
+---
+> base-files - 1463-r18710-dc2da6a233
+20,28c20,28
+< bind-check - 9.17.20-1
+< bind-dig - 9.17.20-1
+< bind-dnssec - 9.17.20-1
+< bind-host - 9.17.20-1
+< bind-libs - 9.17.20-1
+< bind-nslookup - 9.17.20-1
+< bind-rndc - 9.17.20-1
+< bind-tools - 9.17.20-1
+< blkid - 2.37-3
+---
+> bind-check - 9.18.0-1
+> bind-dig - 9.18.0-1
+> bind-dnssec - 9.18.0-1
+> bind-host - 9.18.0-1
+> bind-libs - 9.18.0-1
+> bind-nslookup - 9.18.0-1
+> bind-rndc - 9.18.0-1
+> bind-tools - 9.18.0-1
+> blkid - 2.37.3-1
+30c30
+< blockdev - 2.37-3
+---
+> blockdev - 2.37.3-1
+36c36
+< cal - 2.37-3
+---
+> cal - 2.37.3-1
+72,77c72,77
+< ddns-scripts - 2.8.2-22
+< ddns-scripts-cloudflare - 2.8.2-22
+< ddns-scripts-freedns - 2.8.2-22
+< ddns-scripts-godaddy - 2.8.2-22
+< ddns-scripts-noip - 2.8.2-22
+< ddns-scripts-services - 2.8.2-22
+---
+> ddns-scripts - 2.8.2-23
+> ddns-scripts-cloudflare - 2.8.2-23
+> ddns-scripts-freedns - 2.8.2-23
+> ddns-scripts-godaddy - 2.8.2-23
+> ddns-scripts-noip - 2.8.2-23
+> ddns-scripts-services - 2.8.2-23
+81c81
+< dmesg - 2.37-3
+---
+> dmesg - 2.37.3-1
+87,88c87,88
+< dumpe2fs - 1.45.6-2
+< e2fsprogs - 1.45.6-2
+---
+> dumpe2fs - 1.46.5-1
+> e2fsprogs - 1.46.5-1
+91c91
+< ethtool - 5.15-1
+---
+> ethtool - 5.16-1
+94c94
+< fdisk - 2.37-3
+---
+> fdisk - 2.37.3-1
+106c106
+< hdparm - 9.62-1
+---
+> hdparm - 9.62-2
+132a133
+> iptables-mod-tproxy - 1.8.7-2
+143,335c144,337
+< kernel - 5.10.92-1-a2f581ac6c55f59ba4582b7b721298c0
+---
+> kernel - 5.10.96-1-a2f581ac6c55f59ba4582b7b721298c0
+339c341
+< libblkid1 - 2.37-3
+---
+> libblkid1 - 2.37.3-1
+344c346
+< libcap - 2.51-1
+---
+> libcap - 2.63-1
+346c348
+< libcomerr0 - 1.45.6-2
+---
+> libcomerr0 - 1.46.5-1
+354c356
+< libext2fs2 - 1.45.6-2
+---
+> libext2fs2 - 1.46.5-1
+356c358
+< libfdisk1 - 2.37-3
+---
+> libfdisk1 - 2.37.3-1
+386c388
+< libmount1 - 2.37-3
+---
+> libmount1 - 2.37.3-1
+417c419
+< libsmartcols1 - 2.37-3
+---
+> libsmartcols1 - 2.37.3-1
+420c422
+< libss2 - 1.45.6-2
+---
+> libss2 - 1.46.5-1
+434c436
+< libuuid1 - 2.37-3
+---
+> libuuid1 - 2.37.3-1
+437c439
+< libwolfssl4.8.1.5fb91bea - 4.8.1-stable-7
+---
+> libwolfssl5.1.1.5fb91bea - 5.1.1-stable-1
+442,443c444,445
+< losetup - 2.37-3
+< lsblk - 2.37-3
+---
+> losetup - 2.37.3-1
+> lsblk - 2.37.3-1
+469c471
+< luci-app-uhttpd - git-20.202.77895-d662f3c
+---
+> luci-app-uhttpd - git-22.029.54222-e3fbfe9
+508c510
+< mount-utils - 2.37-3
+---
+> mount-utils - 2.37.3-1
+514c516
+< nano - 6.0-1
+---
+> nano - 6.0-2
+524,528c526,530
+< nut - 2.7.4-26
+< nut-common - 2.7.4-26
+< nut-driver-usbhid-ups - 2.7.4-26
+< nut-server - 2.7.4-26
+< nut-upsc - 2.7.4-26
+---
+> nut - 2.7.4-27
+> nut-common - 2.7.4-27
+> nut-driver-usbhid-ups - 2.7.4-27
+> nut-server - 2.7.4-27
+> nut-upsc - 2.7.4-27
+540c542
+< partx-utils - 2.37-3
+---
+> partx-utils - 2.37.3-1
+597,598c599,600
+< prlimit - 2.37-3
+< procd - 2022-01-11-ac2b8b36-1
+---
+> prlimit - 2.37.3-1
+> procd - 2022-01-31-cb0031c4-3
+657c659
+< resize2fs - 1.45.6-2
+---
+> resize2fs - 1.46.5-1
+669c671
+< sfdisk - 2.37-3
+---
+> sfdisk - 2.37.3-1
+678c680
+< strace - 5.14-1
+---
+> strace - 5.16-1
+685c687
+< tune2fs - 1.45.6-2
+---
+> tune2fs - 1.46.5-1
+702c704
+< uuidgen - 2.37-3
+---
+> uuidgen - 2.37.3-1
+
+
+
+
+
+
+
+
+
+
+
+

@@ -97,7 +97,7 @@ CHROOT_BASEDIR="/usbmountpoint/chroots"
 YOUTUBEDL="/usbmountpoint/youtubedownloads"
 ```
 
-As above chrootbasepath... if anyone is using these with something like docker and feels a custom init.d script or firstboot logic can be of use or any other similar setup, path or automation please post on the forum what you think would work well... preferrably PMing me your config file changes or other setup commands to be automated...
+As above chrootbasepath... if anyone is using these with something like docker and feels a custom init.d script or firstboot logic can be of use or any other similar setup, path or automation please post on the <s>forum</s> github-issues what you think would work well... preferrably PMing me your config file changes or other setup commands to be automated...
 
 ### random example idea1:
 
@@ -117,7 +117,7 @@ DOCKERSYNCDIR="/usbmountpoint/dockersync
 
 <hr>
 
-## forum post regarding this
+## post regarding this
 
 https://forum.openwrt.org/t/rpi4-community-build/69998/1435?u=wulfy23
 

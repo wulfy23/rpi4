@@ -1,0 +1,151 @@
+
+
+
+
+
+
+
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.r18436 manifest.r18523ujail | grep -v python | grep -v kmod
+8c8
+
+
+< ar - 2.37-1
+---
+> ar - 2.37-2
+15c15
+< base-files - 1463-r18436-69ce75fb12
+---
+> base-files - 1463-r18523-8c501bf9fe
+32c32
+< busybox - 1.34.1-1
+---
+> busybox - 1.35.0-1
+96c96
+< firewall - 2021-08-14-40e5f6a2-1
+---
+> firewall4 - 2022-01-06-b68cf670-1
+108,109c108,109
+< hostapd-common - 2021-05-22-b102f19b-63
+< hostapd-utils - 2021-05-22-b102f19b-63
+---
+> hostapd-common - 2021-05-22-b102f19b-65
+> hostapd-utils - 2021-05-22-b102f19b-65
+137a138
+> jansson4 - 2.13.1-2
+141,327c142,332
+
+
+
+< kernel - 5.10.88-1-12a003fdde63a14bf2404afe25f65997
+---
+> kernel - 5.10.90-1-1acfcf6009ffe9ab36516b26bf38436d
+330c335
+< libbfd - 2.37-1
+---
+> libbfd - 2.37-2
+341c346
+< libelf1 - 0.182-1
+---
+> libelf1 - 0.186-1
+368c373
+< liblua5.1.5 - 5.1.5-9
+---
+> liblua5.1.5 - 5.1.5-10
+375c380
+
+
+< libminiupnpc - 2.2.2-2
+---
+> libminiupnpc - 2.2.3-1
+392,393c397,398
+
+
+< libopenssl-conf - 1.1.1l-2
+< libopenssl1.1 - 1.1.1l-2
+---
+> libopenssl-conf - 1.1.1m-1
+> libopenssl1.1 - 1.1.1m-1
+402c407
+
+
+
+---
+421a427
+> libucode20210730 - 2021-10-25-a7976c28-1
+429c435
+< libwolfssl4.8.1.d8795272 - 4.8.1-stable-6
+---
+> libwolfssl4.8.1.5fb91bea - 4.8.1-stable-7
+436c442
+< lua - 5.1.5-9
+---
+> lua - 5.1.5-10
+445,446c451,452
+< luci-app-firewall - git-21.343.55471-4381816
+< luci-app-https-dns-proxy - 2021-07-29-1
+---
+> luci-app-firewall - git-22.006.47037-48599d8
+> luci-app-https-dns-proxy - 2021-09-27-3
+458c464
+< luci-app-statistics - git-21.338.69519-f4dd8b6
+---
+> luci-app-statistics - git-22.002.35118-8572ae0
+467c473
+< luci-base - git-21.357.58153-63d9bcb
+---
+> luci-base - git-22.006.47037-48599d8
+475,476c481,482
+< luci-mod-network - git-21.343.51067-c534f06
+< luci-mod-status - git-21.333.54072-a75ab22
+---
+> luci-mod-network - git-22.007.66027-0ef82b3
+> luci-mod-status - git-22.007.04188-7eeea43
+503c509
+< mwan3 - 2.10.12-1
+---
+> mwan3 - 2.10.13-1
+508c514
+< nftables-nojson - 1.0.1-1
+---
+> nftables-json - 1.0.1-2
+524c530
+< openssl-util - 1.1.1l-2
+---
+> openssl-util - 1.1.1m-1
+535c541
+< perl-cgi - 4.48+perl5.28-1
+---
+> perl-cgi - 4.53+perl5.28-1
+588a595,596
+> procd-seccomp - 2021-12-20-129d050b-1
+> procd-ujail - 2021-12-20-129d050b-1
+
+
+
+
+> r8152-firmware - 20211216-1
+680a690,693
+> ucode - 2021-10-25-a7976c28-1
+> ucode-mod-fs - 2021-10-25-a7976c28-1
+> ucode-mod-ubus - 2021-10-25-a7976c28-1
+> ucode-mod-uci - 2021-10-25-a7976c28-1
+701,702c714,715
+< wpa-cli - 2021-05-22-b102f19b-63
+< wpad-openssl - 2021-05-22-b102f19b-63
+---
+> wpa-cli - 2021-05-22-b102f19b-65
+> wpad-openssl - 2021-05-22-b102f19b-65
+
+
+
+
+
+
+
+
+
+
+
+
+
+

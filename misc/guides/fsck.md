@@ -23,7 +23,7 @@ If you could never get to the gui then normal openwrt guidance applies... PC str
 
 
 ## Tell us your story
-- These kinds of things help others... I won't be embarrassed if you provide a brief overview of what happened on the forum... You'll likely prevent others from having similar issues and more often that not, help to make the build more stable and problem free for others...
+- These kinds of things help others... I won't be embarrassed if you provide a brief overview of what happened on the <s>forum</s> github-issues... You'll likely prevent others from having similar issues and more often that not, help to make the build more stable and problem free for others...
 
 
 

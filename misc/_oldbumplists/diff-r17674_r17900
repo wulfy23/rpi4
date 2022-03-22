@@ -1,0 +1,364 @@
+
+
+
+
+
+
+
+
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff rpi-4_snapshot_3.5.75-7_r17674_extra/*mani* rpi-4_snapshot_3.5.101_r17900/*mani* | grep -v kmod | grep -v php7
+
+1,4c1,4
+< 6in4 - 27
+< 6rd - 11
+< acme - 2.9.0-5
+< acme-dnsapi - 2.9.0-5
+---
+> 6in4 - 28
+> 6rd - 12
+> acme - 3.0.1-1
+> acme-dnsapi - 3.0.1-1
+11,12c11,12
+< at - 3.2.1-1
+< atftpd - 0.7.4-1
+---
+> at - 3.2.2-1
+> atftpd - 0.7.4-2
+15c15
+< base-files - 1453-r17674-0d1ebf0d6d
+---
+> base-files - 1455-r17900-e06aaba4e3
+20,27c20,27
+< bind-check - 9.17.13-1
+< bind-dig - 9.17.13-1
+< bind-dnssec - 9.17.13-1
+< bind-host - 9.17.13-1
+< bind-libs - 9.17.13-1
+< bind-nslookup - 9.17.13-1
+< bind-rndc - 9.17.13-1
+< bind-tools - 9.17.13-1
+---
+> bind-check - 9.17.19-5
+> bind-dig - 9.17.19-5
+> bind-dnssec - 9.17.19-5
+> bind-host - 9.17.19-5
+> bind-libs - 9.17.19-5
+> bind-nslookup - 9.17.19-5
+> bind-rndc - 9.17.19-5
+> bind-tools - 9.17.19-5
+32c32
+< busybox - 1.34.0-1
+---
+> busybox - 1.34.1-1
+41,57c41,57
+< collectd - 5.12.0-13
+< collectd-mod-conntrack - 5.12.0-13
+< collectd-mod-cpu - 5.12.0-13
+< collectd-mod-disk - 5.12.0-13
+< collectd-mod-entropy - 5.12.0-13
+< collectd-mod-exec - 5.12.0-13
+< collectd-mod-interface - 5.12.0-13
+< collectd-mod-irq - 5.12.0-13
+< collectd-mod-iwinfo - 5.12.0-13
+< collectd-mod-load - 5.12.0-13
+< collectd-mod-memory - 5.12.0-13
+< collectd-mod-network - 5.12.0-13
+< collectd-mod-ping - 5.12.0-13
+< collectd-mod-processes - 5.12.0-13
+< collectd-mod-rrdtool - 5.12.0-13
+< collectd-mod-sqm - 5.12.0-13
+< collectd-mod-thermal - 5.12.0-13
+---
+> collectd - 5.12.0-15
+> collectd-mod-conntrack - 5.12.0-15
+> collectd-mod-cpu - 5.12.0-15
+> collectd-mod-disk - 5.12.0-15
+> collectd-mod-entropy - 5.12.0-15
+> collectd-mod-exec - 5.12.0-15
+> collectd-mod-interface - 5.12.0-15
+> collectd-mod-irq - 5.12.0-15
+> collectd-mod-iwinfo - 5.12.0-15
+> collectd-mod-load - 5.12.0-15
+> collectd-mod-memory - 5.12.0-15
+> collectd-mod-network - 5.12.0-15
+> collectd-mod-ping - 5.12.0-15
+> collectd-mod-processes - 5.12.0-15
+> collectd-mod-rrdtool - 5.12.0-15
+> collectd-mod-sqm - 5.12.0-15
+> collectd-mod-thermal - 5.12.0-15
+72,78c72,77
+< ddns-scripts - 2.8.2-14
+< ddns-scripts-cloudflare - 2.8.2-14
+< ddns-scripts-dnspod - 2.8.2-14
+< ddns-scripts-freedns - 2.8.2-14
+< ddns-scripts-godaddy - 2.8.2-14
+< ddns-scripts-noip - 2.8.2-14
+< ddns-scripts-services - 2.8.2-14
+---
+> ddns-scripts - 2.8.2-15
+> ddns-scripts-cloudflare - 2.8.2-15
+> ddns-scripts-freedns - 2.8.2-15
+> ddns-scripts-godaddy - 2.8.2-15
+> ddns-scripts-noip - 2.8.2-15
+> ddns-scripts-services - 2.8.2-15
+80c79
+< debootstrap - 1.0.123-1
+---
+> debootstrap - 1.0.124-1
+83,84c82,83
+< dnsmasq-full - 2.86-2
+< dosfstools - 4.2-1
+---
+> dnsmasq-full - 2.86-3
+> dosfstools - 4.2-2
+92c91
+< ethtool - 5.13-2
+---
+> ethtool - 5.14-1
+105c104
+< glib2 - 2.68.4-2
+---
+> glib2 - 2.70.0-1
+109,111c108,110
+< hostapd-common - 2021-05-22-b102f19b-37
+< hostapd-utils - 2021-05-22-b102f19b-37
+< htop - 3.0.5-2
+---
+> hostapd-common - 2021-05-22-b102f19b-43
+> hostapd-utils - 2021-05-22-b102f19b-43
+> htop - 3.1.0-2
+113c112
+< https-dns-proxy - 2021-07-29-2
+---
+> https-dns-proxy - 2021-09-27-1
+137c136
+< iw - 5.9-8fab0c9e-3
+---
+> iw - 5.9-8fab0c9e-1
+142,324c141,323
+< kernel - 5.10.70-1-94f57780de446bfe1d8b8cbd1bf02bd2
+---
+> kernel - 5.10.76-1-067a9e5f639c8654d86d3360c0326054
+342c341
+< libexpat - 2.4.1-2
+---
+> libexpat - 2.4.1-3
+346c345
+< libffi - 3.4.2-1
+---
+> libffi - 3.4.2-2
+377c376
+< libncurses6 - 6.2-2
+---
+> libncurses6 - 6.2-3
+383c382
+< libnetsnmp - 5.9-1
+---
+> libnetsnmp - 5.9.1-2
+403c402
+< librrd1 - 1.0.50-4
+---
+> librrd1 - 1.0.50-5
+405a405
+> libsodium - 1.0.18-4
+414,415c414,415
+< libuci-lua - 2021-04-14-4b3db117-6
+< libuci20130104 - 2021-04-14-4b3db117-6
+---
+> libuci-lua - 2021-10-22-f84f49f0-6
+> libuci20130104 - 2021-10-22-f84f49f0-6
+417c417
+< libudev-zero - 0.5.2-1
+---
+> libudev-zero - 1.0.0-1
+424,425c424,425
+< libwolfssl4.8.1.ba20a816 - 4.8.1-stable-1
+< libxml2 - 2.9.12-1
+---
+> libwolfssl4.8.1.d8795272 - 4.8.1-stable-6
+> libxml2 - 2.9.12-2
+435,436c435,436
+< luci-app-adblock - git-21.191.29791-18d1101
+< luci-app-banip - git-21.164.21720-770548e
+---
+> luci-app-adblock - git-21.282.00731-0c4dfc9
+> luci-app-banip - git-21.282.00731-e8194d9
+443c443
+< luci-app-ledtrig-usbport - git-21.241.37388-c5dbb51
+---
+> luci-app-ledtrig-usbport - git-21.300.30579-af7b965
+445c445
+< luci-app-mwan3 - git-21.229.23234-c700cbc
+---
+> luci-app-mwan3 - git-21.281.64389-9901902
+451c451
+< luci-app-snmpd - git-20.108.38431-8f34e10
+---
+> luci-app-snmpd - git-21.281.65321-d4767c2
+453c453
+< luci-app-statistics - git-21.271.72155-12b13fe
+---
+> luci-app-statistics - git-21.295.81234-e9039ae
+462c462
+< luci-base - git-21.226.86205-376af36
+---
+> luci-base - git-21.301.66258-0740023
+470,472c470,472
+< luci-mod-network - git-21.274.03419-8659969
+< luci-mod-status - git-21.265.39600-b5464a3
+< luci-mod-system - git-21.271.74796-7c943a1
+---
+> luci-mod-network - git-21.298.68972-3165d5e
+> luci-mod-status - git-21.301.45987-0ad54e4
+> luci-mod-system - git-21.301.49664-b710c4a
+481,484c481,484
+< luci-proto-wireguard - git-21.274.54393-fc8a0b4
+< luci-theme-bootstrap - git-21.217.49862-be028dc
+< luci-theme-material - git-21.247.60996-a9ff8d3
+< luci-theme-openwrt - git-21.217.49862-be028dc
+---
+> luci-proto-wireguard - git-21.281.66433-44445a8
+> luci-theme-bootstrap - git-21.298.79142-37e40e0
+> luci-theme-material - git-21.279.05595-c8d9819
+> luci-theme-openwrt - git-21.285.74425-1c3b32d
+491c491
+< modemmanager - 1.18.2-1
+---
+> modemmanager - 1.18.2-2
+495c495
+< msmtp - 1.8.15-1
+---
+> msmtp - 1.8.17-1
+499,500c499,500
+< nano - 5.8-1
+< netifd - 2021-09-29-448ffc15-1
+---
+> nano - 5.9-1
+> netifd - 2021-10-30-8f82742c-1
+503c503
+< nftables-nojson - 0.9.6-2
+---
+> nftables-nojson - 1.0.0-1
+507,508c507,508
+< ntfs-3g - 2021.8.22-1-fuseint
+< ntfs-3g-utils - 2021.8.22-1-fuseint
+---
+> ntfs-3g - 2021.8.22-2-fuseint
+> ntfs-3g-utils - 2021.8.22-2-fuseint
+521c521
+< openvpn-openssl - 2.5.3-3
+---
+> openvpn-openssl - 2.5.4-1
+570,579c570,579
+---
+584c584
+< procd - 2021-09-15-1eb4371e-1
+---
+> procd - 2021-10-22-1c36d3d0-1
+594c594,595
+< python3-certifi - 2021.5.30-1
+---
+> python3-certifi - 2021.10.8-1
+> python3-cffi - 1.15.0-1
+604c605
+< python3-idna - 3.2-1
+---
+> python3-idna - 3.3-1
+612c613
+< python3-paho-mqtt - 1.5.1-1
+---
+> python3-paho-mqtt - 1.6.1-1
+614a616,617
+> python3-ply - 3.11-2
+> python3-pycparser - 2.20-5
+615a619
+> python3-pynacl - 1.4.0-6
+618a623
+> python3-six - 1.16.0-1
+643c648
+< rrdtool1 - 1.0.50-4
+---
+> rrdtool1 - 1.0.50-5
+648,650c653,655
+< simple-adblock - 1.8.7-7
+< snmp-utils - 5.9-1
+< snmpd - 5.9-1
+---
+> simple-adblock - 1.8.8-1
+> snmp-utils - 5.9.1-2
+> snmpd - 5.9.1-2
+660c665
+< terminfo - 6.2-2
+---
+> terminfo - 6.2-3
+662c667
+< travelmate - 2.0.7-2
+---
+> travelmate - 2.0.7-3
+668c673
+< uci - 2021-04-14-4b3db117-6
+---
+> uci - 2021-10-22-f84f49f0-6
+673c678
+< unrar - 6.0.6-1
+---
+> unrar - 6.0.7-1
+681,682c686,687
+< vim-fuller - 8.2-4
+< vpn-policy-routing - 0.3.5-2
+---
+> vim-fuller - 8.2-5
+> vpn-policy-routing - 0.3.4-8
+687,688c692,693
+< wireguard-tools - 1.0.20210424-1
+< wireless-regdb - 2021.04.21-1
+---
+> wireguard-tools - 1.0.20210424-2
+> wireless-regdb - 2021.08.28-1
+690,691c695,696
+< wpa-cli - 2021-05-22-b102f19b-37
+< wpad-openssl - 2021-05-22-b102f19b-37
+---
+> wpa-cli - 2021-05-22-b102f19b-43
+> wpad-openssl - 2021-05-22-b102f19b-43
+697c702
+< zerotier - 1.6.6-1
+---
+> zerotier - 1.6.6-3
+699,709c704,714
+< zoneinfo-africa - 2021b-1
+< zoneinfo-asia - 2021b-1
+< zoneinfo-atlantic - 2021b-1
+< zoneinfo-australia-nz - 2021b-1
+< zoneinfo-core - 2021b-1
+< zoneinfo-europe - 2021b-1
+< zoneinfo-india - 2021b-1
+< zoneinfo-northamerica - 2021b-1
+< zoneinfo-pacific - 2021b-1
+< zoneinfo-poles - 2021b-1
+< zoneinfo-southamerica - 2021b-1
+---
+> zoneinfo-africa - 2021e-1
+> zoneinfo-asia - 2021e-1
+> zoneinfo-atlantic - 2021e-1
+> zoneinfo-australia-nz - 2021e-1
+> zoneinfo-core - 2021e-1
+> zoneinfo-europe - 2021e-1
+> zoneinfo-india - 2021e-1
+> zoneinfo-northamerica - 2021e-1
+> zoneinfo-pacific - 2021e-1
+> zoneinfo-poles - 2021e-1
+> zoneinfo-southamerica - 2021e-1
+
+
+
+
+
+
+
+
+
+
+
+
+

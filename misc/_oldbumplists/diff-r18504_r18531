@@ -1,0 +1,67 @@
+
+
+
+
+
+
+
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.r18504 manifest.r18531 | grep -v python | grep -v kmod
+15c15
+
+
+
+< base-files - 1463-r18504-4d1f133561
+---
+> base-files - 1463-r18531-0f50d3daff
+
+
+32c32
+< busybox - 1.34.1-1
+---
+> busybox - 1.35.0-1
+
+
+142,328c142,331
+< kernel - 5.10.89-1-d4a0c86aacab6aa9be5744d790a9b4f5
+---
+> kernel - 5.10.90-1-69e6c3141d19963488e15b657d1e174c
+
+
+342c345
+< libelf1 - 0.182-1
+---
+> libelf1 - 0.186-1
+
+
+---
+476,477c479,480
+< luci-mod-network - git-21.343.51067-c534f06
+< luci-mod-status - git-21.333.54072-a75ab22
+---
+> luci-mod-network - git-22.007.66027-0ef82b3
+> luci-mod-status - git-22.007.04188-7eeea43
+
+
+589a593,594
+> procd-seccomp - 2021-12-20-129d050b-1
+> procd-ujail - 2021-12-20-129d050b-1
+
+
+
+
+---
+645a651
+> r8152-firmware - 20211216-1
+> kmod-usb-net-lan78xx - 5.10.90-1
+
+
+
+
+
+
+
+
+
+
+
+

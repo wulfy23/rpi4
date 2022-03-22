@@ -1,0 +1,82 @@
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.r18777 manifest.r18913  | grep -v kmod
+5c5
+< adblock - 4.1.3-4
+---
+> adblock - 4.1.3-5
+14,15c14,15
+< banip - 0.7.10-4
+< base-files - 1464-r18777-1847382456
+---
+> banip - 0.7.10-5
+> base-files - 1466-r18913-b0d5939b80
+144,339c144,339
+< kernel - 5.10.96-1-d66b578a616745846fa80be95d9c4223
+---
+> kernel - 5.10.100-1-c60cebe933e33d4fba4e2a4c16a8d725
+394c394
+< libnetfilter-conntrack3 - 1.0.8-1
+---
+> libnetfilter-conntrack3 - 1.0.9-1
+398c398
+< libnetsnmp - 5.9.1-2
+---
+> libnetsnmp - 5.9.1-3
+440c440
+< libwebsockets-openssl - 4.2.1-1
+---
+> libwebsockets-openssl - 4.2.1-2
+458c458
+< luci-app-firewall - git-22.006.47037-48599d8
+---
+> luci-app-firewall - git-22.046.84457-2178444
+480c480
+< luci-base - git-22.025.79016-22e2bfb
+---
+> luci-base - git-22.046.84457-2178444
+489c489
+< luci-mod-status - git-22.038.44673-bf175fd
+---
+> luci-mod-status - git-22.041.71554-e6f21f8
+509c509
+< modemmanager - 1.18.2-7
+---
+> modemmanager - 1.18.4-1
+518c518
+< nano - 6.0-2
+---
+> nano - 6.1-1
+537c537
+< openssh-sftp-server - 8.8p1-3
+---
+> openssh-sftp-server - 8.8p1-5
+539c539
+< openvpn-easy-rsa - 3.0.8-3
+---
+> openvpn-easy-rsa - 3.0.8-4
+602c602
+< procd - 2022-01-31-cb0031c4-3
+---
+> procd - 2022-01-31-cb0031c4-4
+649c649
+< qosify - 2021-11-22-06872673
+---
+> qosify - 2022-02-10-8d6c19a8
+675,676c675,676
+< snmp-utils - 5.9.1-2
+< snmpd - 5.9.1-2
+---
+> snmp-utils - 5.9.1-3
+> snmpd - 5.9.1-3
+685c685
+< tcpdump - 4.9.3-3
+---
+> tcpdump - 4.9.3-4
+712a713
+> wipefs - 2.37.3-2
+
+
+
+
+
+
+

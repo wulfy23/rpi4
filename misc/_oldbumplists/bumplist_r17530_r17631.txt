@@ -1,0 +1,110 @@
+
+
+
+[root@dca632 /usbstick 56°] rpi4-official-opkg.sh list-upgradable
+
+
+netifd - 2021-08-24-454e9c33-1 - 2021-09-28-4d0c2ad3-1
+zerotier - 1.6.5-1 - 1.6.6-1 #! securityfix
+
+ip-full - 5.13.0-2 - 5.14.0-1
+luci-app-wireguard - git-21.058.18697-98c3d36 - git-21.269.42646-9d560c4
+luci-proto-wireguard - git-21.241.20071-092109c - git-21.269.42646-9d560c4
+
+nlbwmon - 2020-04-11.1-34a18876-3 - 2021-09-01-d82c910c-1
+
+luci-mod-network - git-21.247.46271-0be0f06 - git-21.270.59230-7db926f
+luci-mod-status - git-21.246.41121-1d26eb4 - git-21.265.39600-b5464a3
+
+openssh-sftp-server - 8.7p1-1 - 8.8p1-1
+sshfs - 3.7.2-1 - 3.7.2-2
+modemmanager - 1.16.10-2 - 1.18.2-1
+qmi-utils - 1.28.8-2 - 1.30.2-1
+
+
+php7-mod-curl - 7.4.23-2 - 7.4.24-1
+libevdev - 1.11.0-1 - 1.11.0-2
+zoneinfo-europe - 2021a-1 - 2021b-1
+python3-urllib - 3.9.7-1 - 3.9.7-2
+python3-light - 3.9.7-1 - 3.9.7-2
+zoneinfo-southamerica - 2021a-1 - 2021b-1
+glib2 - 2.68.4-1 - 2.68.4-2
+python3-pydoc - 3.9.7-1 - 3.9.7-2
+zoneinfo-atlantic - 2021a-1 - 2021b-1
+libgcrypt - 1.9.3-1 - 1.9.4-1
+php7-cgi - 7.4.23-2 - 7.4.24-1
+python3-email - 3.9.7-1 - 3.9.7-2
+zoneinfo-asia - 2021a-1 - 2021b-1
+php7-mod-sockets - 7.4.23-2 - 7.4.24-1
+python3-cgitb - 3.9.7-1 - 3.9.7-2
+python3-decimal - 3.9.7-1 - 3.9.7-2
+hostapd-utils - 2021-05-22-b102f19b-35 - 2021-05-22-b102f19b-37
+python3-xml - 3.9.7-1 - 3.9.7-2
+php7-mod-sysvmsg - 7.4.23-2 - 7.4.24-1
+php7-cli - 7.4.23-2 - 7.4.24-1
+wpad-openssl - 2021-05-22-b102f19b-35 - 2021-05-22-b102f19b-37
+php7-mod-fileinfo - 7.4.23-2 - 7.4.24-1
+zoneinfo-pacific - 2021a-1 - 2021b-1
+php7-mod-json - 7.4.23-2 - 7.4.24-1
+curl - 7.79.0-1 - 7.79.1-1
+libqmi - 1.28.8-2 - 1.30.2-1
+zoneinfo-core - 2021a-1 - 2021b-1
+python3-ncurses - 3.9.7-1 - 3.9.7-2
+python3-distutils - 3.9.7-1 - 3.9.7-2
+python3-codecs - 3.9.7-1 - 3.9.7-2
+python3-multiprocessing - 3.9.7-1 - 3.9.7-2
+zoneinfo-northamerica - 2021a-1 - 2021b-1
+php7-mod-session - 7.4.23-2 - 7.4.24-1
+zoneinfo-india - 2021a-1 - 2021b-1
+python3-base - 3.9.7-1 - 3.9.7-2
+ip-bridge - 5.13.0-2 - 5.14.0-1
+libpython3-3.9 - 3.9.7-1 - 3.9.7-2
+python3 - 3.9.7-1 - 3.9.7-2
+libfuse3-3 - 3.10.4-1 - 3.10.5-1
+python3-sqlite3 - 3.9.7-1 - 3.9.7-2
+python3-readline - 3.9.7-1 - 3.9.7-2
+php7-mod-iconv - 7.4.23-2 - 7.4.24-1
+fuse3-utils - 3.10.4-1 - 3.10.5-1
+zoneinfo-australia-nz - 2021a-1 - 2021b-1
+python3-dbm - 3.9.7-1 - 3.9.7-2
+tc-mod-iptables - 5.13.0-2 - 5.14.0-1
+ip-tiny - 5.13.0-2 - 5.14.0-1
+wpa-cli - 2021-05-22-b102f19b-35 - 2021-05-22-b102f19b-37
+zoneinfo-africa - 2021a-1 - 2021b-1
+php7 - 7.4.23-2 - 7.4.24-1
+libcurl4 - 7.79.0-1 - 7.79.1-1
+python3-openssl - 3.9.7-1 - 3.9.7-2
+tc-tiny - 5.13.0-2 - 5.14.0-1
+python3-asyncio - 3.9.7-1 - 3.9.7-2
+python3-cgi - 3.9.7-1 - 3.9.7-2
+python3-logging - 3.9.7-1 - 3.9.7-2
+python3-ctypes - 3.9.7-1 - 3.9.7-2
+python3-lzma - 3.9.7-1 - 3.9.7-2
+dtc - 1.6.1-1 - 1.6.1-2
+6rd - 10 - 11
+libgdbm - 1.19-2 - 1.21-1
+zoneinfo-poles - 2021a-1 - 2021b-1
+hostapd-common - 2021-05-22-b102f19b-35 - 2021-05-22-b102f19b-37
+python3-unittest - 3.9.7-1 - 3.9.7-2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -2,73 +2,7 @@
 
 
 
-
-
-
-
-
-
-
-
-
-DIRTYCHECK=$(grep '^Version: 5.10' /usr/lib/opkg/info/kernel.control | awk '{print $2}')
-#echo "CHECK: $DIRTYCHECK"
-
-if grep -q '^Version: 5.10' /usr/lib/opkg/info/kernel.control; then
-
-	case "$DIRTYCHECK" in
-		"5.10.103"*)
-			:
-			#echo "dirty 5.10 safe"
-			#exit 0
-		;;
-		"5.10"*)
-			: #echo "dirty 5.10 unsafe: $DIRTYCHECK"
-			DIRTYISSUE=1
-		;;
-		*)
-			: #exit 0
-		;;
-
-	esac
-
-	:
-fi
-
-
-
-
-
-
-if [ -f /bin/bannermsg_do.sh ] && [ ! -z "$DIRTYISSUE" ]; then
-
-
-
-/bin/bannermsg_do.sh msg "023-50321_dirty-pipe-vulnerability" "kernel:$DIRTYCHECK vulnerable to dirtypipe CVE-2022-0847<br>note: priv-esc aka would require user access<br>update to kernel 5.10.103 or newer</b>" 1>/dev/null 2>/dev/null
-
-
-fi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 FLASHSTATUSf="/tmp/.flashstatus"
-
-
-
 
 ALLPARAMS=${*}
 VERBOSE=1
@@ -211,8 +145,7 @@ while [ "$#" -gt 0 ]; do
     "-v") VERBOSE=2; shift 1; ;;
     "-Q") VERBOSE=0; shift 1; ;;
 
-    "-S")
-		#DONTREALLYFLASH=1 #@cgi>write state to /tmp/.flashstatus "ish" || minimal ~ parsable output
+    "-S") #DONTREALLYFLASH=1 #@cgi>write state to /tmp/.flashstatus "ish" || minimal ~ parsable output
 		VERBOSE=
 		SILENT=1
 		AUTOMATED=1
@@ -268,11 +201,9 @@ elif [ -z "${FLAVOUR}" ] && [ -z "${UPGRADEsFLAVOUR}" ]; then
 
 else
     if [ ! -z "$DEBUG" ]; then
-        echo "flavour@cmdline> FLAVOUR=${FLAVOUR}"; sleep ${RCSLEEP:0}
+        echo "flavour@cmdline> FLAVOUR=${FLAVOUR}"; sleep ${RCSLEEP:-0}
     fi
 fi
-
-
 
 
 
@@ -282,45 +213,17 @@ fi
    
    
 	case "${FLAVOUR}" in
-	"21.02"*) #20210917TESTONLY-NOTWORKING
 
-
-		echo "no release build available"; exit 0
-	#	echo "version: ${FLAVOUR} no build available"; exit 0 #usage; exit 0
+		"21.02"*) #20210917TESTONLY-NOTWORKING
+			echo "no release build available"; exit 0
+			#	echo "version: ${FLAVOUR} no build available"; exit 0 #usage; exit 0
 		;;
 
 
-	release)
-
-#Fsub="builds/rpi-4_21.02.2_1.1.5-2_r16495_extra"
-#Bname="rpi4.64-21.02.2-29129-1.1.5-2-r16495-ext4-sys.img.gz"
-
-
-#Fsub="builds/rpi-4_21.02.2_1.1.5-7_r16495_extra"
-#Bname="rpi4.64-21.02.2-29132-1.1.5-7-r16495-ext4-sys.img.gz"
-
-
-Fsub="builds/rpi-4_21.02.2_1.1.5-13_r16495_extra"
-Bname="rpi4.64-21.02.2-29139-1.1.5-13-r16495-ext4-sys.img.gz"
-
-Fsub="builds/rpi-4_21.02.2_1.1.5-17_r16495_extra"
-Bname="rpi4.64-21.02.2-29163-1.1.5-17-r16495-ext4-sys.img.gz"
-
-Fsub="builds/rpi-4_21.02.2_1.1.5-19_r16495_extra"
-Bname="rpi4.64-21.02.2-29166-1.1.5-19-r16495-ext4-sys.img.gz"
-
-
-#bullseye sysinfohosts argonupdatecheckcolor elfdatswitcher
-#Fsub="builds/rpi-4_21.02.2_1.1.5-23_r16495_extra"
-#Bname="rpi4.64-21.02.2-29226-1.1.5-23-r16495-ext4-sys.img.gz"
-
+		release)
 
 Fsub="builds/devel/rpi-4_21.02.2_1.1.5-23_r16495_extra"
 Bname="rpi4.64-21.02.2-29226-1.1.5-23-r16495-ext4-sys.img.gz"
-
-
-
-
 
 #		echo "no release build available"; exit 0
     ;; ############################################################## ENDRELEASE 
@@ -331,77 +234,12 @@ Bname="rpi4.64-21.02.2-29226-1.1.5-23-r16495-ext4-sys.img.gz"
 
 	stable)
 
-Fsub="builds/rpi-4_snapshot_5.0.77-132_r18711_extra"
-Bname="rpi4.64-snapshot-27935-5.0.77-132-r18711-ext4-sys.img.gz"
-
-
-Fsub="builds/rpi-4_snapshot_5.0.93-5_r18777_extra"
-Bname="rpi4.64-snapshot-27961-5.0.93-5-r18777-ext4-sys.img.gz"
-
-
-
-
-Fsub="builds/rpi-4_snapshot_5.0.93-7_r18777_extra"
-Bname="rpi4.64-snapshot-27961-5.0.93-7-r18777-ext4-sys.img.gz"
-
-
-
-Fsub="builds/rpi-4_snapshot_5.0.93-11_r18777_extra"
-Bname="rpi4.64-snapshot-27963-5.0.93-11-r18777-ext4-sys.img.gz"
-
-Fsub="builds/rpi-4_snapshot_5.0.93-17_r18777_extra"
-Bname="rpi4.64-snapshot-27970-5.0.93-17-r18777-ext4-sys.img.gz"
-
-
-
-Fsub="builds/rpi-4_snapshot_5.0.93-79_r18777_extra"
-Bname="rpi4.64-snapshot-29061-5.0.93-79-r18777-ext4-sys.img.gz"
-
-
-
-
-
-#Fsub="builds/rpi-4_snapshot_5.0.93-131_r18777_extra"
-#Bname="rpi4.64-snapshot-29133-5.0.93-131-r18777-ext4-sys.img.gz"
-
-
-
-#tcpdumpcve
-Fsub="builds/rpi-4_snapshot_5.0.103-11_r18913_extra"
-Bname="rpi4.64-snapshot-29162-5.0.103-11-r18913-ext4-sys.img.gz"
-
-
-
-Fsub="builds/rpi-4_snapshot_5.0.103-12_r18913_extra"
-Bname="rpi4.64-snapshot-29166-5.0.103-12-r18913-ext4-sys.img.gz"
-
-
-
-
-#Fsub="builds/rpi-4_snapshot_5.0.135-7_r19039_extra"
-#Bname="rpi4.64-snapshot-29225-5.0.135-7-r19039-ext4-sys.img.gz"
-
-
-Fsub="builds/rpi-4_snapshot_5.0.109-9_r19003_extra"
-Bname="rpi4.64-snapshot-29225-5.0.109-9-r19003-ext4-sys.img.gz"
-
-
-
-Fsub="builds/rpi-4_snapshot_5.0.109-13_r19003_extra"
-Bname="rpi4.64-snapshot-29232-5.0.109-13-r19003-ext4-sys.img.gz"
-
-
-
-Fsub="builds/rpi-4_snapshot_5.0.109-15_r19003_extra"
-Bname="rpi4.64-snapshot-29233-5.0.109-15-r19003-ext4-sys.img.gz"
-
-
-
-
 Fsub="builds/rpi-4_snapshot_5.7.5-2_r19075_extra"
 Bname="rpi4.64-snapshot-29236-5.7.5-2-r19075-ext4-sys.img.gz"
 
 
+Fsub="builds/rpi-4_snapshot_5.7.9-2_r19171_extra"
+Bname="rpi4.64-snapshot-29239-5.7.9-2-r19171-ext4-sys.img.gz"
 
 
 
@@ -420,79 +258,21 @@ Bname="rpi4.64-snapshot-29236-5.7.5-2-r19075-ext4-sys.img.gz"
 
 Fsub="builds/rpi-4_snapshot_5.0.77-132_r18711_extra"
 Bname="rpi4.64-snapshot-27935-5.0.77-132-r18711-ext4-sys.img.gz"
-
 Fsub="builds/rpi-4_snapshot_5.0.93-5_r18777_extra"
 Bname="rpi4.64-snapshot-27961-5.0.93-5-r18777-ext4-sys.img.gz"
-
-
 Fsub="builds/rpi-4_snapshot_5.0.93-7_r18777_extra"
 Bname="rpi4.64-snapshot-27961-5.0.93-7-r18777-ext4-sys.img.gz"
-
 Fsub="builds/rpi-4_snapshot_5.0.93-11_r18777_extra"
 Bname="rpi4.64-snapshot-27963-5.0.93-11-r18777-ext4-sys.img.gz"
-
 Fsub="builds/rpi-4_snapshot_5.0.93-17_r18777_extra"
 Bname="rpi4.64-snapshot-27970-5.0.93-17-r18777-ext4-sys.img.gz"
-
-
-
 Fsub="builds/rpi-4_snapshot_5.0.93-79_r18777_extra"
 Bname="rpi4.64-snapshot-29061-5.0.93-79-r18777-ext4-sys.img.gz"
-
-
 #Fsub="builds/rpi-4_snapshot_5.0.93-131_r18777_extra"
 #Bname="rpi4.64-snapshot-29133-5.0.93-131-r18777-ext4-sys.img.gz"
-
-
-
-
-
-
 #tcpdumpcve
 Fsub="builds/rpi-4_snapshot_5.0.103-11_r18913_extra"
 Bname="rpi4.64-snapshot-29162-5.0.103-11-r18913-ext4-sys.img.gz"
-
-
-
-Fsub="builds/rpi-4_snapshot_5.0.103-12_r18913_extra"
-Bname="rpi4.64-snapshot-29166-5.0.103-12-r18913-ext4-sys.img.gz"
-
-
-
-Fsub="builds/rpi-4_snapshot_5.0.109-5_r19003_extra"
-Bname="rpi4.64-snapshot-29211-5.0.109-5-r19003-ext4-sys.img.gz"
-
-
-
-Fsub="builds/rpi-4_snapshot_5.0.109-7_r19003_extra"
-Bname="rpi4.64-snapshot-29213-5.0.109-7-r19003-ext4-sys.img.gz"
-
-
-Fsub="builds/rpi-4_snapshot_5.0.135-5_r19039_extra"
-Bname="rpi4.64-snapshot-29223-5.0.135-5-r19039-ext4-sys.img.gz"
-
-
-
-#Fsub="builds/rpi-4_snapshot_5.0.135-7_r19039_extra"
-#Bname="rpi4.64-snapshot-29225-5.0.135-7-r19039-ext4-sys.img.gz"
-
-
-
-
-Fsub="builds/rpi-4_snapshot_5.0.109-9_r19003_extra"
-Bname="rpi4.64-snapshot-29225-5.0.109-9-r19003-ext4-sys.img.gz"
-
-
-Fsub="builds/rpi-4_snapshot_5.0.109-13_r19003_extra"
-Bname="rpi4.64-snapshot-29232-5.0.109-13-r19003-ext4-sys.img.gz"
-
-
-
-
-
-
-Fsub="builds/rpi-4_snapshot_5.0.109-15_r19003_extra"
-Bname="rpi4.64-snapshot-29233-5.0.109-15-r19003-ext4-sys.img.gz"
 
 
 
@@ -500,9 +280,8 @@ Fsub="builds/rpi-4_snapshot_5.7.5-2_r19075_extra"
 Bname="rpi4.64-snapshot-29236-5.7.5-2-r19075-ext4-sys.img.gz"
 
 
-
-
-
+Fsub="builds/rpi-4_snapshot_5.7.9-2_r19171_extra"
+Bname="rpi4.64-snapshot-29239-5.7.9-2-r19171-ext4-sys.img.gz"
 
 
 
@@ -528,7 +307,7 @@ Bname="rpi4.64-21.02.2-29226-1.1.5-23-r16495-ext4-sys.img.gz"
 
 
 
-#		echo "no testing build available"; exit 0
+		echo "no testing build available"; exit 0
 	
 	;; ############################################################## ENDTESTING
 

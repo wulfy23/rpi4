@@ -1,0 +1,250 @@
+8c8
+< ar - 2.35.2-1
+---
+> ar - 2.37-1
+15c15
+< base-files - 1455-r17900-e06aaba4e3
+---
+> base-files - 1459-r18161-00ce13490a
+20,27c20,27
+< bind-check - 9.17.19-5
+< bind-dig - 9.17.19-5
+< bind-dnssec - 9.17.19-5
+< bind-host - 9.17.19-5
+< bind-libs - 9.17.19-5
+< bind-nslookup - 9.17.19-5
+< bind-rndc - 9.17.19-5
+< bind-tools - 9.17.19-5
+---
+> bind-check - 9.17.19-6
+> bind-dig - 9.17.19-6
+> bind-dnssec - 9.17.19-6
+> bind-host - 9.17.19-6
+> bind-libs - 9.17.19-6
+> bind-nslookup - 9.17.19-6
+> bind-rndc - 9.17.19-6
+> bind-tools - 9.17.19-6
+29c29
+< block-mount - 2021-08-25-e1b68111-2
+---
+> block-mount - 2021-11-16-77c02889-1
+60c60
+< conntrack - 1.4.6-2
+---
+> conntrack - 1.4.6-3
+67c67
+< curl - 7.79.1-1
+---
+> curl - 7.80.0-1
+72,77c72,77
+< ddns-scripts - 2.8.2-15
+< ddns-scripts-cloudflare - 2.8.2-15
+< ddns-scripts-freedns - 2.8.2-15
+< ddns-scripts-godaddy - 2.8.2-15
+< ddns-scripts-noip - 2.8.2-15
+< ddns-scripts-services - 2.8.2-15
+---
+> ddns-scripts - 2.8.2-16
+> ddns-scripts-cloudflare - 2.8.2-16
+> ddns-scripts-freedns - 2.8.2-16
+> ddns-scripts-godaddy - 2.8.2-16
+> ddns-scripts-noip - 2.8.2-16
+> ddns-scripts-services - 2.8.2-16
+79c79
+< debootstrap - 1.0.124-1
+---
+> debootstrap - 1.0.126-1
+82c82
+< dnsmasq-full - 2.86-3
+---
+> dnsmasq-full - 2.86-10
+91c91
+< ethtool - 5.14-1
+---
+> ethtool - 5.15-1
+98c98
+< fstools - 2021-08-25-e1b68111-2
+---
+> fstools - 2021-11-16-77c02889-1
+108,109c108,109
+< hostapd-common - 2021-05-22-b102f19b-43
+< hostapd-utils - 2021-05-22-b102f19b-43
+---
+> hostapd-common - 2021-05-22-b102f19b-48
+> hostapd-utils - 2021-05-22-b102f19b-48
+116,118c116,118
+< ip-bridge - 5.14.0-1
+< ip-full - 5.14.0-1
+< ip-tiny - 5.14.0-1
+---
+> ip-bridge - 5.15.0-1
+> ip-full - 5.15.0-1
+> ip-tiny - 5.15.0-1
+139c139
+< jshn - 2021-08-19-d716ac4b-2
+---
+> jshn - 2021-11-20-cce5e351-1
+141,323c141,324
+< kernel - 5.10.76-1-067a9e5f639c8654d86d3360c0326054
+---
+> kernel - 5.10.80-1-c607de81a52d4ba7e116a2343b96ea4f
+326c327
+< libbfd - 2.35.2-1
+---
+> libbfd - 2.37-1
+328c329
+< libblobmsg-json20210819 - 2021-08-19-d716ac4b-2
+---
+> libblobmsg-json20211120 - 2021-11-20-cce5e351-1
+333c334
+< libcares - 1.17.2-1
+---
+> libcares - 1.18.1-1
+335c336
+< libcurl4 - 7.79.1-1
+---
+> libcurl4 - 7.80.0-1
+338,339c339,340
+< libev - 4.31-1
+< libevdev - 1.11.0-2
+---
+> libev - 4.33-1
+> libevdev - 1.12.0-1
+343c344
+< libf2fs6 - 1.14.0-1
+---
+> libf2fs6 - 1.14.0-2
+351c352
+< libgnutls - 3.7.1-1
+---
+> libgnutls - 3.7.1-2
+361c362
+< libjson-script20210819 - 2021-08-19-d716ac4b-2
+---
+> libjson-script20211120 - 2021-11-20-cce5e351-1
+373c374
+< libmosquitto-ssl - 2.0.11-1
+---
+> libmosquitto-ssl - 2.0.13-1
+390a392
+> libparted - 3.4-2
+393c395
+< libpcre - 8.45-1
+---
+> libpcre - 8.45-2
+411,413c413,415
+< libubox20210819 - 2021-08-19-d716ac4b-2
+< libubus-lua - 2021-06-30-4fc532c8-2
+< libubus20210630 - 2021-06-30-4fc532c8-2
+---
+> libubox20211120 - 2021-11-20-cce5e351-1
+> libubus-lua - 2021-08-09-a72457b6-2
+> libubus20210809 - 2021-08-09-a72457b6-2
+440c442
+< luci-app-firewall - git-21.243.76516-19c66ef
+---
+> luci-app-firewall - git-21.315.43250-0b4b638
+449c451
+< luci-app-opkg - git-21.079.58548-3bcbcbf
+---
+> luci-app-opkg - git-21.312.69814-02398a3
+453c455
+< luci-app-statistics - git-21.295.81234-e9039ae
+---
+> luci-app-statistics - git-21.314.73663-5b3fa3c
+459c461
+< luci-app-wireguard - git-21.269.42646-9d560c4
+---
+> luci-app-wireguard - git-21.322.66896-8ae208d
+462c464
+< luci-base - git-21.301.66258-0740023
+---
+> luci-base - git-21.322.38385-6507b1f
+470c472
+< luci-mod-network - git-21.298.68972-3165d5e
+---
+> luci-mod-network - git-21.315.43250-849772d
+472c474
+< luci-mod-system - git-21.301.49664-b710c4a
+---
+> luci-mod-system - git-21.304.77266-fceabd7
+481,482c483,484
+< luci-proto-wireguard - git-21.281.66433-44445a8
+< luci-theme-bootstrap - git-21.298.79142-37e40e0
+---
+> luci-proto-wireguard - git-21.321.56300-aaa2b3d
+> luci-theme-bootstrap - git-21.322.37656-7f26e86
+490,493c492,495
+< mkf2fs - 1.14.0-1
+< modemmanager - 1.18.2-2
+< mosquitto-client-ssl - 2.0.11-1
+< mosquitto-ssl - 2.0.11-1
+---
+> mkf2fs - 1.14.0-2
+> modemmanager - 1.18.2-3
+> mosquitto-client-ssl - 2.0.13-1
+> mosquitto-ssl - 2.0.13-1
+499c501
+< nano - 5.9-1
+---
+> nano - 5.9-3
+503c505
+< nftables-nojson - 1.0.0-1
+---
+> nftables-nojson - 1.0.0-2
+518c520
+< openssh-sftp-server - 8.8p1-1
+---
+> openssh-sftp-server - 8.8p1-3
+524c526
+< parted - 3.4-1
+---
+> parted - 3.4-2
+570,579c572,581
+---
+584c586
+< procd - 2021-10-22-1c36d3d0-1
+---
+> procd - 2021-11-11-9d1431e1-1
+629a632
+> qosify - 2021-11-21-2743e587
+643,645c646,648
+< rpcd - 2021-07-13-1fa35765-1
+< rpcd-mod-file - 2021-07-13-1fa35765-1
+< rpcd-mod-iwinfo - 2021-07-13-1fa35765-1
+---
+> rpcd - 2021-11-04-d11ffe93-2
+> rpcd-mod-file - 2021-11-04-d11ffe93-2
+> rpcd-mod-iwinfo - 2021-11-04-d11ffe93-2
+661,663c664,666
+< strace - 5.10-1
+< tc-mod-iptables - 5.14.0-1
+< tc-tiny - 5.14.0-1
+---
+> strace - 5.14-1
+> tc-full - 5.15.0-1
+> tc-mod-iptables - 5.15.0-1
+670,671c673,674
+< ubus - 2021-06-30-4fc532c8-2
+< ubusd - 2021-06-30-4fc532c8-2
+---
+> ubus - 2021-08-09-a72457b6-2
+> ubusd - 2021-08-09-a72457b6-2
+680c683
+< uqmi - 2020-11-22-0a19b5b7-3
+---
+> uqmi - 2021-11-06-6f956265-1
+689c692
+< wget-ssl - 1.21.1-1
+---
+> wget-ssl - 1.21.2-1
+695,696c698,699
+< wpa-cli - 2021-05-22-b102f19b-43
+< wpad-openssl - 2021-05-22-b102f19b-43
+---
+> wpa-cli - 2021-05-22-b102f19b-48
+> wpad-openssl - 2021-05-22-b102f19b-48
+702c705
+< zerotier - 1.6.6-3
+---
+> zerotier - 1.8.2-1

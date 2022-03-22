@@ -1,0 +1,98 @@
+
+
+
+
+
+
+
+
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.r19003 manifest.r19039  | grep -v kmod
+13c13
+< atop - 2.6.0-1
+---
+> atop - 2.7.1-1
+15c15
+< base-files - 1468-r19003-43276b60c6
+---
+> base-files - 1468-r19039-8235723c78
+118,121c118,121
+< ip6tables - 1.8.7-2
+< ip6tables-extra - 1.8.7-2
+< ip6tables-mod-nat - 1.8.7-2
+< ip6tables-nft - 1.8.7-2
+---
+> ip6tables-extra - 1.8.7-3
+> ip6tables-legacy - 1.8.7-3
+> ip6tables-mod-nat - 1.8.7-3
+> ip6tables-nft - 1.8.7-3
+124,127c124,127
+< ipset - 7.6-1
+< iptables - 1.8.7-2
+< iptables-mod-conntrack-extra - 1.8.7-2
+< iptables-mod-extra - 1.8.7-2
+---
+> ipset - 7.15-1
+> iptables-legacy - 1.8.7-3
+> iptables-mod-conntrack-extra - 1.8.7-3
+> iptables-mod-extra - 1.8.7-3
+129,130c129,130
+< iptables-mod-hashlimit - 1.8.7-2
+< iptables-mod-ipopt - 1.8.7-2
+---
+> iptables-mod-hashlimit - 1.8.7-3
+> iptables-mod-ipopt - 1.8.7-3
+132,134c132,134
+< iptables-mod-tee - 1.8.7-2
+< iptables-mod-tproxy - 1.8.7-2
+< iptables-nft - 1.8.7-2
+---
+> iptables-mod-tee - 1.8.7-3
+> iptables-mod-tproxy - 1.8.7-3
+> iptables-nft - 1.8.7-3
+144,340c144,340
+< kernel - 5.10.100-1-5f4a49a46ce2cbc20d3975896362601f
+---
+> kernel - 5.10.102-1-f6b2536fc50a2bccf542e07d83531095
+371,373c371,376
+< libip4tc2 - 1.8.7-2
+< libip6tc2 - 1.8.7-2
+< libipset13 - 7.6-1
+---
+> libip4tc2 - 1.8.7-3
+> libip6tc2 - 1.8.7-3
+> libipset13 - 7.15-1
+> libiptext-nft0 - 1.8.7-3
+> libiptext0 - 1.8.7-3
+> libiptext6-0 - 1.8.7-3
+430,431c433,434
+< libubus-lua - 2021-08-09-a72457b6-2
+< libubus20210809 - 2021-08-09-a72457b6-2
+---
+> libubus-lua - 2022-02-28-584f56a2-2
+> libubus20220228 - 2022-02-28-584f56a2-2
+444,445c447
+< libxtables-nft12 - 1.8.7-2
+< libxtables12 - 1.8.7-2
+---
+> libxtables12 - 1.8.7-3
+666c668
+< rng-tools - 6.10-3
+---
+> rng-tools - 6.15-1
+694,695c696,697
+< ubus - 2021-08-09-a72457b6-2
+< ubusd - 2021-08-09-a72457b6-2
+---
+> ubus - 2022-02-28-584f56a2-2
+> ubusd - 2022-02-28-584f56a2-2
+
+
+
+
+
+
+
+
+
+
+

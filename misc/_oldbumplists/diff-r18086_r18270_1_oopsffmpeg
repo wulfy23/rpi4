@@ -1,0 +1,275 @@
+
+
+
+
+
+
+
+
+
+vert@MSI:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.r18086 manifest.r18270 | grep -v python | grep -v php | grep -v kmod
+6a7
+
+
+
+
+
+
+
+> alsa-lib - 1.2.5.1-3
+
+
+< banip - 0.7.10-3
+> banip - 0.7.10-4
+
+
+< base-files - 1459-r18086-cb18b62206
+> base-files - 1461-r18270-fc4398fe71
+
+
+
+20,27c21,28
+< bind-check - 9.17.19-5
+< bind-dig - 9.17.19-5
+< bind-dnssec - 9.17.19-5
+< bind-host - 9.17.19-5
+< bind-libs - 9.17.19-5
+< bind-nslookup - 9.17.19-5
+< bind-rndc - 9.17.19-5
+< bind-tools - 9.17.19-5
+---
+> bind-check - 9.17.20-1
+> bind-dig - 9.17.20-1
+> bind-dnssec - 9.17.20-1
+> bind-host - 9.17.20-1
+> bind-libs - 9.17.20-1
+> bind-nslookup - 9.17.20-1
+> bind-rndc - 9.17.20-1
+> bind-tools - 9.17.20-1
+
+
+
+29c30
+< block-mount - 2021-10-01-d3907445-1
+---
+> block-mount - 2021-11-16-77c02889-1
+
+
+
+34,35c35,36
+< ca-bundle - 20210119-1
+< ca-certificates - 20210119-1
+---
+> ca-bundle - 20211016-1
+> ca-certificates - 20211016-1
+
+
+
+60c61
+< conntrack - 1.4.6-2
+---
+> conntrack - 1.4.6-3
+
+
+
+72,77c73,78
+< ddns-scripts - 2.8.2-15
+< ddns-scripts-cloudflare - 2.8.2-15
+< ddns-scripts-freedns - 2.8.2-15
+< ddns-scripts-godaddy - 2.8.2-15
+< ddns-scripts-noip - 2.8.2-15
+< ddns-scripts-services - 2.8.2-15
+---
+> ddns-scripts - 2.8.2-19
+> ddns-scripts-cloudflare - 2.8.2-19
+> ddns-scripts-freedns - 2.8.2-19
+> ddns-scripts-godaddy - 2.8.2-19
+> ddns-scripts-noip - 2.8.2-19
+> ddns-scripts-services - 2.8.2-19
+
+
+79c80
+< debootstrap - 1.0.124-1
+---
+> debootstrap - 1.0.126-1
+
+
+
+82c83
+< dnsmasq-full - 2.86-10
+---
+> dnsmasq-full - 2.86-11
+
+
+91c92
+< ethtool - 5.14-1
+---
+> ethtool - 5.15-1
+
+
+94a96,97
+> fdk-aac - 2.0.1-4
+> ffmpeg - 4.3.2-1
+
+
+98c101
+< fstools - 2021-10-01-d3907445-1
+---
+> fstools - 2021-11-16-77c02889-1
+
+
+108,109c111,112
+< hostapd-common - 2021-05-22-b102f19b-46
+< hostapd-utils - 2021-05-22-b102f19b-46
+---
+> hostapd-common - 2021-05-22-b102f19b-52
+> hostapd-utils - 2021-05-22-b102f19b-52
+
+
+
+139c142
+< jshn - 2021-11-04-c86a894e-2
+---
+> jshn - 2021-11-20-cce5e351-1
+
+
+
+141,324c144,330
+< kernel - 5.10.79-1-067a9e5f639c8654d86d3360c0326054
+---
+> kernel - 5.10.82-1-cae79ca9e99fa6837d4a3aefc9768088
+> lame-lib - 3.100-1
+
+
+
+329c335
+< libblobmsg-json20211104 - 2021-11-04-c86a894e-2
+---
+> libblobmsg-json20211120 - 2021-11-20-cce5e351-1
+
+
+340c346
+< libevdev - 1.11.0-2
+---
+> libevdev - 1.12.0-1
+
+
+342c348
+< libexpat - 2.4.1-3
+---
+> libexpat - 2.4.1-4
+
+346a353
+> libffmpeg-full - 4.3.2-1
+362c369
+< libjson-script20211104 - 2021-11-04-c86a894e-2
+---
+> libjson-script20211120 - 2021-11-20-cce5e351-1
+
+386c393
+< libnftnl11 - 1.2.0-1
+---
+> libnftnl11 - 1.2.1-1
+
+391a399,400
+> libopus - 1.3.1-3
+> libparted - 3.4-2
+394c403
+< libpcre - 8.45-1
+---
+> libpcre - 8.45-2
+
+
+
+398c407
+---
+412c421
+< libubox20211104 - 2021-11-04-c86a894e-2
+---
+> libubox20211120 - 2021-11-20-cce5e351-1
+454c463
+< luci-app-statistics - git-21.314.73663-5b3fa3c
+---
+> luci-app-statistics - git-21.332.66147-c21c666
+460c469
+< luci-app-wireguard - git-21.306.55583-eff38ed
+---
+> luci-app-wireguard - git-21.322.66896-8ae208d
+463c472
+< luci-base - git-21.315.43250-a812b26
+---
+> luci-base - git-21.336.35676-ff4f529
+471,472c480,481
+< luci-mod-network - git-21.315.43250-849772d
+< luci-mod-status - git-21.301.45987-0ad54e4
+---
+> luci-mod-network - git-21.335.80406-5f98f8c
+> luci-mod-status - git-21.333.54072-a75ab22
+482,483c491,492
+< luci-proto-wireguard - git-21.281.66433-44445a8
+< luci-theme-bootstrap - git-21.312.32316-f16a2f3
+---
+> luci-proto-wireguard - git-21.336.35676-ff4f529
+> luci-theme-bootstrap - git-21.335.50984-1a9afa2
+504c513
+< nftables-nojson - 1.0.0-1
+---
+> nftables-nojson - 1.0.1-1
+525c534
+< parted - 3.4-1
+---
+> parted - 3.4-2
+534c543
+< perl-try-tiny - 0.30+perl5.28-2
+---
+> perl-try-tiny - 0.31+perl5.28-1
+571,580c580,589
+---
+585c594
+< procd - 2021-11-11-9d1431e1-1
+---
+> procd - 2021-11-23-01ac2c45-2
+
+
+---
+631c641
+< qosify - 2021-11-12-bfc2cafe
+---
+> qosify - 2021-11-22-06872673
+
+682c692
+< uqmi - 2021-11-06-6f956265-1
+---
+> uqmi - 2021-11-22-b2c53dc6-1
+
+697c707,708
+< wpad-openssl - 2021-05-22-b102f19b-46
+---
+> wpa-cli - 2021-05-22-b102f19b-52
+> wpad-openssl - 2021-05-22-b102f19b-52
+
+
+703c714
+< zerotier - 1.8.1-1
+---
+> zerotier - 1.8.3-2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

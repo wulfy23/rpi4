@@ -1,0 +1,278 @@
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.r19075 manifest.r19171 | grep -v kmod | grep -v php | grep -v python
+15c15
+< base-files - 1468-r19075-ed364cd4b0
+---
+> base-files - 1472-r19171-f811c33b19
+20,27c20,27
+< bind-check - 9.18.0-2
+< bind-dig - 9.18.0-2
+< bind-dnssec - 9.18.0-2
+< bind-host - 9.18.0-2
+< bind-libs - 9.18.0-2
+< bind-nslookup - 9.18.0-2
+< bind-rndc - 9.18.0-2
+< bind-tools - 9.18.0-2
+---
+> bind-check - 9.18.1-1
+> bind-dig - 9.18.1-1
+> bind-dnssec - 9.18.1-1
+> bind-host - 9.18.1-1
+> bind-libs - 9.18.1-1
+> bind-nslookup - 9.18.1-1
+> bind-rndc - 9.18.1-1
+> bind-tools - 9.18.1-1
+41,57c41,57
+< collectd - 5.12.0-30
+< collectd-mod-conntrack - 5.12.0-30
+< collectd-mod-cpu - 5.12.0-30
+< collectd-mod-disk - 5.12.0-30
+< collectd-mod-entropy - 5.12.0-30
+< collectd-mod-exec - 5.12.0-30
+< collectd-mod-interface - 5.12.0-30
+< collectd-mod-irq - 5.12.0-30
+< collectd-mod-iwinfo - 5.12.0-30
+< collectd-mod-load - 5.12.0-30
+< collectd-mod-memory - 5.12.0-30
+< collectd-mod-network - 5.12.0-30
+< collectd-mod-ping - 5.12.0-30
+< collectd-mod-processes - 5.12.0-30
+< collectd-mod-rrdtool - 5.12.0-30
+< collectd-mod-sqm - 5.12.0-30
+< collectd-mod-thermal - 5.12.0-30
+---
+> collectd - 5.12.0-32
+> collectd-mod-conntrack - 5.12.0-32
+> collectd-mod-cpu - 5.12.0-32
+> collectd-mod-disk - 5.12.0-32
+> collectd-mod-entropy - 5.12.0-32
+> collectd-mod-exec - 5.12.0-32
+> collectd-mod-interface - 5.12.0-32
+> collectd-mod-irq - 5.12.0-32
+> collectd-mod-iwinfo - 5.12.0-32
+> collectd-mod-load - 5.12.0-32
+> collectd-mod-memory - 5.12.0-32
+> collectd-mod-network - 5.12.0-32
+> collectd-mod-ping - 5.12.0-32
+> collectd-mod-processes - 5.12.0-32
+> collectd-mod-rrdtool - 5.12.0-32
+> collectd-mod-sqm - 5.12.0-32
+> collectd-mod-thermal - 5.12.0-32
+67,68c67,68
+< curl - 7.82.0-1
+< cypress-firmware-43455-sdio - v5.4.18-2020_0402-3
+---
+> curl - 7.82.0-2
+> cypress-firmware-43455-sdio - 5.4.18-2021_0812-1
+104c104
+< glib2 - 2.70.0-1
+---
+> glib2 - 2.70.4-3
+117,120c117,120
+< ip6tables-extra - 1.8.7-3
+< ip6tables-legacy - 1.8.7-3
+< ip6tables-mod-nat - 1.8.7-3
+< ip6tables-nft - 1.8.7-3
+---
+> ip6tables-extra - 1.8.7-6
+> ip6tables-legacy - 1.8.7-6
+> ip6tables-mod-nat - 1.8.7-6
+> ip6tables-nft - 1.8.7-6
+123,126c123,126
+< ipset - 7.15-1
+< iptables-legacy - 1.8.7-3
+< iptables-mod-conntrack-extra - 1.8.7-3
+< iptables-mod-extra - 1.8.7-3
+---
+> ipset - 7.15-2
+> iptables-legacy - 1.8.7-6
+> iptables-mod-conntrack-extra - 1.8.7-6
+> iptables-mod-extra - 1.8.7-6
+128,129c128,129
+< iptables-mod-hashlimit - 1.8.7-3
+< iptables-mod-ipopt - 1.8.7-3
+---
+> iptables-mod-hashlimit - 1.8.7-6
+> iptables-mod-ipopt - 1.8.7-6
+131,133c131,133
+< iptables-mod-tee - 1.8.7-3
+< iptables-mod-tproxy - 1.8.7-3
+< iptables-nft - 1.8.7-3
+---
+> iptables-mod-tee - 1.8.7-6
+> iptables-mod-tproxy - 1.8.7-6
+> iptables-nft - 1.8.7-6
+138c138
+< iwinfo - 2021-07-11-a0a0e02d-1
+---
+> iwinfo - 2022-03-01-90bfbb9a-1
+143,338c143,338
+< kernel - 5.10.103-1-f6b2536fc50a2bccf542e07d83531095
+---
+> kernel - 5.10.107-1-5f4e035268bb68a22588c41072e9ee49
+344c344
+< libbpf0 - 5.11.16-1
+---
+> libbpf20220308 - 2022-03-08-04c465fd-1
+350c350
+< libcurl4 - 7.82.0-1
+---
+> libcurl4 - 7.82.0-2
+356c356
+< libexpat - 2.4.6-1
+---
+> libexpat - 2.4.7-2
+369,377c369,377
+< libip4tc2 - 1.8.7-3
+< libip6tc2 - 1.8.7-3
+< libipset13 - 7.15-1
+< libiptext-nft0 - 1.8.7-3
+< libiptext0 - 1.8.7-3
+< libiptext6-0 - 1.8.7-3
+< libiwinfo-data - 2021-07-11-a0a0e02d-1
+< libiwinfo-lua - 2021-07-11-a0a0e02d-1
+< libiwinfo20210430 - 2021-07-11-a0a0e02d-1
+---
+> libip4tc2 - 1.8.7-6
+> libip6tc2 - 1.8.7-6
+> libipset13 - 7.15-2
+> libiptext-nft0 - 1.8.7-6
+> libiptext0 - 1.8.7-6
+> libiptext6-0 - 1.8.7-6
+> libiwinfo-data - 2022-03-01-90bfbb9a-1
+> libiwinfo-lua - 2022-03-01-90bfbb9a-1
+> libiwinfo20210430 - 2022-03-01-90bfbb9a-1
+388c388
+< libmbim - 1.26.2-1
+---
+> libmbim - 1.26.2-2
+394c394
+< libncurses6 - 6.2-3
+---
+> libncurses6 - 6.3-1
+406,408c406,408
+< libopenssl-conf - 1.1.1m-3
+< libopenssl1.1 - 1.1.1m-3
+< liboping - 1.10.0-2
+---
+> libopenssl-conf - 1.1.1n-1
+> libopenssl1.1 - 1.1.1n-1
+> liboping - 1.10.0-3
+416,417c416,417
+< libqmi - 1.30.4-1
+---
+> libqmi - 1.30.4-2
+435c435
+< libudev-zero - 1.0.0-1
+---
+> libudev-zero - 1.0.0-2
+443,444c443,444
+< libxml2 - 2.9.12-2
+< libxtables12 - 1.8.7-3
+---
+> libxml2 - 2.9.13-1
+> libxtables12 - 1.8.7-6
+453c453
+< luci-app-adblock - git-22.066.74080-1eddbe0
+---
+> luci-app-adblock - git-22.069.45071-abbff0f
+456c456
+< luci-app-ddns - git-21.187.20976-699b7f0
+---
+> luci-app-ddns - git-22.069.45071-575fb0c
+481c481
+< luci-compat - git-21.223.24521-5844764
+---
+> luci-compat - git-22.069.45071-03bb0e2
+505c505
+< mbim-utils - 1.26.2-1
+---
+> mbim-utils - 1.26.2-2
+516,517c516,517
+< mtr - 0.94-1
+< mwan3 - 2.10.13-1
+---
+> mtr-json - 0.95-2
+> mwan3 - 2.11.0-1
+525c525
+< noping - 1.10.0-2
+---
+> noping - 1.10.0-3
+537,538c537,538
+< openssh-sftp-server - 8.8p1-5
+< openssl-util - 1.1.1m-3
+---
+> openssh-sftp-server - 8.9p1-1
+> openssl-util - 1.1.1n-1
+589,597c589,597
+---
+602c602
+< procd - 2022-02-19-ad652490-2
+---
+> procd - 2022-02-19-ad652490-3
+609,611c609,611
+---
+614,615c614,615
+---
+617,622c617,622
+---
+624,628c624,628
+---
+630c630
+---
+632c632
+---
+636c636
+---
+638c638
+---
+642,644c642,644
+---
+646,648c646,648
+< qmi-utils - 1.30.4-1
+---
+> qmi-utils - 1.30.4-2
+686c686
+< terminfo - 6.2-3
+---
+> terminfo - 6.3-1
+697a698
+> uhubctl - 2.4.0-1
+701c702
+< uqmi - 2022-02-02-f254fc59-1
+---
+> uqmi - 2022-03-12-44dd0957-1
+720a722,723
+> xtables-legacy - 1.8.7-6
+> xtables-nft - 1.8.7-6
+724c727
+< zerotier - 1.8.4-1
+---
+> zerotier - 1.8.6-1
+726,736c729,739
+< zoneinfo-africa - 2021e-1
+< zoneinfo-asia - 2021e-1
+< zoneinfo-atlantic - 2021e-1
+< zoneinfo-australia-nz - 2021e-1
+< zoneinfo-core - 2021e-1
+< zoneinfo-europe - 2021e-1
+< zoneinfo-india - 2021e-1
+< zoneinfo-northamerica - 2021e-1
+< zoneinfo-pacific - 2021e-1
+< zoneinfo-poles - 2021e-1
+< zoneinfo-southamerica - 2021e-1
+---
+> zoneinfo-africa - 2022a-1
+> zoneinfo-asia - 2022a-1
+> zoneinfo-atlantic - 2022a-1
+> zoneinfo-australia-nz - 2022a-1
+> zoneinfo-core - 2022a-1
+> zoneinfo-europe - 2022a-1
+> zoneinfo-india - 2022a-1
+> zoneinfo-northamerica - 2022a-1
+> zoneinfo-pacific - 2022a-1
+> zoneinfo-poles - 2022a-1
+> zoneinfo-southamerica - 2022a-1
+
+
+
+

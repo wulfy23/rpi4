@@ -1,0 +1,345 @@
+5c5
+< adblock - 4.1.3-3
+---
+> adblock - 4.1.3-4
+15c15
+< base-files - 1434-r16325-88151b8303
+---
+> base-files - 1439-r16495-bf0c965af0
+20,27c20,27
+< bind-check - 9.17.13-1
+< bind-dig - 9.17.13-1
+< bind-dnssec - 9.17.13-1
+< bind-host - 9.17.13-1
+< bind-libs - 9.17.13-1
+< bind-nslookup - 9.17.13-1
+< bind-rndc - 9.17.13-1
+< bind-tools - 9.17.13-1
+---
+> bind-check - 9.18.0-1
+> bind-dig - 9.18.0-1
+> bind-dnssec - 9.18.0-1
+> bind-host - 9.18.0-1
+> bind-libs - 9.18.0-1
+> bind-nslookup - 9.18.0-1
+> bind-rndc - 9.18.0-1
+> bind-tools - 9.18.0-1
+31,32c31,32
+< brcmfmac-firmware-usb - 20201118-3
+< busybox - 1.33.1-6
+---
+> brcmfmac-firmware-usb - 20211216-1
+> busybox - 1.33.2-2
+60c60
+< conntrack - 1.4.6-1
+---
+> conntrack - 1.4.6-3
+67c67
+< curl - 7.79.1-1
+---
+> curl - 7.80.0-1
+72,77c72,77
+< ddns-scripts - 2.8.2-11
+< ddns-scripts-cloudflare - 2.8.2-11
+< ddns-scripts-freedns - 2.8.2-11
+< ddns-scripts-godaddy - 2.8.2-11
+< ddns-scripts-noip - 2.8.2-11
+< ddns-scripts-services - 2.8.2-11
+---
+> ddns-scripts - 2.8.2-12
+> ddns-scripts-cloudflare - 2.8.2-12
+> ddns-scripts-freedns - 2.8.2-12
+> ddns-scripts-godaddy - 2.8.2-12
+> ddns-scripts-noip - 2.8.2-12
+> ddns-scripts-services - 2.8.2-12
+108,110c108,110
+< hostapd-common - 2020-06-08-5a8b3662-35
+< hostapd-utils - 2020-06-08-5a8b3662-35
+< htop - 3.0.5-2
+---
+> hostapd-common - 2020-06-08-5a8b3662-39
+> hostapd-utils - 2020-06-08-5a8b3662-39
+> htop - 3.1.2-1
+112,113c112,113
+< https-dns-proxy - 2021-09-27-1
+< i2c-tools - 4.2-1
+---
+> https-dns-proxy - 2021-11-22-2
+> i2c-tools - 4.3-1
+132a133
+> iptables-mod-tproxy - 1.8.7-1
+136c137
+< iw - 5.9-8fab0c9e-1
+---
+> iw - 5.9-8fab0c9e-3
+141,319c142,325
+< kernel - 5.4.154-1-deb453573a04e7a02726b2659a2a3363
+---
+> kernel - 5.4.179-1-0788d83a1525da40e4d0f7b1f5d6ee0e
+331c337
+< libcurl4 - 7.79.1-1
+---
+> libcurl4 - 7.80.0-1
+336c342
+< libevdev - 1.10.1-1
+---
+> libevdev - 1.12.0-1
+348,350c354,356
+< libgnutls - 3.7.1-1
+< libgpg-error - 1.39-2
+< libi2c - 4.2-1
+---
+> libgnutls - 3.7.1-2
+> libgpg-error - 1.42-2
+> libi2c - 4.3-1
+370c376
+< libmosquitto-ssl - 2.0.11-1
+---
+> libmosquitto-ssl - 2.0.13-1
+384,385c390,391
+< libopenssl-conf - 1.1.1l-1
+< libopenssl1.1 - 1.1.1l-1
+---
+> libopenssl-conf - 1.1.1m-1
+> libopenssl1.1 - 1.1.1m-1
+387c393
+< libpcap1 - 1.9.1-3
+---
+> libpcap1 - 1.9.1-3.1
+393c399
+< libpython3-3.9 - 3.9.7-1
+---
+> libpython3-3.9 - 3.9.10-1
+410,411c416,417
+< libuci-lua - 2020-10-06-52bbc99f-5
+< libuci20130104 - 2020-10-06-52bbc99f-5
+---
+> libuci-lua - 2021-04-14-4b3db117-5
+> libuci20130104 - 2021-04-14-4b3db117-5
+413c419
+< libudev-zero - 0.4.5-2
+---
+> libudev-zero - 1.0.0-1
+416c422
+< libustream-openssl20201210 - 2020-12-10-68d09243-1
+---
+> libustream-openssl20201210 - 2022-01-16-868fd881-1
+420c426
+< libwolfssl4.8.1.66253b90 - 4.8.1-stable-4
+---
+> libwolfssl5.1.1.99a5b54a - 5.1.1-stable-1
+434c440
+< luci-app-ddns - git-21.018.50423-4d5facb
+---
+> luci-app-ddns - git-21.349.33342-b5a40b3
+436,437c442,443
+< luci-app-firewall - git-21.295.66767-8eceb63
+< luci-app-https-dns-proxy - 2021-07-29-1
+---
+> luci-app-firewall - git-22.046.85957-59c3392
+> luci-app-https-dns-proxy - 2021-09-27-2
+442,443c448,449
+< luci-app-openvpn - git-21.188.55022-d943037
+< luci-app-opkg - git-21.079.58598-6639e31
+---
+> luci-app-openvpn - git-22.025.78298-e927a11
+> luci-app-opkg - git-21.312.69848-4745991
+447c453
+< luci-app-statistics - git-21.295.81255-92e21ba
+---
+> luci-app-statistics - git-21.338.69888-2e5b2ab
+449c455
+< luci-app-uhttpd - git-20.202.77895-d662f3c
+---
+> luci-app-uhttpd - git-22.029.54375-df07e6b
+456,457c462,463
+< luci-base - git-21.295.67054-13df80d
+< luci-compat - git-21.099.45066-7bb2fc4
+---
+> luci-base - git-22.046.85957-59c3392
+> luci-compat - git-22.046.85744-f08a0f6
+464,466c470,472
+< luci-mod-network - git-21.295.67048-4d3de0e
+< luci-mod-status - git-21.295.66779-853a128
+< luci-mod-system - git-21.295.66903-8acd0d7
+---
+> luci-mod-network - git-22.046.85061-dd54dce
+> luci-mod-status - git-22.046.85784-0ac2542
+> luci-mod-system - git-22.019.40321-7a37d02
+471,472c477,478
+< luci-proto-modemmanager - git-21.163.62601-127b896
+< luci-proto-ncm - git-21.163.64918-6c6559a
+---
+> luci-proto-modemmanager - git-22.046.84868-a7b0fe1
+> luci-proto-ncm - git-22.046.84868-a7b0fe1
+474c480
+< luci-proto-qmi - git-21.163.62601-127b896
+---
+> luci-proto-qmi - git-22.046.84868-a7b0fe1
+476c482
+< luci-theme-bootstrap - git-21.298.63606-26047fb
+---
+> luci-theme-bootstrap - git-22.047.35373-cc582eb
+486,487c492,493
+< mosquitto-client-ssl - 2.0.11-1
+< mosquitto-ssl - 2.0.11-1
+---
+> mosquitto-client-ssl - 2.0.13-1
+> mosquitto-ssl - 2.0.13-1
+489c495,496
+< msmtp - 1.8.15-1
+---
+> msmtp - 1.8.19-1
+> mt7601u-firmware - 20211216-1
+492,494c499,501
+< mwan3 - 2.10.12-1
+< nano - 5.9-1
+< netifd - 2021-07-26-440eb064-1
+---
+> mwan3 - 2.10.13-1
+> nano - 6.1-1
+> netifd - 2021-10-30-8f82742c-1
+513c520
+< openssl-util - 1.1.1l-1
+---
+> openssl-util - 1.1.1m-1
+517a525
+> parted - 3.4-1
+520c528
+< pciids - 0.350-1
+---
+> pciids - 0.354-1
+563,572c571,580
+< php7 - 7.4.24-1
+< php7-cgi - 7.4.24-1
+< php7-cli - 7.4.24-1
+< php7-mod-curl - 7.4.24-1
+< php7-mod-fileinfo - 7.4.24-1
+< php7-mod-iconv - 7.4.24-1
+< php7-mod-json - 7.4.24-1
+< php7-mod-session - 7.4.24-1
+< php7-mod-sockets - 7.4.24-1
+< php7-mod-sysvmsg - 7.4.24-1
+---
+> php7 - 7.4.27-1
+> php7-cgi - 7.4.27-1
+> php7-cli - 7.4.27-1
+> php7-mod-curl - 7.4.27-1
+> php7-mod-fileinfo - 7.4.27-1
+> php7-mod-iconv - 7.4.27-1
+> php7-mod-json - 7.4.27-1
+> php7-mod-session - 7.4.27-1
+> php7-mod-sockets - 7.4.27-1
+> php7-mod-sysvmsg - 7.4.27-1
+577c585
+< procd - 2021-02-23-37eed131-1
+---
+> procd - 2021-03-08-2cfc26f8-1
+584,586c592,594
+< python3 - 3.9.7-1
+< python3-asyncio - 3.9.7-1
+< python3-base - 3.9.7-1
+---
+> python3 - 3.9.10-1
+> python3-asyncio - 3.9.10-1
+> python3-base - 3.9.10-1
+589,590c597,598
+< python3-cgi - 3.9.7-1
+< python3-cgitb - 3.9.7-1
+---
+> python3-cgi - 3.9.10-1
+> python3-cgitb - 3.9.10-1
+592,598c600,606
+< python3-codecs - 3.9.7-1
+< python3-ctypes - 3.9.7-1
+< python3-dbm - 3.9.7-1
+< python3-decimal - 3.9.7-1
+< python3-distutils - 3.9.7-1
+< python3-email - 3.9.7-1
+< python3-gdbm - 3.9.7-1
+---
+> python3-codecs - 3.9.10-1
+> python3-ctypes - 3.9.10-1
+> python3-dbm - 3.9.10-1
+> python3-decimal - 3.9.10-1
+> python3-distutils - 3.9.10-1
+> python3-email - 3.9.10-1
+> python3-gdbm - 3.9.10-1
+600,604c608,612
+< python3-light - 3.9.7-1
+< python3-logging - 3.9.7-1
+< python3-lzma - 3.9.7-1
+< python3-multiprocessing - 3.9.7-1
+< python3-ncurses - 3.9.7-1
+---
+> python3-light - 3.9.10-1
+> python3-logging - 3.9.10-1
+> python3-lzma - 3.9.10-1
+> python3-multiprocessing - 3.9.10-1
+> python3-ncurses - 3.9.10-1
+606c614
+< python3-openssl - 3.9.7-1
+---
+> python3-openssl - 3.9.10-1
+608,609c616,617
+< python3-pip - 21.2.3-1
+< python3-pkg-resources - 57.4.0-1
+---
+> python3-pip - 21.2.4-1
+> python3-pkg-resources - 58.1.0-1
+612c620
+< python3-pydoc - 3.9.7-1
+---
+> python3-pydoc - 3.9.10-1
+614c622
+< python3-readline - 3.9.7-1
+---
+> python3-readline - 3.9.10-1
+616c624
+< python3-setuptools - 57.4.0-1
+---
+> python3-setuptools - 58.1.0-1
+618,620c626,628
+< python3-sqlite3 - 3.9.7-1
+< python3-unittest - 3.9.7-1
+< python3-urllib - 3.9.7-1
+---
+> python3-sqlite3 - 3.9.10-1
+> python3-unittest - 3.9.10-1
+> python3-urllib - 3.9.10-1
+622c630
+< python3-xml - 3.9.7-1
+---
+> python3-xml - 3.9.10-1
+633c641
+< r8169-firmware - 20201118-3
+---
+> r8169-firmware - 20211216-1
+657c665
+< tcpdump - 4.9.3-3
+---
+> tcpdump - 4.9.3-4
+666c674
+< uci - 2020-10-06-52bbc99f-5
+---
+> uci - 2021-04-14-4b3db117-5
+677c685
+< usbids - 0.350-1
+---
+> usbids - 0.354-1
+686a695
+> wipefs - 2.36.1-2
+688c697
+< wireless-regdb - 2021.04.21-1
+---
+> wireless-regdb - 2021.08.28-1
+690,691c699,700
+< wpa-cli - 2020-06-08-5a8b3662-35
+< wpad-openssl - 2020-06-08-5a8b3662-35
+---
+> wpa-cli - 2020-06-08-5a8b3662-39
+> wpad-openssl - 2020-06-08-5a8b3662-39
+697c706
+< zerotier - 1.6.6-1
+---
+> zerotier - 1.6.6-2

@@ -1,0 +1,206 @@
+
+
+
+
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.21.02.1-2 manifest.21.02.1-3  | grep -v python | grep -v php
+7d6
+
+
+
+
+
+
+
+
+21,28c20,27
+< bind-check - 9.17.19-1
+< bind-dig - 9.17.19-1
+< bind-dnssec - 9.17.19-1
+< bind-host - 9.17.19-1
+< bind-libs - 9.17.19-1
+< bind-nslookup - 9.17.19-1
+< bind-rndc - 9.17.19-1
+< bind-tools - 9.17.19-1
+---
+> bind-check - 9.17.20-1
+> bind-dig - 9.17.20-1
+> bind-dnssec - 9.17.20-1
+> bind-host - 9.17.20-1
+> bind-libs - 9.17.20-1
+> bind-nslookup - 9.17.20-1
+> bind-rndc - 9.17.20-1
+> bind-tools - 9.17.20-1
+
+
+
+33c32
+< busybox - 1.33.1-6
+---
+> busybox - 1.33.2-1
+
+
+61c60
+< conntrack - 1.4.6-1
+---
+> conntrack - 1.4.6-3
+
+
+
+68c67
+< curl - 7.79.1-1
+---
+> curl - 7.80.0-1
+
+
+
+
+73,78c72,77
+< ddns-scripts - 2.8.2-11
+< ddns-scripts-cloudflare - 2.8.2-11
+< ddns-scripts-freedns - 2.8.2-11
+< ddns-scripts-godaddy - 2.8.2-11
+< ddns-scripts-noip - 2.8.2-11
+< ddns-scripts-services - 2.8.2-11
+---
+> ddns-scripts - 2.8.2-12
+> ddns-scripts-cloudflare - 2.8.2-12
+> ddns-scripts-freedns - 2.8.2-12
+> ddns-scripts-godaddy - 2.8.2-12
+> ddns-scripts-noip - 2.8.2-12
+> ddns-scripts-services - 2.8.2-12
+
+
+
+
+
+
+
+
+111,113c108,110
+< hostapd-common - 2020-06-08-5a8b3662-35
+< hostapd-utils - 2020-06-08-5a8b3662-35
+< htop - 3.0.5-2
+---
+> hostapd-common - 2020-06-08-5a8b3662-37
+> hostapd-utils - 2020-06-08-5a8b3662-37
+> htop - 3.1.2-1
+116c113
+< i2c-tools - 4.2-1
+---
+> i2c-tools - 4.3-1
+139c136
+< iw - 5.9-8fab0c9e-1
+---
+> iw - 5.9-8fab0c9e-3
+304a302
+> kmod-usb-net-sierrawireless - 5.4.154-1
+313a312
+> kmod-usb-serial-sierrawireless - 5.4.154-1
+< libcurl4 - 7.79.1-1
+---
+> libcurl4 - 7.80.0-1
+340c338
+< libevdev - 1.10.1-1
+---
+> libevdev - 1.12.0-1
+347d344
+< libffmpeg-full - 4.3.1-1
+353,355c350,352
+< libgnutls - 3.7.1-1
+< libgpg-error - 1.39-2
+< libi2c - 4.2-1
+---
+> libgnutls - 3.7.1-2
+> libgpg-error - 1.42-2
+> libi2c - 4.3-1
+---
+
+419c415
+< libudev-zero - 0.4.5-2
+---
+> libudev-zero - 1.0.0-1
+
+453c449
+< luci-app-statistics - git-21.309.66708-433816e
+---
+> luci-app-statistics - git-21.338.69888-2e5b2ab
+
+462c458
+< luci-base - git-21.314.39479-e1ccb66
+---
+> luci-base - git-21.340.48972-61cc3b1
+
+470c466
+< luci-mod-network - git-21.295.67048-4d3de0e
+---
+> luci-mod-network - git-21.335.80427-5091496
+
+482c478
+< luci-theme-bootstrap - git-21.312.32337-6df9ae0
+---
+> luci-theme-bootstrap - git-21.320.44446-0cee46b
+
+495c491
+< msmtp - 1.8.17-1
+---
+> msmtp - 1.8.19-1
+
+
+500c496
+< netifd - 2021-07-26-440eb064-1
+---
+
+> netifd - 2021-10-30-8f82742c-1
+523a520
+> parted - 3.4-1
+
+
+
+526c523
+< pciids - 0.350-1
+---
+> pciids - 0.354-1
+
+
+683c680
+< usbids - 0.350-1
+---
+> usbids - 0.354-1
+
+
+696,697c693,694
+< wpa-cli - 2020-06-08-5a8b3662-35
+< wpad-openssl - 2020-06-08-5a8b3662-35
+---
+> wpa-cli - 2020-06-08-5a8b3662-37
+> wpad-openssl - 2020-06-08-5a8b3662-37
+
+
+
+
+
+
+< alsa-lib - 1.2.4-1
+
+96,97d94
+< fdk-aac - 2.0.1-4
+< ffmpeg - 4.3.1-1
+
+323d321
+< lame-lib - 3.100-1
+335c333
+
+392d388
+< libopus - 1.3.1-3
+399c395
+
+
+
+
+
+
+
+
+
+
+

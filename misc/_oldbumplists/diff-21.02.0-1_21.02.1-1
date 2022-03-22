@@ -1,0 +1,198 @@
+
+
+
+
+diff-21.02.0-1_21.02.1-1 rpi-4_21.02.1_1.0.6-2_r16325_release
+
+
+
+
+
+< acme - 2.8.7-5
+< acme-dnsapi - 2.8.7-5
+---
+> acme - 3.0.1-1
+> acme-dnsapi - 3.0.1-1
+6a7
+> apk - 2.12.2-1
+12,13c13,15
+< banip - 0.7.9-2
+< base-files - 1432-r16279-5cc0535800
+---
+> atop - 2.6.0-1
+> banip - 0.7.10-3
+> base-files - 1434-r16325-88151b8303
+36c38
+< cgi-io - 2020-10-27-ab4c3471-19
+---
+> cgi-io - 2021-09-08-98cef9dd-20
+39,55c41,57
+< collectd - 5.12.0-9
+---
+> collectd - 5.12.0-10
+65c67
+< curl - 7.78.0-1
+---
+> curl - 7.79.1-1
+71a74,76
+> ddns-scripts-freedns - 2.8.2-11
+> ddns-scripts-godaddy - 2.8.2-11
+> ddns-scripts-noip - 2.8.2-11
+79a85
+> dropbearconvert - 2020.81-2
+104c110
+< htop - 3.0.5-1
+---
+> htop - 3.0.5-2
+106c112
+< https-dns-proxy - 2021-07-29-2
+---
+> https-dns-proxy - 2021-09-27-1
+135,309c141,319
+< kernel - 5.4.143-1-deb453573a04e7a02726b2659a2a3363
+---
+> kernel - 5.4.154-1-deb453573a04e7a02726b2659a2a3363
+321c331
+< libcurl4 - 7.78.0-1
+---
+> libcurl4 - 7.79.1-1
+357c367,368
+< libmbim - 1.24.6-1
+---
+> libmbim - 1.24.8-1
+> libminiupnpc - 2.2.1-1
+361c372,373
+< libncurses6 - 6.2-1
+---
+> libnatpmp1 - 20150609-3
+> libncurses6 - 6.2-3
+368a381
+> libnftnl11 - 1.1.8-1
+380,381c393,394
+< libqmi - 1.28.2-1
+---
+> libqmi - 1.28.8-1
+387a401
+> libsodium - 1.0.18-3
+400a415
+> libusb-compat4 - 0.1.7-2
+405c420
+< libwolfssl4.7.0.66253b90 - 4.7.0-stable-2
+---
+> libwolfssl4.8.1.66253b90 - 4.8.1-stable-4
+421c436
+< luci-app-firewall - git-21.216.73213-deaa179
+---
+> luci-app-firewall - git-21.295.66767-8eceb63
+424a440
+> luci-app-nft-qos - git-20.245.57770-2099bde
+431,432c447,448
+< luci-app-statistics - git-21.163.62566-54b2195
+< luci-app-travelmate - git-21.234.26355-ed43006
+---
+> luci-app-statistics - git-21.295.81255-92e21ba
+> luci-app-travelmate - git-21.248.72347-23e3d93
+440c456
+< luci-base - git-21.231.26241-422c175
+---
+> luci-base - git-21.295.67054-13df80d
+448,450c464,466
+< luci-mod-network - git-21.221.63862-119701c
+< luci-mod-status - git-21.188.55036-eafe171
+< luci-mod-system - git-21.230.63964-c3580ee
+---
+> luci-mod-network - git-21.295.67048-4d3de0e
+> luci-mod-status - git-21.295.66779-853a128
+> luci-mod-system - git-21.295.66903-8acd0d7
+459,462c475,478
+< luci-proto-wireguard - git-21.163.62622-a6a6d61
+< luci-theme-bootstrap - git-21.164.71418-bd36169
+< luci-theme-material - git-21.160.67995-139edfc
+< luci-theme-openwrt - git-21.160.67995-139edfc
+---
+> luci-proto-wireguard - git-21.243.21928-71fe35c
+> luci-theme-bootstrap - git-21.298.63606-26047fb
+> luci-theme-material - git-21.295.66888-fc702bc
+> luci-theme-openwrt - git-21.285.75929-137ede6
+465c481
+< mbim-utils - 1.24.6-1
+---
+> mbim-utils - 1.24.8-1
+469c485
+< modemmanager - 1.16.2-1
+---
+> modemmanager - 1.16.6-1
+476,477c492,493
+< mwan3 - 2.10.11-1
+< nano - 5.8-1
+---
+> mwan3 - 2.10.12-1
+> nano - 5.9-1
+479a496,497
+> nft-qos - 1.0.6-2
+> nftables-nojson - 0.9.6-2
+
+483,484c501,507
+< ntfs-3g - 2017.3.23-4-fuseint
+< ntfs-3g-utils - 2017.3.23-4-fuseint
+---
+> ntfs-3g - 2017.3.23-6-fuseint
+> ntfs-3g-utils - 2017.3.23-6-fuseint
+
+
+
+> nut - 2.7.4-22
+> nut-common - 2.7.4-22
+> nut-driver-usbhid-ups - 2.7.4-22
+> nut-server - 2.7.4-22
+> nut-upsc - 2.7.4-22
+
+492c515
+< openvpn-openssl - 2.5.3-2
+---
+> openvpn-openssl - 2.5.3-3
+499c522
+< perl - 5.28.1-5
+---
+> perl - 5.28.1-6
+
+< qmi-utils - 1.28.2-1
+---
+> qmi-utils - 1.28.8-1
+
+618c646
+< simple-adblock - 1.8.7-6
+---
+> simple-adblock - 1.8.8-1
+
+625d652
+< sqm-scripts-extra - 2016-06-08-1
+631c658
+
+
+< terminfo - 6.2-1
+---
+> terminfo - 6.2-3
+
+633c660
+< travelmate - 2.0.6-1
+> travelmate - 2.0.7-3
+
+< uhttpd - 2021-03-21-15346de8-1
+< uhttpd-mod-ubus - 2021-03-21-15346de8-1
+> uhttpd - 2021-03-21-15346de8-2
+> uhttpd-mod-ubus - 2021-03-21-15346de8-2
+
+< vpn-policy-routing - 0.3.5-1
+> vpn-policy-routing - 0.3.4-8
+
+> zerotier - 1.6.6-1
+
+
+
+
+
+
+
+
+

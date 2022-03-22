@@ -1,13 +1,22 @@
 
 
-
-
-
     ___________________________________________________   CHANGELOG
+                
 
-        5.0.10x -x) fixes dirty pipe
-        r1907x  -x) remove procd-ujail + seccomp again due to simple-adblock problem
-				-x) wifi firmware to linux-firmware
+                -11?) rework wwan/ttl 65 logic @ uci/network/hoplimit
+                      i.e.1=65     uci -q set network.3g.hoplimit='1'; uci commit network; ifdown 3g; ifup 3g
+                      or           uci -q set network.3g.hoplimit='64'; uci commit network; ifdown 3g; ifup 3g
+                      orremove     uci -q set network.3g.hoplimit='0'; uci commit network; ifdown 3g; ifup 3g
+                -11?)
+                -11?)
+                -11?)
+
+
+
+
+        5.7.2   -2) fixes dirty pipe (master kernels <5.10.103 cve)
+        r19075  -2) remove procd-ujail + seccomp again due to simple-adblock problem
+                -2) wifi firmware to linux-firmware
                 -)
                 -)
                 -)
@@ -25,7 +34,7 @@
                 -17) fix hwrng multi system add
 
         5.0.105 -3) 45311 improve theme fixup resultmsg
-        r18913  -3) REMOVEDsee6 populate 'online' log @ /tmp/.booted.online from wan dhcp 'bound-ish' events
+        r18913  -3) REMOVEDsee populate 'online' log @ /tmp/.booted.online from wan dhcp 'bound-ish' events
                 -3) support UPDATECHECK_BANNERMSGS="nofsckmessages"
                 -6) everyboot/51-onlinehook call hotplug/online 'smarter' on all boots
                 -13) fix double [all] in rpi4_eeprom.sh.hook

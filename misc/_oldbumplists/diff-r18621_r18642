@@ -1,0 +1,201 @@
+
+
+
+
+
+
+
+
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.r18621-fw3 manifest.r18642  | grep -v python
+6c6
+< agetty - 2.37-1
+---
+> agetty - 2.37-2
+15c15
+< base-files - 1463-r18609-266b5c83c3
+---
+> base-files - 1463-r18642-ef4c97576b
+28c28
+< blkid - 2.37-1
+---
+> blkid - 2.37-2
+30c30
+< blockdev - 2.37-1
+---
+> blockdev - 2.37-2
+36c36
+< cal - 2.37-1
+---
+> cal - 2.37-2
+41,57c41,57
+< collectd - 5.12.0-15
+< collectd-mod-conntrack - 5.12.0-15
+< collectd-mod-cpu - 5.12.0-15
+< collectd-mod-disk - 5.12.0-15
+< collectd-mod-entropy - 5.12.0-15
+< collectd-mod-exec - 5.12.0-15
+< collectd-mod-interface - 5.12.0-15
+< collectd-mod-irq - 5.12.0-15
+< collectd-mod-iwinfo - 5.12.0-15
+< collectd-mod-load - 5.12.0-15
+< collectd-mod-memory - 5.12.0-15
+< collectd-mod-network - 5.12.0-15
+< collectd-mod-ping - 5.12.0-15
+< collectd-mod-processes - 5.12.0-15
+< collectd-mod-rrdtool - 5.12.0-15
+< collectd-mod-sqm - 5.12.0-15
+< collectd-mod-thermal - 5.12.0-15
+---
+> collectd - 5.12.0-30
+> collectd-mod-conntrack - 5.12.0-30
+> collectd-mod-cpu - 5.12.0-30
+> collectd-mod-disk - 5.12.0-30
+> collectd-mod-entropy - 5.12.0-30
+> collectd-mod-exec - 5.12.0-30
+> collectd-mod-interface - 5.12.0-30
+> collectd-mod-irq - 5.12.0-30
+> collectd-mod-iwinfo - 5.12.0-30
+> collectd-mod-load - 5.12.0-30
+> collectd-mod-memory - 5.12.0-30
+> collectd-mod-network - 5.12.0-30
+> collectd-mod-ping - 5.12.0-30
+> collectd-mod-processes - 5.12.0-30
+> collectd-mod-rrdtool - 5.12.0-30
+> collectd-mod-sqm - 5.12.0-30
+> collectd-mod-thermal - 5.12.0-30
+80,81c80,81
+< diffutils - 3.7-3
+< dmesg - 2.37-1
+---
+> diffutils - 3.8-1
+> dmesg - 2.37-2
+94c94
+< fdisk - 2.37-1
+---
+> fdisk - 2.37-2
+120a121
+> ip6tables-nft - 1.8.7-2
+122c123
+< ipip - 3
+---
+> ipip - 4
+253a255
+> kmod-nft-nat - 5.10.92-1
+254a257
+> kmod-nft-offload - 5.10.92-1
+335c338
+< libblkid1 - 2.37-1
+---
+> libblkid1 - 2.37-2
+349c352
+< libexpat - 2.4.1-4
+---
+> libexpat - 2.4.3-1
+352c355
+< libfdisk1 - 2.37-1
+---
+> libfdisk1 - 2.37-2
+382c385
+< libmount1 - 2.37-1
+---
+> libmount1 - 2.37-2
+385c388
+< libneon - 0.32.1-1
+---
+> libneon - 0.32.1-2
+406c409
+---
+413c416
+< libsmartcols1 - 2.37-1
+---
+> libsmartcols1 - 2.37-2
+430c433
+< libuuid1 - 2.37-1
+---
+> libuuid1 - 2.37-2
+438,439c441,442
+< losetup - 2.37-1
+< lsblk - 2.37-1
+---
+> losetup - 2.37-2
+> lsblk - 2.37-2
+456c459
+< luci-app-nft-qos - git-20.245.57770-2099bde
+---
+> luci-app-nft-qos - git-22.026.38400-f30b673
+458c461
+< luci-app-openvpn - git-21.183.65650-b6f36ca
+---
+> luci-app-openvpn - git-22.025.78197-18b1130
+472c475
+< luci-base - git-22.006.47037-48599d8
+---
+> luci-base - git-22.025.79016-22e2bfb
+480c483
+< luci-mod-network - git-22.007.66027-0ef82b3
+---
+> luci-mod-network - git-22.023.36457-14f98df
+482c485
+< luci-mod-system - git-21.304.77266-fceabd7
+---
+> luci-mod-system - git-22.019.40203-e0ff3ff
+485c488
+< luci-proto-ipip - git-19.307.61018-284918b
+---
+> luci-proto-ipip - git-22.019.83340-37253b5
+504c507
+< mount-utils - 2.37-1
+---
+> mount-utils - 2.37-2
+505a509
+> mt7601u-firmware - 20211216-1
+510c514
+< netifd - 2022-01-14-3043206e-1
+---
+> netifd - 2022-01-22-ed718768-1
+535c539
+< partx-utils - 2.37-1
+---
+> partx-utils - 2.37-2
+580,588c584,592
+< php8 - 8.1.1-1
+< php8-cgi - 8.1.1-1
+< php8-cli - 8.1.1-1
+< php8-mod-curl - 8.1.1-1
+< php8-mod-fileinfo - 8.1.1-1
+< php8-mod-iconv - 8.1.1-1
+< php8-mod-session - 8.1.1-1
+< php8-mod-sockets - 8.1.1-1
+< php8-mod-sysvmsg - 8.1.1-1
+---
+> php8 - 8.1.2-1
+> php8-cgi - 8.1.2-1
+> php8-cli - 8.1.2-1
+> php8-mod-curl - 8.1.2-1
+> php8-mod-fileinfo - 8.1.2-1
+> php8-mod-iconv - 8.1.2-1
+> php8-mod-session - 8.1.2-1
+> php8-mod-sockets - 8.1.2-1
+> php8-mod-sysvmsg - 8.1.2-1
+592c596
+< prlimit - 2.37-1
+---
+> prlimit - 2.37-2
+---
+664c668
+< sfdisk - 2.37-1
+---
+> sfdisk - 2.37-2
+697c701
+< uuidgen - 2.37-1
+---
+> uuidgen - 2.37-2
+
+
+
+
+
+
+
+
+

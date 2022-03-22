@@ -1,0 +1,191 @@
+6c6
+< agetty - 2.37-1
+---
+> agetty - 2.37-2
+15c15
+< base-files - 1463-r18609-266b5c83c3
+---
+> base-files - 1463-r18621-af8a059bb4
+28c28
+< blkid - 2.37-1
+---
+> blkid - 2.37-2
+30c30
+< blockdev - 2.37-1
+---
+> blockdev - 2.37-2
+36c36
+< cal - 2.37-1
+---
+> cal - 2.37-2
+80,81c80,81
+< diffutils - 3.7-3
+< dmesg - 2.37-1
+---
+> diffutils - 3.8-1
+> dmesg - 2.37-2
+94c94
+< fdisk - 2.37-1
+---
+> fdisk - 2.37-2
+96c96
+< firewall - 2022-01-10-0f16ea5f-2
+---
+> firewall4 - 2022-01-09-07579df5-1
+122c122
+< ipip - 3
+---
+> ipip - 4
+253a254,256
+> kmod-nft-fib - 5.10.92-1
+> kmod-nft-nat - 5.10.92-1
+> kmod-nft-nat6 - 5.10.92-1
+254a258
+> kmod-nft-offload - 5.10.92-1
+335c339
+< libblkid1 - 2.37-1
+---
+> libblkid1 - 2.37-2
+349c353
+< libexpat - 2.4.1-4
+---
+> libexpat - 2.4.3-1
+352c356
+< libfdisk1 - 2.37-1
+---
+> libfdisk1 - 2.37-2
+382c386
+< libmount1 - 2.37-1
+---
+> libmount1 - 2.37-2
+385c389
+< libneon - 0.32.1-1
+---
+> libneon - 0.32.1-2
+406c410
+< libpython3-3.10 - 3.10.1-1
+---
+> libpython3-3.10 - 3.10.2-1
+413c417
+< libsmartcols1 - 2.37-1
+---
+> libsmartcols1 - 2.37-2
+425a430
+> libucode20210730 - 2021-10-25-a7976c28-1
+430c435
+< libuuid1 - 2.37-1
+---
+> libuuid1 - 2.37-2
+438,439c443,444
+< losetup - 2.37-1
+< lsblk - 2.37-1
+---
+> losetup - 2.37-2
+> lsblk - 2.37-2
+472c477
+< luci-base - git-22.006.47037-48599d8
+---
+> luci-base - git-22.021.84530-613080f
+480c485
+< luci-mod-network - git-22.007.66027-0ef82b3
+---
+> luci-mod-network - git-22.021.70337-433db83
+482c487
+< luci-mod-system - git-21.304.77266-fceabd7
+---
+> luci-mod-system - git-22.019.40203-e0ff3ff
+485c490
+< luci-proto-ipip - git-19.307.61018-284918b
+---
+> luci-proto-ipip - git-22.019.83340-37253b5
+504c509
+< mount-utils - 2.37-1
+---
+> mount-utils - 2.37-2
+535c540
+< partx-utils - 2.37-1
+---
+> partx-utils - 2.37-2
+592c597
+< prlimit - 2.37-1
+---
+> prlimit - 2.37-2
+600,602c605,607
+< python3 - 3.10.1-1
+< python3-asyncio - 3.10.1-1
+< python3-base - 3.10.1-1
+---
+> python3 - 3.10.2-1
+> python3-asyncio - 3.10.2-1
+> python3-base - 3.10.2-1
+605,606c610,611
+< python3-cgi - 3.10.1-1
+< python3-cgitb - 3.10.1-1
+---
+> python3-cgi - 3.10.2-1
+> python3-cgitb - 3.10.2-1
+608,613c613,618
+< python3-codecs - 3.10.1-1
+< python3-ctypes - 3.10.1-1
+< python3-dbm - 3.10.1-1
+< python3-decimal - 3.10.1-1
+< python3-distutils - 3.10.1-1
+< python3-email - 3.10.1-1
+---
+> python3-codecs - 3.10.2-1
+> python3-ctypes - 3.10.2-1
+> python3-dbm - 3.10.2-1
+> python3-decimal - 3.10.2-1
+> python3-distutils - 3.10.2-1
+> python3-email - 3.10.2-1
+615,619c620,624
+< python3-light - 3.10.1-1
+< python3-logging - 3.10.1-1
+< python3-lzma - 3.10.1-1
+< python3-multiprocessing - 3.10.1-1
+< python3-ncurses - 3.10.1-1
+---
+> python3-light - 3.10.2-1
+> python3-logging - 3.10.2-1
+> python3-lzma - 3.10.2-1
+> python3-multiprocessing - 3.10.2-1
+> python3-ncurses - 3.10.2-1
+621c626
+< python3-openssl - 3.10.1-1
+---
+> python3-openssl - 3.10.2-1
+627c632
+< python3-pydoc - 3.10.1-1
+---
+> python3-pydoc - 3.10.2-1
+629c634
+< python3-readline - 3.10.1-1
+---
+> python3-readline - 3.10.2-1
+633,635c638,640
+< python3-sqlite3 - 3.10.1-1
+< python3-unittest - 3.10.1-1
+< python3-urllib - 3.10.1-1
+---
+> python3-sqlite3 - 3.10.2-1
+> python3-unittest - 3.10.2-1
+> python3-urllib - 3.10.2-1
+637,638c642,643
+< python3-uuid - 3.10.1-1
+< python3-xml - 3.10.1-1
+---
+> python3-uuid - 3.10.2-1
+> python3-xml - 3.10.2-1
+664c669
+< sfdisk - 2.37-1
+---
+> sfdisk - 2.37-2
+686a692,695
+> ucode - 2021-10-25-a7976c28-1
+> ucode-mod-fs - 2021-10-25-a7976c28-1
+> ucode-mod-ubus - 2021-10-25-a7976c28-1
+> ucode-mod-uci - 2021-10-25-a7976c28-1
+697c706
+< uuidgen - 2.37-1
+---
+> uuidgen - 2.37-2

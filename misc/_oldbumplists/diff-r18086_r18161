@@ -1,0 +1,129 @@
+15c15
+< base-files - 1459-r18086-cb18b62206
+---
+> base-files - 1459-r18161-00ce13490a
+20,27c20,27
+< bind-check - 9.17.19-5
+< bind-dig - 9.17.19-5
+< bind-dnssec - 9.17.19-5
+< bind-host - 9.17.19-5
+< bind-libs - 9.17.19-5
+< bind-nslookup - 9.17.19-5
+< bind-rndc - 9.17.19-5
+< bind-tools - 9.17.19-5
+---
+> bind-check - 9.17.19-6
+> bind-dig - 9.17.19-6
+> bind-dnssec - 9.17.19-6
+> bind-host - 9.17.19-6
+> bind-libs - 9.17.19-6
+> bind-nslookup - 9.17.19-6
+> bind-rndc - 9.17.19-6
+> bind-tools - 9.17.19-6
+29c29
+< block-mount - 2021-10-01-d3907445-1
+---
+> block-mount - 2021-11-16-77c02889-1
+60c60
+< conntrack - 1.4.6-2
+---
+> conntrack - 1.4.6-3
+72,77c72,77
+< ddns-scripts - 2.8.2-15
+< ddns-scripts-cloudflare - 2.8.2-15
+< ddns-scripts-freedns - 2.8.2-15
+< ddns-scripts-godaddy - 2.8.2-15
+< ddns-scripts-noip - 2.8.2-15
+< ddns-scripts-services - 2.8.2-15
+---
+> ddns-scripts - 2.8.2-16
+> ddns-scripts-cloudflare - 2.8.2-16
+> ddns-scripts-freedns - 2.8.2-16
+> ddns-scripts-godaddy - 2.8.2-16
+> ddns-scripts-noip - 2.8.2-16
+> ddns-scripts-services - 2.8.2-16
+79c79
+< debootstrap - 1.0.124-1
+---
+> debootstrap - 1.0.126-1
+91c91
+< ethtool - 5.14-1
+---
+> ethtool - 5.15-1
+98c98
+< fstools - 2021-10-01-d3907445-1
+---
+> fstools - 2021-11-16-77c02889-1
+108,109c108,109
+< hostapd-common - 2021-05-22-b102f19b-46
+< hostapd-utils - 2021-05-22-b102f19b-46
+---
+> hostapd-common - 2021-05-22-b102f19b-48
+> hostapd-utils - 2021-05-22-b102f19b-48
+139c139
+< jshn - 2021-11-04-c86a894e-2
+---
+> jshn - 2021-11-20-cce5e351-1
+141,324c141,324
+< kernel - 5.10.79-1-067a9e5f639c8654d86d3360c0326054
+---
+> kernel - 5.10.80-1-c607de81a52d4ba7e116a2343b96ea4f
+329c329
+< libblobmsg-json20211104 - 2021-11-04-c86a894e-2
+---
+> libblobmsg-json20211120 - 2021-11-20-cce5e351-1
+340c340
+< libevdev - 1.11.0-2
+---
+> libevdev - 1.12.0-1
+362c362
+< libjson-script20211104 - 2021-11-04-c86a894e-2
+---
+> libjson-script20211120 - 2021-11-20-cce5e351-1
+391a392
+> libparted - 3.4-2
+394c395
+< libpcre - 8.45-1
+---
+> libpcre - 8.45-2
+412c413
+< libubox20211104 - 2021-11-04-c86a894e-2
+---
+> libubox20211120 - 2021-11-20-cce5e351-1
+460c461
+< luci-app-wireguard - git-21.306.55583-eff38ed
+---
+> luci-app-wireguard - git-21.322.66896-8ae208d
+463c464
+< luci-base - git-21.315.43250-a812b26
+---
+> luci-base - git-21.322.38385-6507b1f
+482,483c483,484
+< luci-proto-wireguard - git-21.281.66433-44445a8
+< luci-theme-bootstrap - git-21.312.32316-f16a2f3
+---
+> luci-proto-wireguard - git-21.321.56300-aaa2b3d
+> luci-theme-bootstrap - git-21.322.37656-7f26e86
+504c505
+< nftables-nojson - 1.0.0-1
+---
+> nftables-nojson - 1.0.0-2
+525c526
+< parted - 3.4-1
+---
+> parted - 3.4-2
+571,580c572,581
+---
+631c632
+< qosify - 2021-11-12-bfc2cafe
+---
+> qosify - 2021-11-21-2743e587
+697c698,699
+< wpad-openssl - 2021-05-22-b102f19b-46
+---
+> wpa-cli - 2021-05-22-b102f19b-48
+> wpad-openssl - 2021-05-22-b102f19b-48
+703c705
+< zerotier - 1.8.1-1
+---
+> zerotier - 1.8.2-1

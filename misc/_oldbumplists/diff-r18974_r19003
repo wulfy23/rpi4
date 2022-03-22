@@ -1,0 +1,57 @@
+
+
+
+
+
+
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.r18974 manifest.r19003 | grep -v kmod
+15c15
+< base-files - 1468-r18974-8144f9c665
+---
+> base-files - 1468-r19003-43276b60c6
+61,66c61,66
+< coreutils - 9.0-1
+< coreutils-chroot - 9.0-1
+< coreutils-od - 9.0-1
+< coreutils-sha1sum - 9.0-1
+< coreutils-sleep - 9.0-1
+< coreutils-sort - 9.0-1
+---
+> coreutils - 9.0-2
+> coreutils-chroot - 9.0-2
+> coreutils-od - 9.0-2
+> coreutils-sha1sum - 9.0-2
+> coreutils-sleep - 9.0-2
+> coreutils-sort - 9.0-2
+144c144
+< kernel - 5.10.100-1-bf2f094c5f39733d98bc84d278657ede
+---
+> kernel - 5.10.100-1-5f4a49a46ce2cbc20d3975896362601f
+254a255
+357c358
+< libexpat - 2.4.3-1
+---
+> libexpat - 2.4.6-1
+480c481
+< luci-base - git-22.052.50356-5663fd5
+---
+> luci-base - git-22.058.70382-d29400e
+500c501
+< luci-theme-bootstrap - git-22.052.81736-edbde44
+---
+> luci-theme-bootstrap - git-22.055.81918-06b3517
+602a604,605
+> procd-seccomp - 2022-02-19-ad652490-1
+> procd-ujail - 2022-02-19-ad652490-1
+703c706
+< usb-modeswitch - 2017-12-19-f40f84c2-2
+---
+> usb-modeswitch - 2022-02-24-3c8595a4-1
+
+
+
+
+
+
+
+

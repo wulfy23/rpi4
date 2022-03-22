@@ -1,0 +1,127 @@
+15,16c15,16
+< base-files - 1463-r18531-0f50d3daff
+< bash - 5.1.8-1
+---
+> base-files - 1463-r18568-7f7705923a
+> bash - 5.1.16-1
+67c67
+< curl - 7.80.0-1
+---
+> curl - 7.81.0-1
+72,77c72,77
+< ddns-scripts - 2.8.2-20
+< ddns-scripts-cloudflare - 2.8.2-20
+< ddns-scripts-freedns - 2.8.2-20
+< ddns-scripts-godaddy - 2.8.2-20
+< ddns-scripts-noip - 2.8.2-20
+< ddns-scripts-services - 2.8.2-20
+---
+> ddns-scripts - 2.8.2-21
+> ddns-scripts-cloudflare - 2.8.2-21
+> ddns-scripts-freedns - 2.8.2-21
+> ddns-scripts-godaddy - 2.8.2-21
+> ddns-scripts-noip - 2.8.2-21
+> ddns-scripts-services - 2.8.2-21
+96c96
+< firewall - 2021-08-14-40e5f6a2-2
+---
+> firewall - 2022-01-10-0f16ea5f-2
+108,109c108,109
+< hostapd-common - 2021-05-22-b102f19b-65
+< hostapd-utils - 2021-05-22-b102f19b-65
+---
+> hostapd-common - 2021-05-22-b102f19b-66
+> hostapd-utils - 2021-05-22-b102f19b-66
+118,121c118,120
+< ip-tiny - 5.15.0-1
+< ip6tables - 1.8.7-1
+< ip6tables-extra - 1.8.7-1
+< ip6tables-mod-nat - 1.8.7-1
+---
+> ip6tables - 1.8.7-2
+> ip6tables-extra - 1.8.7-2
+> ip6tables-mod-nat - 1.8.7-2
+125,127c124,126
+< iptables - 1.8.7-1
+< iptables-mod-conntrack-extra - 1.8.7-1
+< iptables-mod-extra - 1.8.7-1
+---
+> iptables - 1.8.7-2
+> iptables-mod-conntrack-extra - 1.8.7-2
+> iptables-mod-extra - 1.8.7-2
+129,130c128,129
+< iptables-mod-hashlimit - 1.8.7-1
+< iptables-mod-ipopt - 1.8.7-1
+---
+> iptables-mod-hashlimit - 1.8.7-2
+> iptables-mod-ipopt - 1.8.7-2
+132c131,132
+< iptables-mod-tee - 1.8.7-1
+---
+> iptables-mod-tee - 1.8.7-2
+> iptables-nft - 1.8.7-2
+134c134
+< iputils-arping - 20210202-1
+---
+> iputils-arping - 20211215-1
+343c343
+< libcurl4 - 7.80.0-1
+---
+> libcurl4 - 7.81.0-1
+362,363c362,363
+< libip4tc2 - 1.8.7-1
+< libip6tc2 - 1.8.7-1
+---
+> libip4tc2 - 1.8.7-2
+> libip6tc2 - 1.8.7-2
+435c435,436
+< libxtables12 - 1.8.7-1
+---
+> libxtables-nft12 - 1.8.7-2
+> libxtables12 - 1.8.7-2
+494c495
+< lynx - 2.8.9rel.1-1
+---
+> lynx - 2.8.9rel.1-2
+500c501
+< modemmanager - 1.18.2-6
+---
+> modemmanager - 1.18.2-7
+509c510
+< netifd - 2021-12-02-5ca5e0b4-1
+---
+> netifd - 2022-01-14-3043206e-1
+518,522c519,523
+< nut - 2.7.4-23
+< nut-common - 2.7.4-23
+< nut-driver-usbhid-ups - 2.7.4-23
+< nut-server - 2.7.4-23
+< nut-upsc - 2.7.4-23
+---
+> nut - 2.7.4-26
+> nut-common - 2.7.4-26
+> nut-driver-usbhid-ups - 2.7.4-26
+> nut-server - 2.7.4-26
+> nut-upsc - 2.7.4-26
+532c533
+< opkg - 2021-06-13-1bf042dd-3
+---
+> opkg - 2022-01-09-2edcfad1-1
+592,594c593,595
+< procd - 2021-12-20-129d050b-1
+< procd-seccomp - 2021-12-20-129d050b-1
+< procd-ujail - 2021-12-20-129d050b-1
+---
+> procd - 2022-01-11-ac2b8b36-1
+> procd-seccomp - 2022-01-11-ac2b8b36-1
+> procd-ujail - 2022-01-11-ac2b8b36-1
+629c630
+< python3-pynacl - 1.4.0-6
+---
+> python3-pynacl - 1.5.0-1
+708,709c709,710
+< wpa-cli - 2021-05-22-b102f19b-65
+< wpad-openssl - 2021-05-22-b102f19b-65
+---
+> wpa-cli - 2021-05-22-b102f19b-66
+> wpad-openssl - 2021-05-22-b102f19b-66

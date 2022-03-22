@@ -1,0 +1,86 @@
+
+
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.21.02.1-1 manifest.21.02.1-2 | grep -v php
+6a7
+> alsa-lib - 1.2.4-1
+20,27c21,28
+< bind-check - 9.17.13-1
+< bind-dig - 9.17.13-1
+< bind-dnssec - 9.17.13-1
+< bind-host - 9.17.13-1
+< bind-libs - 9.17.13-1
+< bind-nslookup - 9.17.13-1
+< bind-rndc - 9.17.13-1
+< bind-tools - 9.17.13-1
+---
+> bind-check - 9.17.19-1
+> bind-dig - 9.17.19-1
+> bind-dnssec - 9.17.19-1
+> bind-host - 9.17.19-1
+> bind-libs - 9.17.19-1
+> bind-nslookup - 9.17.19-1
+> bind-rndc - 9.17.19-1
+> bind-tools - 9.17.19-1
+94a96,97
+> fdk-aac - 2.0.1-4
+> ffmpeg - 4.3.1-1
+319a323
+> lame-lib - 3.100-1
+342a347
+> libffmpeg-full - 4.3.1-1
+370c375
+< libmosquitto-ssl - 2.0.11-1
+---
+> libmosquitto-ssl - 2.0.13-1
+387c392,393
+< libpcap1 - 1.9.1-3
+---
+> libopus - 1.3.1-3
+> libpcap1 - 1.9.1-3.1
+436c442
+< luci-app-firewall - git-21.295.66767-8eceb63
+---
+> luci-app-firewall - git-21.312.70727-3eac573
+443c449
+< luci-app-opkg - git-21.079.58598-6639e31
+---
+> luci-app-opkg - git-21.312.69848-4745991
+447c453
+< luci-app-statistics - git-21.295.81255-92e21ba
+---
+> luci-app-statistics - git-21.309.66708-433816e
+456c462
+< luci-base - git-21.295.67054-13df80d
+---
+> luci-base - git-21.314.39479-e1ccb66
+466c472
+< luci-mod-system - git-21.295.66903-8acd0d7
+---
+> luci-mod-system - git-21.305.74567-388dae9
+476c482
+< luci-theme-bootstrap - git-21.298.63606-26047fb
+---
+> luci-theme-bootstrap - git-21.312.32337-6df9ae0
+486,487c492,493
+< mosquitto-client-ssl - 2.0.11-1
+< mosquitto-ssl - 2.0.11-1
+---
+> mosquitto-client-ssl - 2.0.13-1
+> mosquitto-ssl - 2.0.13-1
+489c495
+< msmtp - 1.8.15-1
+---
+> msmtp - 1.8.17-1
+493c499
+< nano - 5.9-1
+---
+> nano - 5.9-3
+563,572c569,578
+---
+688c694
+< wireless-regdb - 2021.04.21-1
+---
+> wireless-regdb - 2021.08.28-1
+
+
+

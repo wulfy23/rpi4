@@ -37,30 +37,23 @@ a variable configured in /root/wrt.ini (or luci > system > startup > custom star
 
 ```
 UPGRADEsFLAVOUR="stable"       #what I advise usually master after a while of testing
-#UPGRADEsFLAVOUR="release"     #currently 21.02.0
+#UPGRADEsFLAVOUR="release"     #currently 21.02
 #UPGRADEsFLAVOUR="current"     #master head/latest, small chances of bugs
                                #or no major changes/improvements to warrant
                                #telling everyone to update
                                #NOTE: at the moment testing = current
 #UPGRADEsFLAVOUR="testing"     #master head/latest + stability is of known questionality
+                               #testing is seldom used or available
 ```
 
 The default at the current time is 'stable'... If you start with 21.02.0 factory...
 you will probably want to change the above variable to 'release'
+(edit: if you start with 21.02 change to 'release' is now automated)
 
-
-Now that 21.02.0 is available most 70% people should really be changing stable to release
+Now that 21.02 is available, approx. 70% of people should really be changing stable to release
 
 
 if you choose to run current see bottom of page for specifics re: bug/availability etc.
-
-
-
-
-
-
-
-
 
 
 
@@ -95,7 +88,7 @@ These are semi-secured(as above) although they are still under test
 
 For the uber security concious there are two ways to remove these
 note: these need more testing(wip) if they do not work for you
-please PM me on the forum
+please <s>PM me on the forum</s> create github-issue...
 
 1. Comment out the line below or adjust it to your liking...
 ```
@@ -195,14 +188,20 @@ ENABLEDSERVICES="sqm irqbalance https-dns-proxy" #[fboot/upgrade] enable+start
 
 ## unknown or new options
 
+# firsboot pre-populate custom ini
+
 There is a sample file which can be placed on the first partition of a factory install (needs testing)
 
 wrt.ini sample [wulfy23/rpi4/utilities/wrt.ini](https://github.com/wulfy23/rpi4/tree/master/utilities/wrt.ini)
 
+# rarely used or wip ini options
+
 You can checkout the file `/etc/custom/wrt.ini.undocumented` for some extra options that are
 either wip or not really 'mainstream'...
 
-If you'd like an option for something... just ask on the forum... fair chance others may want it too!
+# need an option for something?
+
+If you'd like an option for something... just ask on <s>the forum</s> a github-issue... fair chance others may want it too!
 Can't guarentee anything, but i'll do what is feasable pending the need / complexities...
 
 
@@ -217,9 +216,10 @@ Over time more packages were added so 'variants' were made possible
 These are NOT RELATED to FLAVOUR at the moment... but are variations on how many packages are bundled with each build...
 
 ```
-current: 'extra(full)' has more packages than std (semi-discontinued due to low demand)
+'extra/fullest' has more packages than std 
 
-intermittent: 'std(halffull)' includes general-kmods[device-support], packages that are used for core function [disk,internet,scripting], and packages i'd guess more than 3-5 people use...
+'std/halffull' includes general-kmods[device-support], packages that are used for core function [disk,internet,scripting], and packages i'd guess more than 3-5 people use...
+(semi-discontinued due to low demand)
 ```
 
 As most people have been comfortable/happy with the fullest='extra' variant... Other variants are not generated at this time... but there is scope for a 'minimal' or perhaps a 'mega' pending demand... (3-5 regular build users needing such commonalities)
@@ -227,9 +227,6 @@ As most people have been comfortable/happy with the fullest='extra' variant... O
 ## ib-statix
 
 there is also an alternate solution, via a downloaded (custom) imagebuilder, which offers more flexibility although is less appealing to all users... availability of this is also dependant on 3-5 people regularly needing it... and clearly explaining why... (just because i'd like to know)
-
-
-
 
 
 

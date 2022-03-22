@@ -10,12 +10,18 @@
               (but I am happy to make one for you if you wish)
 
 
+
+
+       ############################## openssl>1.1.1n CVE-2022-0778
+
+
+
        ############################## kernel 5.10 (master) prior to 5.10.103 (r19075ish) has dirtypipe cve
                                       priv-esc vuln (requires user / application access)
                                       (build r19075 has 5.10.103)
 
 
-       r19075/5.7.2~+
+       r19075/5.7.5-2~+
        ############################## nft-qos rate no longer displays
                                       https://github.com/openwrt/luci/issues/5713
 
@@ -68,6 +74,9 @@
                          and/or odd issue with missing file?
                          use busybox reboot -f and wait for newer builds or
                          more diagnostic details
+
+                         possible lead re monitor connection / fw / mailbox / et al
+                         https://github.com/raspberrypi/firmware/issues/1559
 
 
        ############################### r18913

@@ -1,0 +1,29 @@
+
++zerotier
+
+[ /usbstick 53°]# rpi4-official-opkg.sh list-upgradable
+
+dnsmasq-full - 2.85-7 - 2.86-2
+nft-qos - 1.0.6-2 - 1.0.6-3
+
+travelmate - 2.0.7-1 - 2.0.7-2
+
+procd - 2021-08-31-773e8da4-2 - 2021-09-15-1eb4371e-1
+
+curl - 7.78.0-1 - 7.79.0-1
+libcurl4 - 7.78.0-1 - 7.79.0-1
+
+php7-mod-curl - 7.4.23-1 - 7.4.23-2
+php7-cgi - 7.4.23-1 - 7.4.23-2
+php7-mod-sockets - 7.4.23-1 - 7.4.23-2
+php7-mod-sysvmsg - 7.4.23-1 - 7.4.23-2
+php7-cli - 7.4.23-1 - 7.4.23-2
+php7-mod-fileinfo - 7.4.23-1 - 7.4.23-2
+php7-mod-json - 7.4.23-1 - 7.4.23-2
+php7-mod-session - 7.4.23-1 - 7.4.23-2
+php7-mod-iconv - 7.4.23-1 - 7.4.23-2
+php7 - 7.4.23-1 - 7.4.23-2
+
+
+
+

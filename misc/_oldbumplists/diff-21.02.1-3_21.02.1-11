@@ -1,0 +1,45 @@
+
+
+
+
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.21.02.1-3 manifest.21.02.1-11  | grep -v php
+5c5
+< adblock - 4.1.3-3
+---
+> adblock - 4.1.3-4
+108,109c108,109
+< hostapd-common - 2020-06-08-5a8b3662-37
+< hostapd-utils - 2020-06-08-5a8b3662-37
+---
+> hostapd-common - 2020-06-08-5a8b3662-38
+> hostapd-utils - 2020-06-08-5a8b3662-38
+267a268
+> kmod-sdhci - 5.4.154-1
+436c437
+< luci-app-ddns - git-21.018.50423-4d5facb
+---
+> luci-app-ddns - git-21.349.33342-b5a40b3
+458c459
+< luci-base - git-21.340.48972-61cc3b1
+---
+> luci-base - git-21.357.58218-b3cd473
+495c496
+< nano - 5.9-3
+---
+> nano - 6.0-1
+566,575c567,576
+---
+693,694c694,695
+< wpa-cli - 2020-06-08-5a8b3662-37
+< wpad-openssl - 2020-06-08-5a8b3662-37
+---
+> wpa-cli - 2020-06-08-5a8b3662-38
+> wpad-openssl - 2020-06-08-5a8b3662-38
+
+
+
+
+
+
+
+

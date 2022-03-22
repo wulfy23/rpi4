@@ -1,0 +1,251 @@
+
+
+
+
+
+
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff rpi-4_snapshot_3.5.75-7_r17674_extra/*mani* rpi-4_snapshot_3.5.99-1_r17795_default/*mani* | grep -v kmod
+3,4c3,4
+< acme - 2.9.0-5
+< acme-dnsapi - 2.9.0-5
+---
+> acme - 3.0.1-1
+> acme-dnsapi - 3.0.1-1
+11c11
+< at - 3.2.1-1
+---
+> at - 3.2.2-1
+15c15
+< base-files - 1453-r17674-0d1ebf0d6d
+---
+> base-files - 1453-r17795-b519997ab9
+32c32
+< busybox - 1.34.0-1
+---
+> busybox - 1.34.1-1
+72,78c72,78
+< ddns-scripts - 2.8.2-14
+< ddns-scripts-cloudflare - 2.8.2-14
+< ddns-scripts-dnspod - 2.8.2-14
+< ddns-scripts-freedns - 2.8.2-14
+< ddns-scripts-godaddy - 2.8.2-14
+< ddns-scripts-noip - 2.8.2-14
+< ddns-scripts-services - 2.8.2-14
+---
+> ddns-scripts - 2.8.2-15
+> ddns-scripts-cloudflare - 2.8.2-15
+> ddns-scripts-dnspod - 2.8.2-15
+> ddns-scripts-freedns - 2.8.2-15
+> ddns-scripts-godaddy - 2.8.2-15
+> ddns-scripts-noip - 2.8.2-15
+> ddns-scripts-services - 2.8.2-15
+80c80
+< debootstrap - 1.0.123-1
+---
+> debootstrap - 1.0.124-1
+83c83
+< dnsmasq-full - 2.86-2
+---
+> dnsmasq-full - 2.86-3
+109,111c109,111
+< hostapd-common - 2021-05-22-b102f19b-37
+< hostapd-utils - 2021-05-22-b102f19b-37
+< htop - 3.0.5-2
+---
+> hostapd-common - 2021-05-22-b102f19b-40
+> hostapd-utils - 2021-05-22-b102f19b-40
+> htop - 3.1.0-2
+113c113
+< https-dns-proxy - 2021-07-29-2
+---
+> https-dns-proxy - 2021-09-27-1
+137c137
+< iw - 5.9-8fab0c9e-3
+---
+> iw - 5.9-8fab0c9e-4
+142,324c142,324
+< kernel - 5.10.70-1-94f57780de446bfe1d8b8cbd1bf02bd2
+---
+> kernel - 5.10.75-1-067a9e5f639c8654d86d3360c0326054
+342c342
+< libexpat - 2.4.1-2
+---
+> libexpat - 2.4.1-3
+377c377
+< libncurses6 - 6.2-2
+---
+> libncurses6 - 6.2-3
+383c383
+< libnetsnmp - 5.9-1
+---
+> libnetsnmp - 5.9.1-2
+403c403
+< librrd1 - 1.0.50-4
+---
+> librrd1 - 1.0.50-5
+405a406
+> libsodium - 1.0.18-4
+417c418
+< libudev-zero - 0.5.2-1
+---
+> libudev-zero - 1.0.0-1
+424c425
+< libwolfssl4.8.1.ba20a816 - 4.8.1-stable-1
+---
+> libwolfssl4.8.1.ba20a816 - 4.8.1-stable-5
+435,436c436,437
+< luci-app-adblock - git-21.191.29791-18d1101
+< luci-app-banip - git-21.164.21720-770548e
+---
+> luci-app-adblock - git-21.282.00731-0c4dfc9
+> luci-app-banip - git-21.282.00731-e8194d9
+445c446
+< luci-app-mwan3 - git-21.229.23234-c700cbc
+---
+> luci-app-mwan3 - git-21.281.64389-9901902
+451c452
+< luci-app-snmpd - git-20.108.38431-8f34e10
+---
+> luci-app-snmpd - git-21.281.65321-d4767c2
+453c454
+< luci-app-statistics - git-21.271.72155-12b13fe
+---
+> luci-app-statistics - git-21.278.67350-2c27f5c
+462c463
+< luci-base - git-21.226.86205-376af36
+---
+> luci-base - git-21.284.67084-e4d24f0
+470c471
+< luci-mod-network - git-21.274.03419-8659969
+---
+> luci-mod-network - git-21.292.76423-f4f64b9
+472c473
+< luci-mod-system - git-21.271.74796-7c943a1
+---
+> luci-mod-system - git-21.292.76186-07569c5
+481,484c482,485
+< luci-proto-wireguard - git-21.274.54393-fc8a0b4
+< luci-theme-bootstrap - git-21.217.49862-be028dc
+< luci-theme-material - git-21.247.60996-a9ff8d3
+< luci-theme-openwrt - git-21.217.49862-be028dc
+---
+> luci-proto-wireguard - git-21.281.66433-44445a8
+> luci-theme-bootstrap - git-21.283.63931-588e24f
+> luci-theme-material - git-21.279.05595-c8d9819
+> luci-theme-openwrt - git-21.285.74425-1c3b32d
+495c496
+< msmtp - 1.8.15-1
+---
+> msmtp - 1.8.17-1
+499,500c500,501
+< nano - 5.8-1
+< netifd - 2021-09-29-448ffc15-1
+---
+> nano - 5.9-1
+> netifd - 2021-10-13-7a048bd6-1
+503c504
+< nftables-nojson - 0.9.6-2
+---
+> nftables-nojson - 1.0.0-1
+521c522
+< openvpn-openssl - 2.5.3-3
+---
+> openvpn-openssl - 2.5.4-1
+584c585
+< procd - 2021-09-15-1eb4371e-1
+---
+> procd - 2021-10-17-59f76992-1
+594c595,596
+< python3-certifi - 2021.5.30-1
+---
+> python3-certifi - 2021.10.8-1
+> python3-cffi - 1.15.0-1
+604c606
+< python3-idna - 3.2-1
+---
+> python3-idna - 3.3-1
+614a617,618
+> python3-ply - 3.11-2
+> python3-pycparser - 2.20-5
+615a620
+> python3-pynacl - 1.4.0-6
+618a624
+> python3-six - 1.16.0-1
+643c649
+< rrdtool1 - 1.0.50-4
+---
+> rrdtool1 - 1.0.50-5
+648,650c654,656
+< simple-adblock - 1.8.7-7
+< snmp-utils - 5.9-1
+< snmpd - 5.9-1
+---
+> simple-adblock - 1.8.8-1
+> snmp-utils - 5.9.1-2
+> snmpd - 5.9.1-2
+660c666
+< terminfo - 6.2-2
+---
+> terminfo - 6.2-3
+662c668
+< travelmate - 2.0.7-2
+---
+> travelmate - 2.0.7-3
+681,682c687,688
+< vim-fuller - 8.2-4
+< vpn-policy-routing - 0.3.5-2
+---
+> vim-fuller - 8.2-5
+> vpn-policy-routing - 0.3.4-8
+687c693
+< wireguard-tools - 1.0.20210424-1
+---
+> wireguard-tools - 1.0.20210424-2
+690,691c696,697
+< wpa-cli - 2021-05-22-b102f19b-37
+< wpad-openssl - 2021-05-22-b102f19b-37
+---
+> wpa-cli - 2021-05-22-b102f19b-40
+> wpad-openssl - 2021-05-22-b102f19b-40
+697c703
+< zerotier - 1.6.6-1
+---
+> zerotier - 1.6.6-2
+699,709c705,715
+< zoneinfo-africa - 2021b-1
+< zoneinfo-asia - 2021b-1
+< zoneinfo-atlantic - 2021b-1
+< zoneinfo-australia-nz - 2021b-1
+< zoneinfo-core - 2021b-1
+< zoneinfo-europe - 2021b-1
+< zoneinfo-india - 2021b-1
+< zoneinfo-northamerica - 2021b-1
+< zoneinfo-pacific - 2021b-1
+< zoneinfo-poles - 2021b-1
+< zoneinfo-southamerica - 2021b-1
+---
+> zoneinfo-africa - 2021d-1
+> zoneinfo-asia - 2021d-1
+> zoneinfo-atlantic - 2021d-1
+> zoneinfo-australia-nz - 2021d-1
+> zoneinfo-core - 2021d-1
+> zoneinfo-europe - 2021d-1
+> zoneinfo-india - 2021d-1
+> zoneinfo-northamerica - 2021d-1
+> zoneinfo-pacific - 2021d-1
+> zoneinfo-poles - 2021d-1
+> zoneinfo-southamerica - 2021d-1
+
+
+
+
+
+
+
+
+
+
+
+
+
+

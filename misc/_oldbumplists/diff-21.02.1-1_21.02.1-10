@@ -1,0 +1,216 @@
+
+
+
+
+
+
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.21.02.1-1 manifest.21.02.1-10 | grep -v python | grep -v php
+20,27c20,27
+
+
+< bind-check - 9.17.13-1
+< bind-dig - 9.17.13-1
+< bind-dnssec - 9.17.13-1
+< bind-host - 9.17.13-1
+< bind-libs - 9.17.13-1
+< bind-nslookup - 9.17.13-1
+< bind-rndc - 9.17.13-1
+< bind-tools - 9.17.13-1
+---
+> bind-check - 9.17.20-1
+> bind-dig - 9.17.20-1
+> bind-dnssec - 9.17.20-1
+> bind-host - 9.17.20-1
+> bind-libs - 9.17.20-1
+> bind-nslookup - 9.17.20-1
+> bind-rndc - 9.17.20-1
+> bind-tools - 9.17.20-1
+32c32
+
+
+
+< busybox - 1.33.1-6
+---
+> busybox - 1.33.2-1
+
+
+
+
+60c60
+< conntrack - 1.4.6-1
+---
+> conntrack - 1.4.6-3
+
+
+
+67c67
+< curl - 7.79.1-1
+---
+> curl - 7.80.0-1
+
+
+
+72,77c72,77
+< ddns-scripts - 2.8.2-11
+< ddns-scripts-cloudflare - 2.8.2-11
+< ddns-scripts-freedns - 2.8.2-11
+< ddns-scripts-godaddy - 2.8.2-11
+< ddns-scripts-noip - 2.8.2-11
+< ddns-scripts-services - 2.8.2-11
+---
+> ddns-scripts - 2.8.2-12
+> ddns-scripts-cloudflare - 2.8.2-12
+> ddns-scripts-freedns - 2.8.2-12
+> ddns-scripts-godaddy - 2.8.2-12
+> ddns-scripts-noip - 2.8.2-12
+> ddns-scripts-services - 2.8.2-12
+
+
+
+
+108,110c108,110
+< hostapd-common - 2020-06-08-5a8b3662-35
+< hostapd-utils - 2020-06-08-5a8b3662-35
+< htop - 3.0.5-2
+---
+> hostapd-common - 2020-06-08-5a8b3662-37
+> hostapd-utils - 2020-06-08-5a8b3662-37
+> htop - 3.1.2-1
+
+
+
+113c113
+< i2c-tools - 4.2-1
+---
+> i2c-tools - 4.3-1
+
+
+136c136
+< iw - 5.9-8fab0c9e-1
+---
+> iw - 5.9-8fab0c9e-3
+
+
+
+301a302
+> kmod-usb-net-sierrawireless - 5.4.154-1
+310a312
+> kmod-usb-serial-sierrawireless - 5.4.154-1
+331c333
+< libcurl4 - 7.79.1-1
+---
+> libcurl4 - 7.80.0-1
+336c338
+< libevdev - 1.10.1-1
+---
+> libevdev - 1.12.0-1
+348,350c350,352
+< libgnutls - 3.7.1-1
+< libgpg-error - 1.39-2
+< libi2c - 4.2-1
+---
+> libgnutls - 3.7.1-2
+> libgpg-error - 1.42-2
+> libi2c - 4.3-1
+370c372
+< libmosquitto-ssl - 2.0.11-1
+---
+> libmosquitto-ssl - 2.0.13-1
+387c389
+< libpcap1 - 1.9.1-3
+---
+> libpcap1 - 1.9.1-3.1
+393c395
+---
+413c415
+< libudev-zero - 0.4.5-2
+---
+> libudev-zero - 1.0.0-1
+434c436
+< luci-app-ddns - git-21.018.50423-4d5facb
+---
+> luci-app-ddns - git-21.349.33342-b5a40b3
+436c438
+< luci-app-firewall - git-21.295.66767-8eceb63
+---
+> luci-app-firewall - git-21.312.70727-3eac573
+443c445
+< luci-app-opkg - git-21.079.58598-6639e31
+---
+> luci-app-opkg - git-21.312.69848-4745991
+447c449
+< luci-app-statistics - git-21.295.81255-92e21ba
+---
+> luci-app-statistics - git-21.338.69888-2e5b2ab
+456c458
+< luci-base - git-21.295.67054-13df80d
+---
+> luci-base - git-21.340.48972-61cc3b1
+464c466
+< luci-mod-network - git-21.295.67048-4d3de0e
+---
+> luci-mod-network - git-21.335.80427-5091496
+466c468
+< luci-mod-system - git-21.295.66903-8acd0d7
+---
+> luci-mod-system - git-21.305.74567-388dae9
+476c478
+< luci-theme-bootstrap - git-21.298.63606-26047fb
+---
+> luci-theme-bootstrap - git-21.320.44446-0cee46b
+486,487c488,489
+< mosquitto-client-ssl - 2.0.11-1
+< mosquitto-ssl - 2.0.11-1
+---
+> mosquitto-client-ssl - 2.0.13-1
+> mosquitto-ssl - 2.0.13-1
+489c491
+< msmtp - 1.8.15-1
+---
+> msmtp - 1.8.19-1
+493,494c495,496
+< nano - 5.9-1
+< netifd - 2021-07-26-440eb064-1
+---
+> nano - 6.0-1
+> netifd - 2021-10-30-8f82742c-1
+517a520
+> parted - 3.4-1
+520c523
+< pciids - 0.350-1
+---
+> pciids - 0.354-1
+
+
+
+< usbids - 0.350-1
+---
+> usbids - 0.354-1
+688c691
+< wireless-regdb - 2021.04.21-1
+---
+> wireless-regdb - 2021.08.28-1
+690,691c693,694
+< wpa-cli - 2020-06-08-5a8b3662-35
+< wpad-openssl - 2020-06-08-5a8b3662-35
+---
+> wpa-cli - 2020-06-08-5a8b3662-37
+> wpad-openssl - 2020-06-08-5a8b3662-37
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

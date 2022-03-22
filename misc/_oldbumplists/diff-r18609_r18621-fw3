@@ -1,0 +1,9 @@
+
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.r18609 manifest.r18621-fw3
+594,595d593
+< procd-seccomp - 2022-01-11-ac2b8b36-1
+< procd-ujail - 2022-01-11-ac2b8b36-1
+
+
+
+

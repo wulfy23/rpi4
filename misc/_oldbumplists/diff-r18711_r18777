@@ -1,0 +1,174 @@
+6c6
+< agetty - 2.37.3-1
+---
+> agetty - 2.37.3-2
+15c15
+< base-files - 1463-r18711-4367d4f869
+---
+> base-files - 1464-r18777-1847382456
+20,28c20,28
+< bind-check - 9.18.0-1
+< bind-dig - 9.18.0-1
+< bind-dnssec - 9.18.0-1
+< bind-host - 9.18.0-1
+< bind-libs - 9.18.0-1
+< bind-nslookup - 9.18.0-1
+< bind-rndc - 9.18.0-1
+< bind-tools - 9.18.0-1
+< blkid - 2.37.3-1
+---
+> bind-check - 9.18.0-2
+> bind-dig - 9.18.0-2
+> bind-dnssec - 9.18.0-2
+> bind-host - 9.18.0-2
+> bind-libs - 9.18.0-2
+> bind-nslookup - 9.18.0-2
+> bind-rndc - 9.18.0-2
+> bind-tools - 9.18.0-2
+> blkid - 2.37.3-2
+30,31c30,31
+< blockdev - 2.37.3-1
+< brcmfmac-firmware-usb - 20211216-1
+---
+> blockdev - 2.37.3-2
+> brcmfmac-firmware-usb - 20211216-2
+36c36
+< cal - 2.37.3-1
+---
+> cal - 2.37.3-2
+71c71
+< dbus - 1.13.18-10
+---
+> dbus - 1.13.18-12
+81c81
+< dmesg - 2.37.3-1
+---
+> dmesg - 2.37.3-2
+94c94
+< fdisk - 2.37.3-1
+---
+> fdisk - 2.37.3-2
+108,109c108,109
+< hostapd-common - 2021-05-22-b102f19b-66
+< hostapd-utils - 2021-05-22-b102f19b-66
+---
+> hostapd-common - 2022-01-16-cff80b4f-2
+> hostapd-utils - 2022-01-16-cff80b4f-2
+112c112
+< https-dns-proxy - 2021-09-27-1
+---
+> https-dns-proxy - 2021-11-22-2
+144c144
+< kernel - 5.10.96-1-a2f581ac6c55f59ba4582b7b721298c0
+---
+> kernel - 5.10.96-1-d66b578a616745846fa80be95d9c4223
+256a257
+285a287
+341c343
+< libblkid1 - 2.37.3-1
+---
+> libblkid1 - 2.37.3-2
+350c352
+< libdbus - 1.13.18-10
+---
+> libdbus - 1.13.18-12
+358c360
+< libfdisk1 - 2.37.3-1
+---
+> libfdisk1 - 2.37.3-2
+388c390
+< libmount1 - 2.37.3-1
+---
+> libmount1 - 2.37.3-2
+419c421
+< libsmartcols1 - 2.37.3-1
+---
+> libsmartcols1 - 2.37.3-2
+436c438
+< libuuid1 - 2.37.3-1
+---
+> libuuid1 - 2.37.3-2
+444,445c446,447
+< losetup - 2.37.3-1
+< lsblk - 2.37.3-1
+---
+> losetup - 2.37.3-2
+> lsblk - 2.37.3-2
+451c453
+< luci-app-adblock - git-21.338.32773-845129a
+---
+> luci-app-adblock - git-22.038.79726-2ab828f
+487c489
+< luci-mod-status - git-22.007.04188-7eeea43
+---
+> luci-mod-status - git-22.038.44673-bf175fd
+510c512
+< mount-utils - 2.37.3-1
+---
+> mount-utils - 2.37.3-2
+512c514
+< mt7601u-firmware - 20211216-1
+---
+> mt7601u-firmware - 20211216-2
+517c519
+< netifd - 2022-01-22-ed718768-1
+---
+> netifd - 2022-02-04-fd4c9e17-1
+542c544
+< partx-utils - 2.37.3-1
+---
+> partx-utils - 2.37.3-2
+547c549
+< perl-cgi - 4.53+perl5.28-1
+---
+> perl-cgi - 4.54+perl5.28-1
+599c601
+< prlimit - 2.37.3-1
+---
+> prlimit - 2.37.3-2
+657,658c659,660
+< r8152-firmware - 20211216-1
+< r8169-firmware - 20211216-1
+---
+> r8152-firmware - 20211216-2
+> r8169-firmware - 20211216-2
+662,664c664,666
+< rpcd - 2021-11-04-d11ffe93-2
+< rpcd-mod-file - 2021-11-04-d11ffe93-2
+< rpcd-mod-iwinfo - 2021-11-04-d11ffe93-2
+---
+> rpcd - 2022-02-07-909f2a04-1
+> rpcd-mod-file - 2022-02-07-909f2a04-1
+> rpcd-mod-iwinfo - 2022-02-07-909f2a04-1
+671c673
+< sfdisk - 2.37.3-1
+---
+> sfdisk - 2.37.3-2
+678c680
+< sqm-scripts - 1.5.1-2
+---
+> sqm-scripts - 1.5.1-3
+694,695c696,697
+< uhttpd - 2021-03-21-15346de8-3
+< uhttpd-mod-ubus - 2021-03-21-15346de8-3
+---
+> uhttpd - 2022-02-07-2f8b1360-1
+> uhttpd-mod-ubus - 2022-02-07-2f8b1360-1
+704c706
+< uuidgen - 2.37.3-1
+---
+> uuidgen - 2.37.3-2
+711c713
+< wireguard-tools - 1.0.20210424-2
+---
+> wireguard-tools - 1.0.20210424-3
+714,715c716,717
+< wpa-cli - 2021-05-22-b102f19b-66
+< wpad-openssl - 2021-05-22-b102f19b-66
+---
+> wpa-cli - 2022-01-16-cff80b4f-2
+> wpad-openssl - 2022-01-16-cff80b4f-2
+717c719
+< xinetd - 2.3.15-12
+---
+> xinetd - 2.3.15-13

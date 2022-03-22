@@ -1,0 +1,134 @@
+6c6
+< agetty - 2.37-1
+---
+> agetty - 2.37-2
+15c15
+< base-files - 1463-r18609-266b5c83c3
+---
+> base-files - 1463-r18639-f5865452ac
+28c28
+< blkid - 2.37-1
+---
+> blkid - 2.37-2
+30c30
+< blockdev - 2.37-1
+---
+> blockdev - 2.37-2
+36c36
+< cal - 2.37-1
+---
+> cal - 2.37-2
+80,81c80,81
+< diffutils - 3.7-3
+< dmesg - 2.37-1
+---
+> diffutils - 3.8-1
+> dmesg - 2.37-2
+94c94
+< fdisk - 2.37-1
+---
+> fdisk - 2.37-2
+120a121
+> ip6tables-nft - 1.8.7-2
+122c123
+< ipip - 3
+---
+> ipip - 4
+253a255
+> kmod-nft-nat - 5.10.92-1
+254a257
+> kmod-nft-offload - 5.10.92-1
+335c338
+< libblkid1 - 2.37-1
+---
+> libblkid1 - 2.37-2
+349c352
+< libexpat - 2.4.1-4
+---
+> libexpat - 2.4.3-1
+352c355
+< libfdisk1 - 2.37-1
+---
+> libfdisk1 - 2.37-2
+382c385
+< libmount1 - 2.37-1
+---
+> libmount1 - 2.37-2
+385c388
+< libneon - 0.32.1-1
+---
+> libneon - 0.32.1-2
+406c409
+---
+413c416
+< libsmartcols1 - 2.37-1
+---
+> libsmartcols1 - 2.37-2
+430c433
+< libuuid1 - 2.37-1
+---
+> libuuid1 - 2.37-2
+438,439c441,442
+< losetup - 2.37-1
+< lsblk - 2.37-1
+---
+> losetup - 2.37-2
+> lsblk - 2.37-2
+472c475
+< luci-base - git-22.006.47037-48599d8
+---
+> luci-base - git-22.021.84530-613080f
+480c483
+< luci-mod-network - git-22.007.66027-0ef82b3
+---
+> luci-mod-network - git-22.023.36457-14f98df
+482c485
+< luci-mod-system - git-21.304.77266-fceabd7
+---
+> luci-mod-system - git-22.019.40203-e0ff3ff
+485c488
+< luci-proto-ipip - git-19.307.61018-284918b
+---
+> luci-proto-ipip - git-22.019.83340-37253b5
+504c507
+< mount-utils - 2.37-1
+---
+> mount-utils - 2.37-2
+511c514
+< netifd - 2022-01-14-3043206e-1
+---
+> netifd - 2022-01-22-ed718768-1
+536c539
+< partx-utils - 2.37-1
+---
+> partx-utils - 2.37-2
+593c596
+< prlimit - 2.37-1
+---
+> prlimit - 2.37-2
+601,603c604,606
+---
+606,607c609,610
+---
+609,614c612,617
+---
+616,620c619,623
+---
+622c625
+---
+628c631
+---
+630c633
+---
+634,636c637,639
+---
+638,639c641,642
+---
+665c668
+< sfdisk - 2.37-1
+---
+> sfdisk - 2.37-2
+698c701
+< uuidgen - 2.37-1
+---
+> uuidgen - 2.37-2
