@@ -11,8 +11,7 @@
                       orremove     uci -q set network.3g.hoplimit='0'; uci commit network; ifdown 3g; ifup 3g
                 -3) rpi-perftweaks.sh fixup sloppy errors thankyou synapse!!!
                     https://github.com/wulfy23/rpi4/issues/17
-
-                -)
+                -5) same issue as above... remove semi-forced backport for RCSHBASH no way to check disabled manually
                 -)
                 -)
                 -)
