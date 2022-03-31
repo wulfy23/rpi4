@@ -1,7 +1,5 @@
 #!/bin/sh
 
-set +x
-
 
 ecmd="echo "; i=$(basename $0); if [ -x /etc/custom/custfunc.sh ]; then . /etc/custom/custfunc.sh; ecmd="echm ${i} "; fi
 D="`date +%Y%m%d-%H%M`"
