@@ -1,6 +1,5 @@
 #!/bin/sh
 
-
 ecmd="echo "; i=$(basename $0); if [ -x /etc/custom/custfunc.sh ]; then . /etc/custom/custfunc.sh; ecmd="echm ${i} "; fi
 D="`date +%Y%m%d-%H%M`"
 
@@ -29,12 +28,18 @@ fi
 
 
 
+
+
+
+
+
 if [ "$1" = "disable" ]; then
 	
 
 	#sed -i '/v2raya/d' /etc/opkg/customfeeds.conf && $ecmd "disable-feed"
 	#rm /etc/opkg/keys/94cc2a834fb0aa03 2>/dev/null && $ecmd "disable-key"
 
+	V2RAYA_MSG= #NEEDED as NO-INI var
 
 
 	if grep -q 'v2raya' /etc/opkg/customfeeds.conf; then
@@ -43,8 +48,6 @@ if [ "$1" = "disable" ]; then
 	else
 		:
 	fi
-	#DOESNOTWORK sed -i '/v2raya/d' /etc/opkg/customfeeds.conf && V2RAYA_MSG="${V2RAYA_MSG} [disable-feed]"
-
 
 
 	rm /etc/opkg/keys/94cc2a834fb0aa03 2>/dev/null && V2RAYA_MSG="${V2RAYA_MSG} [disable-key]"
