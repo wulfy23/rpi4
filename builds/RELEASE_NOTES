@@ -145,3 +145,9 @@
 
 
 
+
+        firewall.getZoneColorStyle is not a function - https://github.com/openwrt/luci/issues/5728
+
+
+
+

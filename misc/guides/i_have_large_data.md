@@ -6,22 +6,6 @@
 -lxc?
 -samba4 with photos?
 
-
-
-
-
-NOTE: As of 20220216 in addition to the advice below changing ROOTFSEXPAND=1 to
-      ROOTFSEXPAND_DATAPART=1 will get you a persistent 'z' folder/drive
-
-      This unlocks a few persistence features the primary one being
-      `reboot_recovery` os snapshotting and quick restoration tool...
-
-
-
-
-
-
-
 OpenWrt is based on traditionally small amounts of flash memory ( 8M to 128M )... where only tiny backup files are/can-be stored...
 
 In this build... i've made several 'enhancements' to support
@@ -30,6 +14,47 @@ larger amounts of packages
 expansion of the rootfs
 but the underlying backup method is still traditional ( although with a stock image /boot is maybe 50M not 300M )
 
+
+## ROOTFSEXPAND=1
+
+This is the default INI option for os-disk 'build' operations. It expands partion2(rootfs) to
+fill your entire disk on upgrade.
+
+This is volatile per-upgrade and re-occurs each upgrade... so it can be useful to run some
+large temporary containers or cache/save some stuff... it's always temporary...
+
+Prior to DATAPART below being available... it was/is advised to use an additional usb3 stick
+or powered drive for persistent large data... I still recommend this as the most reliable and
+efficient method for handling large persistent data across in an upgrade friendly way...
+
+However... choosing to change ROOTFSEXPAND to the option below is now another means of doing
+this, without requiring additional drives (at the cost of a little more wear and tear on
+your primary os disk)
+
+
+## ROOTFSEXPAND_DATAPART
+
+NOTE: As of 20220216 in addition to the advice below changing ROOTFSEXPAND=1 to
+```
+      ROOTFSEXPAND_DATAPART=1 will get you a persistent 'z' folder/drive
+or
+      ROOTFSEXPAND_DATAPART="psave" will get you a persistent 'z' folder/drive
+                                    with some build persistent save data automatically
+                                    stored there... note: it's a little WIP, creation
+                                    is mostly ok, but undoing needs find tuning...
+```
+      This unlocks a few persistence features the primary one being
+      `reboot_recovery` os snapshotting and quick restoration tool...
+
+      <small>NOTE: in the RARE event you need to undo or clear this
+```
+datapart_destroy.sh
+```
+prior to upgrade and probable changing of ROOTFSEXPAND/ROOTFSEXPAND_DATAPART ini setting prior to upgrade is needed
+
+note: for dd backups sometimes I disable all ROOTFSEXPAND ini lines... then destroy if needed... then upgrade... then make the dd backup... not absolutely needed but worth mentioning if you are making alot of dd backups...
+
+      </small>
 
 
 ## You need an additional drive (usb3 stick or powered dock/ssd)

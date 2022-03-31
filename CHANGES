@@ -1,22 +1,29 @@
 
 
     ___________________________________________________   CHANGELOG
-                
 
-        5.7.9   -2)
-        r19171  -2)
-                -1?) rework wwan/ttl 65 logic @ uci/network/hoplimit
-                      i.e.1=65     uci -q set network.3g.hoplimit='1'; uci commit network; ifdown 3g; ifup 3g
+
+
+        5.??
+        r19???
+                -pkgs) add kmod-inet-diag @malikshi (+kmod-netlink-diag ss)
+                -opkgfeed) v2raya custom repo - depends on OPKGFEEDS_EXTRA_V2RAYA=1
+                           https://github.com/wulfy23/rpi4/issues/18
+                -)
+                -)
+                -)
+                -)
+                -)
+
+
+
+        5.7.9   -1?) rework wwan/ttl 65 logic @ uci/network/hoplimit
+        r19171        i.e.1=65     uci -q set network.3g.hoplimit='1'; uci commit network; ifdown 3g; ifup 3g
                       or           uci -q set network.3g.hoplimit='64'; uci commit network; ifdown 3g; ifup 3g
                       orremove     uci -q set network.3g.hoplimit='0'; uci commit network; ifdown 3g; ifup 3g
                 -3) rpi-perftweaks.sh fixup sloppy errors thankyou synapse!!!
                     https://github.com/wulfy23/rpi4/issues/17
                 -5) same issue as above... remove semi-forced backport for RCSHBASH no way to check disabled manually
-                -)
-                -)
-                -)
-                -)
-                -)
                 -)
 
 
