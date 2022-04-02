@@ -1,8 +1,5 @@
 
 
-
-
-
         ##################################### RELEASE NOTES
 
         note: there is no ujail(added back r19003 removed post due to simple-adblock issue)
@@ -11,6 +8,14 @@
 
 
 
+
+       ############################## 5.7.31-x_r19345
+            -uploaded as 'current' flavour, i've limited time to test and
+             unaware of any CVE so can't/shouldn't push this as 'stable'
+             until a few users test/weeks pass to find bugs or issues
+               -nft-qos 'rate' still not working
+               -busybumped
+               -5.10.109
 
        ############################## 5.7.9-x_r19171
             -openssl>1.1.1n CVE-2022-0778
