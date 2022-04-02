@@ -297,6 +297,14 @@ Bname="rpi4.64-snapshot-29250-5.7.9-3-r19171-ext4-sys.img.gz"
 
 
 
+Fsub="builds/rpi-4_snapshot_5.7.31-2_r19345_extra"
+Bname="rpi4.64-snapshot-29253-5.7.31-2-r19345-ext4-sys.img.gz"
+
+
+
+
+
+
 		#echo "no current build available"; exit 0
 	;; ############################################################## ENDCURRENT
 
