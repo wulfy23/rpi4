@@ -4,17 +4,16 @@
 
 
 
-        5.??
-        r19???
-                -pkgs) add kmod-inet-diag @malikshi (+kmod-netlink-diag ss)
-                -opkgfeed) v2raya custom repo - depends on OPKGFEEDS_EXTRA_V2RAYA=1
+        5.7.31  -pkgs) add kmod-inet-diag @malikshi (+kmod-netlink-diag ss)
+        r19345  -opkgfeed) v2raya custom repo - depends on OPKGFEEDS_EXTRA_V2RAYA=1
                            https://github.com/wulfy23/rpi4/issues/18
                 -)
                 -)
                 -)
                 -)
                 -)
-
+                -)
+                -)
 
 
         5.7.9   -1?) rework wwan/ttl 65 logic @ uci/network/hoplimit
@@ -24,8 +23,6 @@
                 -3) rpi-perftweaks.sh fixup sloppy errors thankyou synapse!!!
                     https://github.com/wulfy23/rpi4/issues/17
                 -5) same issue as above... remove semi-forced backport for RCSHBASH no way to check disabled manually
-                -)
-
 
         5.7.5   -2) fixes dirty pipe (master kernels <5.10.103 cve)
         r19075  -2) remove procd-ujail + seccomp again due to simple-adblock problem
@@ -85,13 +82,6 @@
                       helps with intermittent likely isp related wan6
                       failing to come up 20220216 possible related to ramfs
                       boot/use without nicmove
-                -)
-                -)
-                -)
-                -)
-
-
-
 
         5.0.77  -pkgs) add iptables-mod-tproxy (v2ray dep etc.)
         r18711  -pkgs) 7 kmod-tcp-bbr
