@@ -10,7 +10,7 @@
 
 
        ############################## 5.7.31-x_r19345
-            -uploaded as 'current' flavour, i've limited time to test and
+            -uploaded as 'current'(>stable@05042022) flavour, i've limited time to test and
              unaware of any CVE so can't/shouldn't push this as 'stable'
              until a few users test/weeks pass to find bugs or issues
                -nft-qos 'rate' still not working
