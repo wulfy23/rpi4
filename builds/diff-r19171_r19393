@@ -1,0 +1,236 @@
+
+
+
+
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.r19171 manifest.r19393 | grep -v python3 | grep -v kmod
+5c5
+< adblock - 4.1.3-6
+---
+> adblock - 4.1.3-7
+15c15
+< base-files - 1472-r19171-f811c33b19
+---
+> base-files - 1473-r19393-0392644083
+20,27c20,28
+< bind-check - 9.18.1-1
+< bind-dig - 9.18.1-1
+< bind-dnssec - 9.18.1-1
+< bind-host - 9.18.1-1
+< bind-libs - 9.18.1-1
+< bind-nslookup - 9.18.1-1
+< bind-rndc - 9.18.1-1
+< bind-tools - 9.18.1-1
+---
+> bind-check - 9.18.1-3
+> bind-ddns-confgen - 9.18.1-3
+> bind-dig - 9.18.1-3
+> bind-dnssec - 9.18.1-3
+> bind-host - 9.18.1-3
+> bind-libs - 9.18.1-3
+> bind-nslookup - 9.18.1-3
+> bind-rndc - 9.18.1-3
+> bind-tools - 9.18.1-3
+32c33
+< busybox - 1.35.0-1
+---
+> busybox - 1.35.0-3
+82c83
+< dnsmasq-full - 2.86-11
+---
+> dnsmasq-full - 2.86-12
+95c96
+< file - 5.41-1
+---
+> file - 5.41-2
+103,104c104,105
+< getrandom - 2021-08-03-205defb5-2
+< glib2 - 2.70.4-3
+---
+> getrandom - 2022-01-06-b87a4fdc-2
+> glib2 - 2.70.4-4
+107,108c108,109
+< hostapd-common - 2022-01-16-cff80b4f-5
+< hostapd-utils - 2022-01-16-cff80b4f-5
+---
+> hostapd-common - 2022-01-16-cff80b4f-8
+> hostapd-utils - 2022-01-16-cff80b4f-8
+127c128,129
+< iptables-mod-geoip - 3.13-4
+---
+> iptables-mod-filter - 1.8.7-6
+> iptables-mod-geoip - 3.19-2
+130c132
+< iptables-mod-quota2 - 3.13-4
+---
+> iptables-mod-quota2 - 3.19-2
+143,339c145,345
+< kernel - 5.10.107-1-5f4e035268bb68a22588c41072e9ee49
+< libatomic1 - 11.2.0-3
+---
+> kernel - 5.10.109-1-9495ff64bd2216fdba0531278d028525
+> libatomic1 - 11.2.0-4
+346c352
+< libc - 1.2.2-3
+---
+> libc - 1.2.2-4
+362c368
+< libgcc1 - 11.2.0-3
+---
+> libgcc1 - 11.2.0-4
+366c372
+< libgnutls - 3.7.1-2
+---
+> libgnutls - 3.7.4-1
+387,388c393,394
+< libmagic - 5.41-1
+< libmbim - 1.26.2-2
+---
+> libmagic - 5.41-2
+> libmbim - 1.26.2-3
+406,407c412,413
+< libopenssl-conf - 1.1.1n-1
+< libopenssl1.1 - 1.1.1n-1
+---
+> libopenssl-conf - 1.1.1n-2
+> libopenssl1.1 - 1.1.1n-2
+412c418
+< libpcre - 8.45-2
+---
+> libpcre - 8.45-3
+415,417c421,423
+< libpthread - 1.2.2-3
+< libqmi - 1.30.4-2
+---
+> libpthread - 1.2.2-4
+> libqmi - 1.30.4-4
+419c425
+< libqrtr-glib - 1.2.2-1
+---
+> libqrtr-glib - 1.2.2-2
+422c428
+< librt - 1.2.2-3
+---
+> librt - 1.2.2-4
+427c433
+< libstdcpp6 - 11.2.0-3
+---
+> libstdcpp6 - 11.2.0-4
+435c441
+< libudev-zero - 1.0.0-2
+---
+> libudev-zero - 1.0.1-1
+440c446
+< libuv1 - 1.41.1-1
+---
+> libuv1 - 1.44.1-1
+445c451
+< logd - 2021-08-03-205defb5-2
+---
+> logd - 2022-01-06-b87a4fdc-2
+458c464
+< luci-app-firewall - git-22.046.84457-2178444
+---
+> luci-app-firewall - git-22.089.67453-0eb3aeb
+480c486
+< luci-base - git-22.058.70382-d29400e
+---
+> luci-base - git-22.089.43958-7110635
+485c491
+< luci-lib-jsonc - git-19.317.29469-8da8f38
+---
+> luci-lib-jsonc - git-22.079.54693-45f411b
+488,489c494,495
+< luci-mod-network - git-22.049.73249-8890111
+< luci-mod-status - git-22.041.71554-e6f21f8
+---
+> luci-mod-network - git-22.087.28325-8a46648
+> luci-mod-status - git-22.087.28325-8a46648
+499,500c505,506
+< luci-proto-wireguard - git-21.336.35676-ff4f529
+< luci-theme-bootstrap - git-22.055.81918-06b3517
+---
+> luci-proto-wireguard - git-22.077.49664-b6925a1
+> luci-theme-bootstrap - git-22.084.38997-8e09f18
+505c511
+< mbim-utils - 1.26.2-2
+---
+> mbim-utils - 1.26.2-3
+509c515
+< modemmanager - 1.18.6-1
+---
+> modemmanager - 1.18.6-2
+517,518c523,524
+< mwan3 - 2.11.0-1
+< nano - 6.2-1
+---
+> mwan3 - 2.11.1-1
+> nano - 6.2-2
+534c540
+< odhcpd-ipv6only - 2021-08-11-01b4e604-1
+---
+> odhcpd-ipv6only - 2022-03-22-860ca900-1
+538c544
+< openssl-util - 1.1.1n-1
+---
+> openssl-util - 1.1.1n-2
+540,541c546,547
+< openvpn-openssl - 2.5.5-1
+< openwrt-keyring - 2021-02-20-49283916-2
+---
+> openvpn-openssl - 2.5.6-1
+> openwrt-keyring - 2022-03-25-62471e69-2
+609,611c615,617
+---
+614,615c620,621
+---
+617,622c623,628
+---
+624,628c630,634
+---
+630c636
+---
+636c642
+---
+638c644
+---
+642,644c648,650
+---
+646,649c652,655
+< qmi-utils - 1.30.4-2
+< qosify - 2022-03-06-f13b67c9-1
+---
+> qmi-utils - 1.30.4-4
+> qosify - 2022-04-08-ef82defa-1
+680a687
+> ss - 5.15.0-2
+683,684c690
+< tc-full - 5.15.0-2
+< tc-mod-iptables - 5.15.0-2
+---
+> tc-tiny - 5.15.0-2
+690c696
+< ubox - 2021-08-03-205defb5-2
+---
+> ubox - 2022-01-06-b87a4fdc-2
+702c708
+< uqmi - 2022-03-12-44dd0957-1
+---
+> uqmi - 2022-03-12-44dd0957-2
+718,719c724,725
+< wpa-cli - 2022-01-16-cff80b4f-5
+< wpad-openssl - 2022-01-16-cff80b4f-5
+---
+> wpa-cli - 2022-01-16-cff80b4f-8
+> wpad-openssl - 2022-01-16-cff80b4f-8
+728c734
+< zlib - 1.2.11-3
+---
+> zlib - 1.2.12-2
+
+
+
+
+
+
+
+

@@ -222,8 +222,13 @@ fi
 
 		release)
 
-Fsub="builds/devel/rpi-4_21.02.2_1.1.5-23_r16495_extra"
-Bname="rpi4.64-21.02.2-29226-1.1.5-23-r16495-ext4-sys.img.gz"
+#Fsub="builds/devel/rpi-4_21.02.2_1.1.5-23_r16495_extra"
+#Bname="rpi4.64-21.02.2-29226-1.1.5-23-r16495-ext4-sys.img.gz"
+
+Fsub="builds/rpi-4_21.02.3_1.3.6-2_r16554_extra"
+Bname="rpi4.64-21.02.3-29255-1.3.6-2-r16554-ext4-sys.img.gz"
+
+
 
 #		echo "no release build available"; exit 0
     ;; ############################################################## ENDRELEASE 

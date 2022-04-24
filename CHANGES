@@ -4,10 +4,8 @@
 
 
 
-        5.7.31  -pkgs) add kmod-inet-diag @malikshi (+kmod-netlink-diag ss)
-        r19345  -opkgfeed) v2raya custom repo - depends on OPKGFEEDS_EXTRA_V2RAYA=1
-                           https://github.com/wulfy23/rpi4/issues/18
-                -)
+        5.7.x   -pkgs) kmod rtc packages have finally been enabled for this target
+        r193xx     add a couple of initial ones by default (master only)
                 -)
                 -)
                 -)
@@ -15,6 +13,9 @@
                 -)
                 -)
 
+        5.7.31  -pkgs) add kmod-inet-diag @malikshi (+kmod-netlink-diag ss)
+        r19345  -opkgfeed) v2raya custom repo - depends on OPKGFEEDS_EXTRA_V2RAYA=1
+                           https://github.com/wulfy23/rpi4/issues/18
 
         5.7.9   -1?) rework wwan/ttl 65 logic @ uci/network/hoplimit
         r19171        i.e.1=65     uci -q set network.3g.hoplimit='1'; uci commit network; ifdown 3g; ifup 3g
