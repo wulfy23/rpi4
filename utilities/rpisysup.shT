@@ -310,6 +310,11 @@ Bname="rpi4.64-snapshot-29253-5.7.31-2-r19345-ext4-sys.img.gz"
 
 
 
+Fsub="builds/rpi-4_snapshot_5.7.37-2_r19512_extra"
+Bname="rpi4.64-snapshot-29256-5.7.37-2-r19512-ext4-sys.img.gz"
+
+
+
 
 
 
