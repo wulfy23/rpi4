@@ -1,0 +1,129 @@
+
+
+
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.r19512 manifest.r19602  | grep -v kmod
+
+
+15c15
+< base-files - 1485-r19512-fb4edcef71
+---
+> base-files - 1489-r19602-cb1dc49c18
+30c30
+< block-mount - 2021-11-16-77c02889-1
+---
+> block-mount - 2022-05-03-9e11b372-1
+83c83
+< dnsmasq-full - 2.86-12
+---
+> dnsmasq-full - 2.86-14
+97c97
+< firewall - 2022-02-17-4cd7d4f3-2
+---
+> firewall - 2022-02-17-4cd7d4f3-3
+99c99
+< fstools - 2021-11-16-77c02889-1
+---
+> fstools - 2022-05-03-9e11b372-1
+110c110
+< htop - 3.1.2-1
+---
+> htop - 3.2.0-1
+140c140
+< iwinfo - 2022-03-01-90bfbb9a-1
+---
+> iwinfo - 2022-04-26-dc6847eb-1
+145,346c145,346
+< kernel - 5.10.111-1-24e1e20678b21b9fad6c33c171ab2d94
+---
+> kernel - 5.10.113-1-24e1e20678b21b9fad6c33c171ab2d94
+366c366
+< libf2fs6 - 1.14.0-2
+---
+> libf2fs6 - 1.14.0-3
+383,385c383,385
+< libiwinfo-data - 2022-03-01-90bfbb9a-1
+< libiwinfo-lua - 2022-03-01-90bfbb9a-1
+< libiwinfo20210430 - 2022-03-01-90bfbb9a-1
+---
+> libiwinfo-data - 2022-04-26-dc6847eb-1
+> libiwinfo-lua - 2022-04-26-dc6847eb-1
+> libiwinfo20210430 - 2022-04-26-dc6847eb-1
+474c474
+< luci-app-openvpn - git-22.025.78197-18b1130
+---
+> luci-app-openvpn - git-22.078.84282-64b80b8
+479c479
+< luci-app-statistics - git-22.002.35118-8572ae0
+---
+> luci-app-statistics - git-22.115.68379-f16037c
+488c488
+< luci-base - git-22.089.43958-7110635
+---
+> luci-base - git-22.126.42175-8583efb
+496,498c496,498
+< luci-mod-network - git-22.087.28325-8a46648
+< luci-mod-status - git-22.087.28325-8a46648
+< luci-mod-system - git-22.102.44067-b6fb2b1
+---
+> luci-mod-network - git-22.118.36517-904c174
+> luci-mod-status - git-22.117.40788-2f80fe3
+> luci-mod-system - git-22.125.76098-24ac5a2
+508,509c508,509
+< luci-theme-bootstrap - git-22.084.38997-8e09f18
+< luci-theme-material - git-21.279.05595-c8d9819
+---
+> luci-theme-bootstrap - git-22.126.42174-c40dd71
+> luci-theme-material - git-22.124.32015-1cd6157
+516c516
+< mkf2fs - 1.14.0-2
+---
+> mkf2fs - 1.14.0-3
+526c526
+< nano - 6.2-2
+---
+> nano - 6.3-1
+554c554
+< pciids - 0.354-1
+---
+> pciids - 0.359-1
+597,605c597,605
+< php8 - 8.1.4-1
+< php8-cgi - 8.1.4-1
+< php8-cli - 8.1.4-1
+< php8-mod-curl - 8.1.4-1
+< php8-mod-fileinfo - 8.1.4-1
+< php8-mod-iconv - 8.1.4-1
+< php8-mod-session - 8.1.4-1
+< php8-mod-sockets - 8.1.4-1
+< php8-mod-sysvmsg - 8.1.4-1
+---
+> php8 - 8.1.5-1
+> php8-cgi - 8.1.5-1
+> php8-cli - 8.1.5-1
+> php8-mod-curl - 8.1.5-1
+> php8-mod-fileinfo - 8.1.5-1
+> php8-mod-iconv - 8.1.5-1
+> php8-mod-session - 8.1.5-1
+> php8-mod-sockets - 8.1.5-1
+> php8-mod-sysvmsg - 8.1.5-1
+610c610
+< procd - 2022-04-13-eb03f031-1
+---
+> procd - 2022-05-03-652e6df0-1
+710c710
+< uqmi - 2022-03-12-44dd0957-2
+---
+> uqmi - 2022-05-04-56cb2d40-1
+734,735c734,735
+< youtube-dl - 2021.6.6-1
+< zerotier - 1.8.8-2
+---
+> youtube-dl - 2021.12.17-1
+> zerotier - 1.8.9-1
+
+
+
+
+
+
+
