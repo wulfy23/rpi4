@@ -7,13 +7,14 @@
 
         5.7.?   -pkgs) kmod rtc packages have finally been enabled for this target
         r193/5?xx     add a couple of initial ones by default (master only)
+                      (hold off until requested)
 
+        5.7.50  -info) k113 promote to current basic test by me and zer0fl0w
+                       does not have rtc mods as above, guess was waiting for
+                       to be requested
 
-
-
-        5.7.37
-                -) promote to stable after two weeks as current quick test +
-                   syntax + zeroflow ok result (thankyou!)
+        5.7.37  -) promote to stable after two weeks as current quick test +
+                   syntax + zer0fl0w ok result (thankyou!)
 
         5.7.31  -pkgs) add kmod-inet-diag @malikshi (+kmod-netlink-diag ss)
         r19345  -opkgfeed) v2raya custom repo - depends on OPKGFEEDS_EXTRA_V2RAYA=1

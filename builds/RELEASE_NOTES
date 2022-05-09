@@ -9,6 +9,18 @@
 
 
 
+       ############################## 5.7.50 - k113 - r19602
+            -minor php7 backport (custom ipk install) inst errors
+             opkg_download_pkg: Package php7-cgi is not available from any configured src
+             (low/medium priority pending files fork for 22.03)
+             (NOTEtoSELF: check for any official opkg handling changes?)
+            -possible vim fullest colors/env issue &&|| PS1 mods broken
+             (could be broader TERM stuff going on)
+             wait for a few builds / files fork / major usability report before investigating
+
+             based on the above might just leave as 'current' and not 'stable' for now
+
+
        ############################## 5.7.31-x_r19345
             -uploaded as 'current'(>stable@05042022) flavour, i've limited time to test and
              unaware of any CVE so can't/shouldn't push this as 'stable'
