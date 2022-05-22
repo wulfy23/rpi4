@@ -19,19 +19,12 @@
              for any brave souls whom are eager to test the new kernel and
              investigate core function / quirks / performance etc.
 
-             i would also recommend you validate the firewall (something i've been
-             doing with recent builds given we still/try to run iptables)
-             after firstboot is complete...
-               'nft list ruleset' should come back blank
-               iptables -L and ip6tables -L should be reasonably populated
-
-
 
              a) on building kmod pwm was not available
 
 
        ############################## 5.7.50 - k113 - r19602
-
+            -hmmm... I think this build http login fails(chrome) but https is ok...
 
        ############################## 5.7.31-x_r19345
             -uploaded as 'current'(>stable@05042022) flavour, i've limited time to test and
