@@ -8,6 +8,27 @@
 
 
 
+       ############################## 7.1.13 - k5.15test - r19686
+
+            kernel was updated to 5.15 test build, i have to tested this yet so
+            wait for a week / few days if you don't have dd backups or general
+            confidence based on other sources...
+
+            -uploaded as current but i'm aware of a few mostly minimal? places
+             where my/our logix does not accomodate it... for this week its mostly
+             for any brave souls whom are eager to test the new kernel and
+             investigate core function / quirks / performance etc.
+
+             i would also recommend you validate the firewall (something i've been
+             doing with recent builds given we still/try to run iptables)
+             after firstboot is complete...
+               'nft list ruleset' should come back blank
+               iptables -L and ip6tables -L should be reasonably populated
+
+
+
+             a) on building kmod pwm was not available
+
 
        ############################## 5.7.50 - k113 - r19602
 
