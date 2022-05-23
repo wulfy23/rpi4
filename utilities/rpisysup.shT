@@ -264,6 +264,10 @@ Bname="rpi4.64-snapshot-29257-5.7.50-3-r19602-ext4-sys.img.gz"
 
 
 
+Fsub="builds/rpi-4_snapshot_7.1.13-3_r19686_extra"
+Bname="rpi4.64-snapshot-29260-7.1.13-3-r19686-ext4-sys.img.gz"
+
+
 
 		#echo "no stable build available"; exit 0
     ;; ############################################################## ENDSTABLE
@@ -336,6 +340,11 @@ Bname="rpi4.64-snapshot-29257-5.7.50-3-r19602-ext4-sys.img.gz"
 
 Fsub="builds/rpi-4_snapshot_7.1.13-2_r19686_extra"
 Bname="rpi4.64-snapshot-29259-7.1.13-2-r19686-ext4-sys.img.gz"
+
+
+#updated the 5.10 conditionals
+Fsub="builds/rpi-4_snapshot_7.1.13-3_r19686_extra"
+Bname="rpi4.64-snapshot-29260-7.1.13-3-r19686-ext4-sys.img.gz"
 
 
 

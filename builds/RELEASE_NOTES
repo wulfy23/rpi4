@@ -21,6 +21,13 @@
 
 
              a) on building kmod pwm was not available
+             b) hmmm... userspace seems alot more snappy
+             c) tailroom bug (rare) still present
+             d) um... my additional usb mount is spitting errors on (last build)
+                upgrade... looks like some sort of semi-newish brute ps kill
+                / term... and probably not so big a deal for most?
+                ... just noting here for a time reference...
+
 
 
        ############################## 5.7.50 - k113 - r19602

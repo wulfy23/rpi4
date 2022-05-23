@@ -5,6 +5,14 @@
 
 
 
+
+
+        7.1.13
+                TBA also check below for is not SNAPSHOT aka 22.x
+                -3) bin/rpi-perftweaks.sh support tailroom fix for 5.15
+                    -similar etc/custom/earlyboot/30-raspberrypi
+                    -as above bin/ffmpeg...
+
         5.7.?   -pkgs) kmod rtc packages have finally been enabled for this target
         r193/5?xx     add a couple of initial ones by default (master only)
                       (hold off until requested)
