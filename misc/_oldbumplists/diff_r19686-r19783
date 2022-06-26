@@ -1,0 +1,196 @@
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.r19686 manifest.r19783  | grep -v kmod
+3,4c3,4
+< acme - 3.0.1-1
+< acme-dnsapi - 3.0.1-1
+---
+> acme - 3.0.1-2
+> acme-dnsapi - 3.0.1-2
+14,15c14
+< banip - 0.7.10-5
+< base-files - 1489-r19686-2317a7426e
+---
+> base-files - 1489-r19783-2a07270180
+30c29
+< block-mount - 2022-05-03-9e11b372-1
+---
+> block-mount - 2022-06-02-93369be0-1
+68c67
+< curl - 7.82.0-2
+---
+> curl - 7.83.1-1
+99c98
+< fstools - 2022-05-03-9e11b372-1
+---
+> fstools - 2022-06-02-93369be0-1
+102c101
+< gddrescue - 1.23-4
+---
+> gddrescue - 1.26-1
+105c104
+< glib2 - 2.70.4-4
+---
+> glib2 - 2.70.5-3
+108,110c107,109
+< hostapd-common - 2022-01-16-cff80b4f-8
+< hostapd-utils - 2022-01-16-cff80b4f-8
+< htop - 3.2.0-1
+---
+> hostapd-common - 2022-05-08-b859b9bc-4
+> hostapd-utils - 2022-05-08-b859b9bc-4
+> htop - 3.2.1-1
+129c128
+< iptables-mod-geoip - 3.19-2
+---
+> iptables-mod-geoip - 3.20-1
+132c131
+< iptables-mod-quota2 - 3.19-2
+---
+> iptables-mod-quota2 - 3.20-1
+138c137
+< irqbalance - 1.8.0-1
+---
+> irqbalance - 1.9.0-2
+145,348c144,346
+< kernel - 5.15.40-1-e50f099ccb3091a0cc343c76fe9fa2d1
+< libatomic1 - 11.2.0-4
+---
+> kernel - 5.15.45-1-36366c23928f05b55c3ce67034f899fe
+> libatomic1 - 11.3.0-4
+359c357
+< libcurl4 - 7.82.0-2
+---
+> libcurl4 - 7.83.1-1
+371c369
+< libgcc1 - 11.2.0-4
+---
+> libgcc1 - 11.3.0-4
+414c412
+< libnl-tiny1 - 2021-11-21-8e0555fb-1
+---
+> libnl-tiny2022-05-17 - 2022-05-17-b5b2ba09-1
+436,437c434,435
+< libstdcpp6 - 11.2.0-4
+< libtirpc - 1.3.2-1
+---
+> libstdcpp6 - 11.3.0-4
+> libtirpc - 1.3.2-2
+439,440c437,438
+< libubus-lua - 2022-02-28-584f56a2-2
+< libubus20220228 - 2022-02-28-584f56a2-2
+---
+> libubus-lua - 2022-06-01-2bebf93c-1
+> libubus20220601 - 2022-06-01-2bebf93c-1
+450,452c448,450
+< libwebsockets-openssl - 4.2.1-2
+< libwolfssl5.3.0.5fb91bea - 5.3.0-stable-1
+< libxml2 - 2.9.13-1
+---
+> libwebsockets-openssl - 4.2.1-3
+> libwolfssl5.3.0.ee39414e - 5.3.0-stable-7
+> libxml2 - 2.9.14-1
+463d460
+< luci-app-banip - git-21.282.00731-e8194d9
+476c473
+< luci-app-opkg - git-22.043.53495-1e6f630
+---
+> luci-app-opkg - git-22.154.41762-b84791b
+497c494
+< luci-mod-network - git-22.118.36517-904c174
+---
+> luci-mod-network - git-22.140.63674-34813ff
+508c505
+< luci-proto-wireguard - git-22.104.35996-7206d8f
+---
+> luci-proto-wireguard - git-22.137.49520-9ba2064
+510c507
+< luci-theme-material - git-22.124.32015-1cd6157
+---
+> luci-theme-material - git-22.157.06387-b0f13ef
+528c525
+< netifd - 2022-02-20-136006b8-1
+---
+> netifd - 2022-06-01-39ef9fe1-1
+535,536c532,533
+< ntfs-3g - 2021.8.22-2-fuseint
+< ntfs-3g-utils - 2021.8.22-2-fuseint
+---
+> ntfs-3g - 2022.5.17-1-fuseint
+> ntfs-3g-utils - 2022.5.17-1-fuseint
+544c541
+< open-iscsi - 2.1.3-1
+---
+> open-iscsi - 2.1.7-1
+549c546
+< openvpn-openssl - 2.5.6-1
+---
+> openvpn-openssl - 2.5.7-1
+598,606c595,603
+< php8 - 8.1.5-1
+< php8-cgi - 8.1.5-1
+< php8-cli - 8.1.5-1
+< php8-mod-curl - 8.1.5-1
+< php8-mod-fileinfo - 8.1.5-1
+< php8-mod-iconv - 8.1.5-1
+< php8-mod-session - 8.1.5-1
+< php8-mod-sockets - 8.1.5-1
+< php8-mod-sysvmsg - 8.1.5-1
+---
+> php8 - 8.1.6-1
+> php8-cgi - 8.1.6-1
+> php8-cli - 8.1.6-1
+> php8-mod-curl - 8.1.6-1
+> php8-mod-fileinfo - 8.1.6-1
+> php8-mod-iconv - 8.1.6-1
+> php8-mod-session - 8.1.6-1
+> php8-mod-sockets - 8.1.6-1
+> php8-mod-sysvmsg - 8.1.6-1
+611c608
+< procd - 2022-05-03-652e6df0-1
+---
+> procd - 2022-06-01-7a009685-1
+673,675c670,672
+< rpcd - 2022-02-07-909f2a04-1
+< rpcd-mod-file - 2022-02-07-909f2a04-1
+< rpcd-mod-iwinfo - 2022-02-07-909f2a04-1
+---
+> rpcd - 2022-05-31-1c482573-1
+> rpcd-mod-file - 2022-05-31-1c482573-1
+> rpcd-mod-iwinfo - 2022-05-31-1c482573-1
+700,701c697,698
+< ubus - 2022-02-28-584f56a2-2
+< ubusd - 2022-02-28-584f56a2-2
+---
+> ubus - 2022-06-01-2bebf93c-1
+> ubusd - 2022-06-01-2bebf93c-1
+705,706c702,703
+< uhttpd - 2022-02-07-2f8b1360-1
+< uhttpd-mod-ubus - 2022-02-07-2f8b1360-1
+---
+> uhttpd - 2022-06-01-d59d732a-1
+> uhttpd-mod-ubus - 2022-06-01-d59d732a-1
+727,728c724,725
+< wpa-cli - 2022-01-16-cff80b4f-8
+< wpad-openssl - 2022-01-16-cff80b4f-8
+---
+> wpa-cli - 2022-05-08-b859b9bc-4
+> wpad-openssl - 2022-05-08-b859b9bc-4
+735c732
+
+
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+< youtube-dl - 2021.12.17-1
+---
+> yt-dlp - 2022.5.18-1
+
+
+
+
+
+
+
+
+
+
+
+
+

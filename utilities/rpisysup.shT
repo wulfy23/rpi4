@@ -349,6 +349,11 @@ Bname="rpi4.64-snapshot-29260-7.1.13-3-r19686-ext4-sys.img.gz"
 
 
 
+#r19904 possible upgrade needs -F key checking thing to sort out
+Fsub="builds/rpi-4_snapshot_7.1.31-3_r19904_extra"
+Bname="rpi4.64-snapshot-29262-7.1.31-3-r19904-ext4-sys.img.gz"
+
+
 
 
 		#echo "no current build available"; exit 0
@@ -373,7 +378,13 @@ Bname="rpi4.64-21.02.2-29226-1.1.5-23-r16495-ext4-sys.img.gz"
 
 
 
-		echo "no testing build available"; exit 0
+Fsub="builds/rpi-4_snapshot_7.1.17-3_r19783_extra"
+Bname="rpi4.64-snapshot-29261-7.1.17-3-r19783-ext4-sys.img.gz"
+
+
+
+
+#		echo "no testing build available"; exit 0
 	
 	;; ############################################################## ENDTESTING
 

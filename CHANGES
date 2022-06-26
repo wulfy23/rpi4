@@ -3,7 +3,39 @@
     ___________________________________________________   CHANGELOG
 
 
+        7.1.31
+                 -3) note to self ytdl stuff is probably stale now test / update or
+                     remove / make 22/21 specific only...
+    				 (if problematic + cleanup / forking happens)
 
+
+                 -3) it appears changes were made to image validation and or
+                     something is stale in my code regarding this
+
+                     (tested from 22.03-rc3>master
+                      remote chance there were issues
+                      there only)
+
+                     you may need to manually use FORCE (
+                     > sysupgade -F -R /tmp/rpi4-sys-xxx.img.gz
+                     to complete the upgrade process )
+
+
+
+
+
+
+
+                -22.02.0-rc3 dropped banip, add it back as
+                 we use iptables
+
+
+
+                -initial test / accomodations for 22.03(rc2)
+                  * ib build script wanted php7 tba convert elif to case
+                  * case valid/url gen -> loosen matches
+                  * check opkg.conf points to official repo's
+                  * other?
 
 
 

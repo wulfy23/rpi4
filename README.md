@@ -2,13 +2,10 @@
 
 # OpenWrt builds for the rpi-4
 
-see: <s>https://forum.openwrt.org/t/rpi4-community-build/69998</s> to request packages, provide feedback etc.
-
-after being DoS'd by a senior openwrt developer... i'm no longer active on the forums...
-and builds are <s>discontinued</s> on life support
+see: <s>https://forum.openwrt.org/t/rpi4-community-build/69998 to request packages, provide feedback etc.</s> 
+i'm no longer active on the forums... and builds are <s>discontinued</s> on life support
 
 a few build users have reached out regarding continuation of builds...
-while the gut says we are prolonging the inedible youth in asia...
 
 given github issues is available to us
 
@@ -20,8 +17,6 @@ contain critical fixes for CVE's or key bumps
 
 anticipate degradation in master based builds and potential discontinuation of them, leaving only release builds available
 - factory images if present are primarily for use by existing users of the build
-
-
 
 
 
