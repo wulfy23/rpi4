@@ -3,6 +3,22 @@
     ___________________________________________________   CHANGELOG
 
 
+
+       22.03.0 / 20220909 / r20xxx - untested, borderline unsupported, staler than before...
+
+                  -Generate / provide new non-expired key
+                  -Webhosting expirey point update scripts back to github
+                   as they were originally... (if one click updates are to work...)
+                   until then, typical update methods covered in the past may work?
+					(dd backup/image your sdcard if not confident)
+
+                    (22.03 might be ok - TBA better test a little first)
+
+                   *** NOTE to self, did not update bootfiles... revisit if these work
+                       || core kernel / boot issue ***
+
+
+
         7.1.31
                  -3) note to self ytdl stuff is probably stale now test / update or
                      remove / make 22/21 specific only...
@@ -19,9 +35,6 @@
                      you may need to manually use FORCE (
                      > sysupgade -F -R /tmp/rpi4-sys-xxx.img.gz
                      to complete the upgrade process )
-
-
-
 
 
 

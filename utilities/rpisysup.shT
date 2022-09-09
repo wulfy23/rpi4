@@ -2,6 +2,41 @@
 
 
 
+
+
+
+
+if [ ! -f /etc/custom/keys/ec3ce191447f05b5 ]; then
+cat << EOF > /etc/custom/keys/ec3ce191447f05b5
+untrusted comment: wulfy23 build key
+RWTsPOGRRH8FtQK8ja1dNm+KLHT3rWv7IMTxVHuDzrRK1keU9ac0bA03
+EOF
+fi
+#if [ ! -f /etc/opkg/keys/ec3ce191447f05b5 ]; then
+#cat << EOF > /etc/opkg/keys/ec3ce191447f05b5
+#untrusted comment: wulfy23 build key
+#RWTsPOGRRH8FtQK8ja1dNm+KLHT3rWv7IMTxVHuDzrRK1keU9ac0bA03
+#EOF
+#fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 FLASHSTATUSf="/tmp/.flashstatus"
 
 ALLPARAMS=${*}
@@ -26,6 +61,10 @@ fails() {
     fi
     echo "$1" && exit 1
 }
+
+
+
+
 
 
 
@@ -63,6 +102,11 @@ EOG
 
 
 
+
+
+
+
+
 ################################################################### non-echo@-qetc... START
 ecmd="echo "; i=$(basename $0); if [ -x /etc/custom/custfunc.sh  ]; then . /etc/custom/custfunc.sh; ecmd="echm ${i} "; fi
 if [ -f /root/wrt.ini  ]; then . /root/wrt.ini; fi
@@ -73,6 +117,8 @@ if [ -z "$ffD"  ]; then ffD="/root"; fi
 #iM="$i" #iM="$(basename $0)"
 iL="/$i.log"
 LOGCHECKS=1 #???fromoldfunction-testdirname?
+
+
 
 
 
@@ -123,11 +169,19 @@ WGETs="wget -T 6 --no-parent -q -nd -l1 -nv "
 
 
 
+
+
 #case "$(cat /tmp/sysinfo/board_name)" in '4-model-b')
 MODELf=$(cat /tmp/sysinfo/board_name)
 Gbase="https://raw.github.com/wulfy23/rpi4/master"
 SUMSname="sha256sums"
-Wbase="https://rpi4.wulfy23.info"
+
+
+###OLDHETZNER Wbase="https://rpi4.wulfy23.info"
+Wbase="https://raw.github.com/wulfy23/rpi4/master"
+
+
+
 
 
 
@@ -220,6 +274,15 @@ fi
 		;;
 
 
+
+
+
+
+
+
+
+
+
 		release)
 
 #Fsub="builds/devel/rpi-4_21.02.2_1.1.5-23_r16495_extra"
@@ -229,9 +292,16 @@ Fsub="builds/rpi-4_21.02.3_1.3.6-2_r16554_extra"
 Bname="rpi4.64-21.02.3-29255-1.3.6-2-r16554-ext4-sys.img.gz"
 
 
+#################################################POST 202209
+#ATTEMPT1
+Fsub="builds/rpi-4_22.03.0_2.1.6-2_r19685_extra"
+Bname="rpi4.64-22.03.0-29265-2.1.6-2-r19685-ext4-sys.img.gz"
+
+
 
 #		echo "no release build available"; exit 0
     ;; ############################################################## ENDRELEASE 
+
 
 
 
@@ -269,8 +339,15 @@ Bname="rpi4.64-snapshot-29260-7.1.13-3-r19686-ext4-sys.img.gz"
 
 
 
+########################################POST 202209
+#ATTEMPT1
+Fsub="builds/rpi-4_22.03.0_2.1.6-2_r19685_extra"
+Bname="rpi4.64-22.03.0-29265-2.1.6-2-r19685-ext4-sys.img.gz"
+
+
 		#echo "no stable build available"; exit 0
     ;; ############################################################## ENDSTABLE
+
 
 
 
@@ -356,8 +433,25 @@ Bname="rpi4.64-snapshot-29262-7.1.31-3-r19904-ext4-sys.img.gz"
 
 
 
+
+
+#POST 202209
+
+
+### TEST ONE BACK TO GITHUB FOR IMAGES
+Fsub="builds/rpi-4_snapshot_7.1.37-3_r20522_extra"
+Bname="rpi4.64-snapshot-29263-7.1.37-3-r20522-ext4-sys.img.gz"
+
+
+
+
+
+
+
 		#echo "no current build available"; exit 0
 	;; ############################################################## ENDCURRENT
+
+
 
 
 
@@ -380,6 +474,19 @@ Bname="rpi4.64-21.02.2-29226-1.1.5-23-r16495-ext4-sys.img.gz"
 
 Fsub="builds/rpi-4_snapshot_7.1.17-3_r19783_extra"
 Bname="rpi4.64-snapshot-29261-7.1.17-3-r19783-ext4-sys.img.gz"
+
+
+
+
+
+
+#POST 202209
+
+
+
+### TEST ONE BACK TO GITHUB FOR IMAGES
+Fsub="builds/rpi-4_snapshot_7.1.37-3_r20522_extra"
+Bname="rpi4.64-snapshot-29263-7.1.37-3-r20522-ext4-sys.img.gz"
 
 
 

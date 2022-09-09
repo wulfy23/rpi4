@@ -1,17 +1,12 @@
 
 
-    MANUAL DOWNLOAD URL: https://rpi4.wulfy23.info/builds
-    (please use the repo above to download images)
-    (images present here are for downstream projects and metadata purposes)
-
-
-
-
-           NOTE: www(uhttpd) features under test mean that running
-                 of www on untrusted(guest etc.) is not advised
-
-
     ################################################## builds
+
+	NOTE: These builds are for the most part too stale now
+          for my liking (unvalidated tweaks, app specific workarounds)
+          They can break at any time and
+          are provided to support legacy installs until
+          they either don't build or what you need breaks :(
 
 
     WHAT-IS-IT?: disk images of openwrt for the rpi-4... see thread
@@ -84,9 +79,6 @@
             -packages.txt contains all "extra" added packages
             -rebuild.sh is a cmdline based imagebuilder rebuild command without 'files'
             -ibbuildinformation can be used also to rebuild or verify finer build details
-
-
-
 
 
 
