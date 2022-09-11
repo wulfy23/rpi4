@@ -26,28 +26,28 @@ anticipate degradation in master based builds and potential discontinuation of t
 
 ### Credit and source courtesy of the OpenWrt team, contributors and the great folks on the forum.
 
+the two kind $10 donators who helped facilitate image storage and distribution last year
+<sup>github https://github.com for a solid and open platform</sup><br><br>
 
 <sup>[@damianperera github_action_sidebuilds](https://github.com/damianperera/openwrt-rpi)</sup><br>
 <sup>[@jerrykuku luci-theme-argon](https://github.com/jerrykuku/luci-theme-argon)</sup><br>
 <sup>login-sysinfo.sh: Cezary Jackiewicz</sup><br>
 <sup>[@NateLol](https://github.com/NateLol/luci-app-oled) and Vinay Divakar</sup><br>
-<sup>github https://github.com for a solid and open platform</sup><br>
 <sup>pi-foundation for a mostly open platform - committers do good things</sup><br>
 <sup>Special thanks: vgaetera jeff jow slh trendy and lleachii for guru skillsharing and support... </sup><br>
-<sup>@neil1, @PaulFertser, @dibdot, @trendy, @moodyblue, @jayanta525, @poodad, @syntaxterror, @bigfat, @gpuyy, @krazeh, @LionHeartP, @jcejohnson, @cesarvog, @malikshi, @stargeizer, @mint, @johnd2, @BenjaminBeichler, @cricalix, @aporetic, @toasterdev, @masaq, @synapse, @Phase1, @zakeru46, @SubZero, @swanson, @Hagbertumple, @peexl and @geerlingguy for contributions to the build</sup><br>
+<sup>@neil1, @PaulFertser, @dibdot, @trendy, @moodyblue, @jayanta525, @poodad, @syntaxterror, @bigfat, @gpuyy, @krazeh, @LionHeartP, @jcejohnson, @cesarvog, @malikshi, @stargeizer, @mint, @johnd2, @BenjaminBeichler, @cricalix, @aporetic, @toasterdev, @masaq, @synapse, @Phase1, @zakeru46, @SubZero, @swanson, @Hagbertumple, @rspierz, @peexl and @geerlingguy for contributions to the build</sup><br>
 <sup>@dangowrt, @noltari, @oskari.rauta, @nbd, @bkpepe, @mj22226, @chunkeey, @mhei mainline code</sup><br>
-<sup>@lynx, @moeller0, @dlakelan + others sqm-autorate (lte/3g/variable-bw-links)</sup><br>
 <sup>@hnyman build system insight and official repo fixing</sup><br>
 <sup>@bobafetthotmail nicmove/macmatch</sup><br>
 <sup>@stangri vpn-pbr and other apps</sup><br>
-<sup>argonone code: @DarkElvenAngel</sup><br>
 <sup>@bkpepe, @neheb github mentoring</sup><br>
 <sup>[Van Tech Corner](https://www.youtube.com/channel/UCczXrZ5r1nCMACiaipGqbtw)</sup><br>
 <sup>[MaroonMed](https://www.maroonmed.com/berry-on-a-bush-router-on-a-stick-raspberry-pi-4-inter-vlan-openwrt-router/)</sup><br>
 <sup>sqm-dscp-logic: hisham2630(ultimate-sqm-settings-layer-cake-dscp-marks) (and others) @ldir @dlakelan</sup><br>
+<sup>@lynx, @moeller0, @dlakelan + others sqm-autorate (lte/3g/variable-bw-links)</sup>(no longer active - use upstream direct)<br>
+<sup>argonone code: @DarkElvenAngel</sup><br>
 <sup>@dairyman and the rooter peoples</sup><br>
 <sup>plenty-of-others: if i have learnt or borrowed something from you thankyou...</sup><br>
-
 
 
 ## img-specs:
@@ -77,26 +77,27 @@ anticipate degradation in master based builds and potential discontinuation of t
 ## features
 - automatic re-install of packages post-upgrade (or not)
 - luci updatecheck notice with one-click flash
-- expansion of partition to whole sdcard on sysupgrade
-- webui full-ish text editor (conditional)
-- youtube-download webui (wip requires external storage) (conditional)
-- webui browser ssh terminal (wip conditional)
-- smb/sshfs mount helper
 - optimised / patched rpi-eeprom-update
-- nano colors, fake 'man' command
 - login sysinfo and sh/bash profile blingification
-- easy user setup variables via wrt.ini (lanip, ntp-server, etc.) with luci editing
 - usbboot-support/auto-fsck (wip->multiboot/partresize/live-mode)
 - usb persisent nic naming (optional)
+- pre/post upgrade OS snapshotting or restore assumming bootability and extrapart is enabled
+- easy user setup variables via wrt.ini (lanip, ntp-server, etc.) with luci editing
+- expansion of partition to whole sdcard on sysupgrade
+- webui full-ish text editor (conditional/semi-stale)
+- youtube-download webui (wip requires external storage) (conditional/semi-stale)
+- webui browser ssh terminal (wip conditional/to finish test further)
+- smb/sshfs mount helper
+- nano colors, fake 'man' command
 
 ## scripts
 - rpi-sysup-online.sh automated upgrade
 - package restore (sysupgrade -R)
-- rpi4-official-opkg.sh for security and bugfixes from master
+- rpi4-official-opkg.sh for security and bugfixes from master (this may not work post around 2022/03)
 - rpi-throttlewatch.sh ( test thermal/scaling )
-- rollback.sh|opK install <pkg|file>|wrtsnapback (betas)
 - some 'locate' command setup+tweaks
 - semi-discontinued use topbar: rpi-sysup-clean-backup.sh wip (dump generic backups)
+- rollback.sh|opK install <pkg|file>|wrtsnapback (betas-not really functional)
 
 
 ## opt-in/out

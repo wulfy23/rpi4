@@ -8,6 +8,15 @@
 
 
 
+
+		############################# 22.03 + r20xxx untested
+      
+           if luci login fails make sure to type "https://" at
+           the start of url...
+
+
+
+
        ############################## 7.1.13 - k5.15test - r19686
 
             kernel was updated to 5.15 test build, i have to tested this yet so

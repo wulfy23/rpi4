@@ -20,6 +20,16 @@ fi
 #fi
 
 
+if cat /etc/sqm/sqm.conf 2>/dev/null | grep '^IP6TABLES' | grep -q ip6tables-nft; then
+	#$ecmd "fixing sqm broken dualfw support"
+	logger "fixing sqm broken dualfw support"
+	sed -i 's/^IP/#IP/g' /etc/sqm/sqm.conf
+fi
+
+
+
+
+
 
 
 

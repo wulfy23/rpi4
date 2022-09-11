@@ -47,7 +47,7 @@
                 -initial test / accomodations for 22.03(rc2)
                   * ib build script wanted php7 tba convert elif to case
                   * case valid/url gen -> loosen matches
-                  * check opkg.conf points to official repo's
+                  * check opkg.conf points to official repo's (for stable new release)
                   * other?
 
 
