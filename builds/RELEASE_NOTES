@@ -14,8 +14,17 @@
            if luci login fails make sure to type "https://" at
            the start of url...
 
-
-
+           -splash/banner messages may not be showing
+           -possible acme changes/new workarounds needed
+           -sqm dual fw support broken -> workaround added but might effect
+            anyone advanced trying to switch to nft manually (which a seperate
+            image will be better for probably at this stage anyway given how often
+            and varied packages break when altered for fw changes)
+           -ipv6 wan connection on my link hits firstboot failsafe code
+            (not coming up) afaik this has been an issue going back 7+months
+            (to test more on non-firstboot as first step)
+           -masq seems to have changed a bit a look like it needs some love which
+            will likely need to be version specific
 
        ############################## 7.1.13 - k5.15test - r19686
 

@@ -20,7 +20,9 @@ fi
 #fi
 
 
-if cat /etc/sqm/sqm.conf 2>/dev/null | grep '^IP6TABLES' | grep -q ip6tables-nft; then
+#if cat /etc/sqm/sqm.conf 2>/dev/null | grep '^IP6TABLES' | grep -q ip6tables-nft; then
+if cat /etc/sqm/sqm.conf 2>/dev/null | grep '^IP6TABLES' | grep -q ip6tables-nft && \
+	basename $(realpath /usr/sbin/iptables) | grep -q legacy; then
 	#$ecmd "fixing sqm broken dualfw support"
 	logger "fixing sqm broken dualfw support"
 	sed -i 's/^IP/#IP/g' /etc/sqm/sqm.conf
@@ -309,6 +311,14 @@ Bname="rpi4.64-22.03.0-29265-2.1.6-2-r19685-ext4-sys.img.gz"
 
 
 
+#sqmfix
+Fsub="builds/rpi-4_22.03.0_2.1.6-5_r19685_extra"
+Bname="rpi4.64-22.03.0-29266-2.1.6-5-r19685-ext4-sys.img.gz"
+
+
+
+
+
 #		echo "no release build available"; exit 0
     ;; ############################################################## ENDRELEASE 
 
@@ -353,6 +363,15 @@ Bname="rpi4.64-snapshot-29260-7.1.13-3-r19686-ext4-sys.img.gz"
 #ATTEMPT1
 Fsub="builds/rpi-4_22.03.0_2.1.6-2_r19685_extra"
 Bname="rpi4.64-22.03.0-29265-2.1.6-2-r19685-ext4-sys.img.gz"
+
+
+#sqmfix
+Fsub="builds/rpi-4_22.03.0_2.1.6-5_r19685_extra"
+Bname="rpi4.64-22.03.0-29266-2.1.6-5-r19685-ext4-sys.img.gz"
+
+
+
+
 
 
 		#echo "no stable build available"; exit 0
@@ -451,6 +470,10 @@ Bname="rpi4.64-snapshot-29262-7.1.31-3-r19904-ext4-sys.img.gz"
 ### TEST ONE BACK TO GITHUB FOR IMAGES
 Fsub="builds/rpi-4_snapshot_7.1.37-3_r20522_extra"
 Bname="rpi4.64-snapshot-29263-7.1.37-3-r20522-ext4-sys.img.gz"
+#sqmfix
+Fsub="builds/rpi-4_snapshot_7.1.37-5_r20522_extra"
+Bname="rpi4.64-snapshot-29266-7.1.37-5-r20522-ext4-sys.img.gz"
+
 
 
 
@@ -490,19 +513,18 @@ Bname="rpi4.64-snapshot-29261-7.1.17-3-r19783-ext4-sys.img.gz"
 
 
 
-#POST 202209
-
-
-
+#####################################################################POST 202209
 ### TEST ONE BACK TO GITHUB FOR IMAGES
 Fsub="builds/rpi-4_snapshot_7.1.37-3_r20522_extra"
 Bname="rpi4.64-snapshot-29263-7.1.37-3-r20522-ext4-sys.img.gz"
+#sqmfix
+Fsub="builds/rpi-4_snapshot_7.1.37-5_r20522_extra"
+Bname="rpi4.64-snapshot-29266-7.1.37-5-r20522-ext4-sys.img.gz"
 
 
 
 
-#		echo "no testing build available"; exit 0
-	
+	#		echo "no testing build available"; exit 0
 	;; ############################################################## ENDTESTING
 
 
