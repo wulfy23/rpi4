@@ -25,6 +25,8 @@
             (to test more on non-firstboot as first step)
            -masq seems to have changed a bit a look like it needs some love which
             will likely need to be version specific
+           -updatecheck bar (flash and msg is not functional > hotfix in progress)
+
 
        ############################## 7.1.13 - k5.15test - r19686
 
