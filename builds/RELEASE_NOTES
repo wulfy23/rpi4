@@ -14,9 +14,16 @@
            if luci login fails make sure to type "https://" at
            the start of url...
 
-           -splash/banner messages may not be showing
-           -possible acme changes/new workarounds needed
+           FIXED-ISH MAYBE
            -sqm dual fw support broken -> workaround added but might effect
+           -updatecheck bar (flash and msg is not functional > hotfix in progress)
+          workaround for no flash button/link in updatecheck bar once logged in (subversions before 7)
+```
+sed -i 's/\!sysauth=\!/\!sysauth_https=\!/g' /bin/updatecheck.sh
+```
+           
+            TOFIX
+           -possible acme changes/new workarounds needed
             anyone advanced trying to switch to nft manually (which a seperate
             image will be better for probably at this stage anyway given how often
             and varied packages break when altered for fw changes)
@@ -25,7 +32,6 @@
             (to test more on non-firstboot as first step)
            -masq seems to have changed a bit a look like it needs some love which
             will likely need to be version specific
-           -updatecheck bar (flash and msg is not functional > hotfix in progress)
 
 
        ############################## 7.1.13 - k5.15test - r19686

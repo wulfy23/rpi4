@@ -315,6 +315,9 @@ Bname="rpi4.64-22.03.0-29265-2.1.6-2-r19685-ext4-sys.img.gz"
 Fsub="builds/rpi-4_22.03.0_2.1.6-5_r19685_extra"
 Bname="rpi4.64-22.03.0-29266-2.1.6-5-r19685-ext4-sys.img.gz"
 
+#fix updatecheck msgs and flash
+Fsub="builds/rpi-4_22.03.0_2.1.6-7_r19685_extra"
+Bname="rpi4.64-22.03.0-29269-2.1.6-7-r19685-ext4-sys.img.gz"
 
 
 
@@ -369,7 +372,9 @@ Bname="rpi4.64-22.03.0-29265-2.1.6-2-r19685-ext4-sys.img.gz"
 Fsub="builds/rpi-4_22.03.0_2.1.6-5_r19685_extra"
 Bname="rpi4.64-22.03.0-29266-2.1.6-5-r19685-ext4-sys.img.gz"
 
-
+#fix updatecheck msgs and flash
+Fsub="builds/rpi-4_22.03.0_2.1.6-7_r19685_extra"
+Bname="rpi4.64-22.03.0-29269-2.1.6-7-r19685-ext4-sys.img.gz"
 
 
 
@@ -464,18 +469,17 @@ Bname="rpi4.64-snapshot-29262-7.1.31-3-r19904-ext4-sys.img.gz"
 
 
 
-#POST 202209
-
-
+#####################################POST 202209
 ### TEST ONE BACK TO GITHUB FOR IMAGES
 Fsub="builds/rpi-4_snapshot_7.1.37-3_r20522_extra"
 Bname="rpi4.64-snapshot-29263-7.1.37-3-r20522-ext4-sys.img.gz"
-#sqmfix
+### sqmfix
 Fsub="builds/rpi-4_snapshot_7.1.37-5_r20522_extra"
 Bname="rpi4.64-snapshot-29266-7.1.37-5-r20522-ext4-sys.img.gz"
+### fix updatecheck msgs and flash
 
-
-
+Fsub="builds/rpi-4_snapshot_7.1.37-7_r20522_extra"
+Bname="rpi4.64-snapshot-29269-7.1.37-7-r20522-ext4-sys.img.gz"
 
 
 
@@ -520,6 +524,14 @@ Bname="rpi4.64-snapshot-29263-7.1.37-3-r20522-ext4-sys.img.gz"
 #sqmfix
 Fsub="builds/rpi-4_snapshot_7.1.37-5_r20522_extra"
 Bname="rpi4.64-snapshot-29266-7.1.37-5-r20522-ext4-sys.img.gz"
+
+
+#fix updatecheck msgs and flash
+
+Fsub="builds/rpi-4_snapshot_7.1.37-7_r20522_extra"
+Bname="rpi4.64-snapshot-29269-7.1.37-7-r20522-ext4-sys.img.gz"
+
+
 
 
 

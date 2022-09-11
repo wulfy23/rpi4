@@ -17,7 +17,8 @@
                    *** NOTE to self, did not update bootfiles... revisit if these work
                        || core kernel / boot issue ***
 
-                   > hotfix fix broken sqm dual fw support
+                   5> hotfix fix broken sqm dual fw support
+                   7> fix luci banner
                    > tba acme,argon testing
 
         7.1.31
