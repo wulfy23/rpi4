@@ -9,8 +9,22 @@
 
 
 
-		############################# 22.03 + r20xxx untested
+		############################# 22.03 + r20xxx untested > .7 tested a bit
+
+
       
+            -note: ujail and seccomp crept back in on these builds although we've dabbled
+                  with them on and i've endeavored to enable them somewhat, last build
+                  had them off afaik as they effected https-dns-proxy's function
+
+                  if this is the case, i'll use the testing 'flavour' for a build without
+                  them unless there is more foundational issues with them.
+
+                  apologies for not stating/noticing this earlier
+
+
+
+
            if luci login fails make sure to type "https://" at
            the start of url...
 
@@ -32,6 +46,8 @@ sed -i 's/\!sysauth=\!/\!sysauth_https=\!/g' /bin/updatecheck.sh
            -ipv6 wan connection on my link hits firstboot failsafe code
             (not coming up) afaik this has been an issue going back 7+months
             (to test more on non-firstboot as first step)
+            NB: firstboot times are stretched an additional ~1+mins from this
+                (albeit can use some attention anyway)
            -masq seems to have changed a bit a look like it needs some love which
             will likely need to be version specific
 

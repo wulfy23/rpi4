@@ -2,6 +2,10 @@
 
 # OpenWrt builds for the rpi-4
 
+NOTE: Hetzner (wulfy23.info) hosting expired on the 9/Aug/2022 therefore the account was closed on the 8/Aug/2022
+
+
+
 see: <s>https://forum.openwrt.org/t/rpi4-community-build/69998 to request packages, provide feedback etc.</s> 
 i'm no longer active on the forums... and builds are <s>discontinued</s> on life support
 
@@ -20,14 +24,13 @@ anticipate degradation in master based builds and potential discontinuation of t
 
 
 
-
-
 ## Credits
 
 ### Credit and source courtesy of the OpenWrt team, contributors and the great folks on the forum.
 
-the two kind $10 donators who helped facilitate image storage and distribution last year
+<sup>the two kind $10(AUD) donators who helped facilitate image storage and distribution over the last year</sup><br>
 <sup>github https://github.com for a solid and open platform</sup><br><br>
+
 
 <sup>[@damianperera github_action_sidebuilds](https://github.com/damianperera/openwrt-rpi)</sup><br>
 <sup>[@jerrykuku luci-theme-argon](https://github.com/jerrykuku/luci-theme-argon)</sup><br>
@@ -44,7 +47,7 @@ the two kind $10 donators who helped facilitate image storage and distribution l
 <sup>[Van Tech Corner](https://www.youtube.com/channel/UCczXrZ5r1nCMACiaipGqbtw)</sup><br>
 <sup>[MaroonMed](https://www.maroonmed.com/berry-on-a-bush-router-on-a-stick-raspberry-pi-4-inter-vlan-openwrt-router/)</sup><br>
 <sup>sqm-dscp-logic: hisham2630(ultimate-sqm-settings-layer-cake-dscp-marks) (and others) @ldir @dlakelan</sup><br>
-<sup>@lynx, @moeller0, @dlakelan + others sqm-autorate (lte/3g/variable-bw-links)</sup>(no longer active - use upstream direct)<br>
+<sup>@lynx, @moeller0, @dlakelan + others sqm-autorate (lte/3g/variable-bw-links) (no longer active - use upstream direct)</sup><br>
 <sup>argonone code: @DarkElvenAngel</sup><br>
 <sup>@dairyman and the rooter peoples</sup><br>
 <sup>plenty-of-others: if i have learnt or borrowed something from you thankyou...</sup><br>

@@ -322,6 +322,25 @@ Bname="rpi4.64-22.03.0-29269-2.1.6-7-r19685-ext4-sys.img.gz"
 
 
 
+
+
+
+
+
+
+
+
+Fsub="builds/rpi-4_22.03.1_2.1.7-2_r19777_extra"
+Bname="rpi4.64-22.03.1-29276-2.1.7-2-r19777-ext4-sys.img.gz"
+
+
+
+
+
+
+
+
+
 #		echo "no release build available"; exit 0
     ;; ############################################################## ENDRELEASE 
 
@@ -375,6 +394,14 @@ Bname="rpi4.64-22.03.0-29266-2.1.6-5-r19685-ext4-sys.img.gz"
 #fix updatecheck msgs and flash
 Fsub="builds/rpi-4_22.03.0_2.1.6-7_r19685_extra"
 Bname="rpi4.64-22.03.0-29269-2.1.6-7-r19685-ext4-sys.img.gz"
+
+
+
+
+Fsub="builds/rpi-4_22.03.1_2.1.7-2_r19777_extra"
+Bname="rpi4.64-22.03.1-29276-2.1.7-2-r19777-ext4-sys.img.gz"
+
+
 
 
 

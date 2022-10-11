@@ -4,8 +4,36 @@
 
 
 
-       22.03.0 / 20220909 / r20xxx - untested, borderline unsupported, staler than before...
+                  -link yt-dlp to youtube-dl (if needed) -> nope, not 1:1 compatible probs
+                  -> above still not really working and php7 getting long in the tooth now
+                  -> disable PHP7=1 hardcoded on until further testing or functionality
+                     verification/improvements done
+                  -> as a bonus should speed up firstboot times by maybe 10-23%
+                  -> while there... tidy a little (print on action for 50dsl etc.)
 
+                  -backup list sysupgrade.conf add /etc/mbcollect.ini just in case
+
+
+
+
+
+
+                  -chop firstboot notup iface wait times in half (imperfect but see
+                                                                  how it goes)
+                                          on my system it only effects ipv6 not
+                                          coming up (ever~30~mins?) but anything
+                                          with slow wan link layer or provider
+                                          negotiation is possibly effected...
+
+                  -checked brcm (wifiblob) ver seems "current"(master) although a cymac minimal
+                   popped up somewhere in my travels... more info needed?
+
+                  -initial (master) check current upstream argon theme manual install - seems pretty solid
+                    luci-app-argon-config_0.8-beta_all.ipk
+                    luci-theme-argon-master_2.2.9.4_all.ipk  
+
+       22.03.0 / 20220909 / r20xxx - untested, borderline unsupported, staler than before...
+        (3-7)
                   -Generate / provide new non-expired key
                   -Webhosting expirey point update scripts back to github
                    as they were originally... (if one click updates are to work...)
@@ -16,10 +44,14 @@
 
                    *** NOTE to self, did not update bootfiles... revisit if these work
                        || core kernel / boot issue ***
+                   *** also double check upstream wifi blobs are OOTB/packaged ***
 
-                   5> hotfix fix broken sqm dual fw support
-                   7> fix luci banner
-                   > tba acme,argon testing
+
+                   5> hotfix + builtin - fix broken sqm dual fw support (quickfix)
+                   7> fix luci banner (semi-quickfix and likely imperfect)
+
+
+
 
         7.1.31
                  -3) note to self ytdl stuff is probably stale now test / update or
@@ -29,7 +61,7 @@
 
                  -3) it appears changes were made to image validation and or
                      something is stale in my code regarding this
-
+                     (edit: key had expired)
                      (tested from 22.03-rc3>master
                       remote chance there were issues
                       there only)
@@ -740,7 +772,17 @@
 
 
          tba
+                > tba (low) acme,argon testing
                 -rotate signing keys > done-ish > march/april/may 2022 next tick
+                   -NB: ~june?ish 2022 current key expired, that includes next rotation
+                        newkey was hotfixed to legacy installs ~sept
+                        aka -> ~7-9monthly rotation seems ideal
+
+
+
+
+
+
 
 
 

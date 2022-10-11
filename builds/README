@@ -2,11 +2,12 @@
 
     ################################################## builds
 
-	NOTE: These builds are for the most part too stale now
+	NOTE: These builds are for the most part getting stale now
           for my liking (unvalidated tweaks, app specific workarounds)
-          They can break at any time and
-          are provided to support legacy installs until
-          they either don't build or what you need breaks :(
+          They can break at any time. If you are not confident in
+          verifying basic function, best hold off on any available update
+          for 3-7 days minimum.
+
 
 
     WHAT-IS-IT?: disk images of openwrt for the rpi-4... see thread
