@@ -510,6 +510,11 @@ Bname="rpi4.64-snapshot-29269-7.1.37-7-r20522-ext4-sys.img.gz"
 
 
 
+Fsub="builds/rpi-4_snapshot_7.1.59-2_r20894_extra"
+Bname="rpi4.64-snapshot-29290-7.1.59-2-r20894-ext4-sys.img.gz"
+
+
+
 
 
 		#echo "no current build available"; exit 0
@@ -557,6 +562,11 @@ Bname="rpi4.64-snapshot-29266-7.1.37-5-r20522-ext4-sys.img.gz"
 
 Fsub="builds/rpi-4_snapshot_7.1.37-7_r20522_extra"
 Bname="rpi4.64-snapshot-29269-7.1.37-7-r20522-ext4-sys.img.gz"
+
+
+
+Fsub="builds/rpi-4_snapshot_7.1.59-2_r20894_extra"
+Bname="rpi4.64-snapshot-29290-7.1.59-2-r20894-ext4-sys.img.gz"
 
 
 
