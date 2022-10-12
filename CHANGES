@@ -4,6 +4,14 @@
 
 
 
+
+       
+       7.1.59-2_r20894
+                 -remove httpsdnsproxy workarounds
+
+
+
+       22.03.1 below this would be r205xx as well I think
                   -link yt-dlp to youtube-dl (if needed) -> nope, not 1:1 compatible probs
                   -> above still not really working and php7 getting long in the tooth now
                   -> disable PHP7=1 hardcoded on until further testing or functionality
@@ -12,10 +20,6 @@
                   -> while there... tidy a little (print on action for 50dsl etc.)
 
                   -backup list sysupgrade.conf add /etc/mbcollect.ini just in case
-
-
-
-
 
 
                   -chop firstboot notup iface wait times in half (imperfect but see
