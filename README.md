@@ -88,19 +88,17 @@ anticipate degradation in master based builds and potential discontinuation of t
 - easy user setup variables via wrt.ini (lanip, ntp-server, etc.) with luci editing
 - expansion of partition to whole sdcard on sysupgrade
 - webui full-ish text editor (conditional/semi-stale)
-- youtube-download webui (wip requires external storage) (conditional/semi-stale)
 - webui browser ssh terminal (wip conditional/to finish test further)
 - smb/sshfs mount helper
 - nano colors, fake 'man' command
+- OLD youtube-download webui (wip requires external storage) (removed/disabled 2022-09)
 
 ## scripts
 - rpi-sysup-online.sh automated upgrade
 - package restore (sysupgrade -R)
-- rpi4-official-opkg.sh for security and bugfixes from master (this may not work post around 2022/03)
 - rpi-throttlewatch.sh ( test thermal/scaling )
 - some 'locate' command setup+tweaks
-- semi-discontinued use topbar: rpi-sysup-clean-backup.sh wip (dump generic backups)
-- rollback.sh|opK install <pkg|file>|wrtsnapback (betas-not really functional)
+- OLD? (may have broken around 2022-03) rpi4-official-opkg.sh for security and bugfixes from master (this may not work post around 2022/03)
 
 
 ## opt-in/out

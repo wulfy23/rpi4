@@ -336,6 +336,12 @@ Bname="rpi4.64-22.03.1-29276-2.1.7-2-r19777-ext4-sys.img.gz"
 
 
 
+Fsub="builds/rpi-4_22.03.2_1.0.3-2_r19803_extra"
+Bname="rpi4.64-22.03.2-29291-1.0.3-2-r19803-ext4-sys.img.gz"
+
+
+
+
 
 
 
@@ -400,6 +406,9 @@ Bname="rpi4.64-22.03.0-29269-2.1.6-7-r19685-ext4-sys.img.gz"
 
 Fsub="builds/rpi-4_22.03.1_2.1.7-2_r19777_extra"
 Bname="rpi4.64-22.03.1-29276-2.1.7-2-r19777-ext4-sys.img.gz"
+
+Fsub="builds/rpi-4_22.03.2_1.0.3-2_r19803_extra"
+Bname="rpi4.64-22.03.2-29291-1.0.3-2-r19803-ext4-sys.img.gz"
 
 
 
@@ -567,6 +576,8 @@ Bname="rpi4.64-snapshot-29269-7.1.37-7-r20522-ext4-sys.img.gz"
 
 Fsub="builds/rpi-4_snapshot_7.1.59-2_r20894_extra"
 Bname="rpi4.64-snapshot-29290-7.1.59-2-r20894-ext4-sys.img.gz"
+
+
 
 
 
