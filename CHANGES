@@ -5,10 +5,10 @@
 
 
 
-       
-       7.1.59-2_r20894
-                 -remove httpsdnsproxy workarounds
 
+       
+       7.1.59-2_r20894 + 22.03.2 (mainline wifi cve fixes good if using wifi)
+                 -remove httpsdnsproxy workarounds
 
 
        22.03.1 below this would be r205xx as well I think

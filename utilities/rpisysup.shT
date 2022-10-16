@@ -344,6 +344,12 @@ Bname="rpi4.64-22.03.2-29291-1.0.3-2-r19803-ext4-sys.img.gz"
 
 
 
+Fsub="builds/rpi-4_22.03.2_2.1.9-5_r19803_extra"
+Bname="rpi4.64-22.03.2-29291-2.1.9-5-r19803-ext4-sys.img.gz"
+
+
+
+
 
 
 
@@ -409,6 +415,9 @@ Bname="rpi4.64-22.03.1-29276-2.1.7-2-r19777-ext4-sys.img.gz"
 
 Fsub="builds/rpi-4_22.03.2_1.0.3-2_r19803_extra"
 Bname="rpi4.64-22.03.2-29291-1.0.3-2-r19803-ext4-sys.img.gz"
+
+Fsub="builds/rpi-4_22.03.2_2.1.9-5_r19803_extra"
+Bname="rpi4.64-22.03.2-29291-2.1.9-5-r19803-ext4-sys.img.gz"
 
 
 
