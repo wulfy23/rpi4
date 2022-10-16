@@ -1,0 +1,141 @@
+
+
+
+
+
+
+
+
+
+
+
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.r20894 manifest.r20954 | grep -v kmod | grep -v python
+10,11c10,11
+< arp-scan - 1.9.7-1
+< arp-scan-database - 1.9.7-1
+---
+> arp-scan - 1.9.8-1
+> arp-scan-database - 1.9.8-1
+15c15
+< base-files - 1498-r20894-2683cca592
+---
+> base-files - 1499-r20954-cb24be47ff
+33c33
+< busybox - 1.35.0-3
+---
+> busybox - 1.35.0-4
+68c68
+< curl - 7.85.0-3.1
+---
+> curl - 7.85.0-4.1
+108,109c108,109
+< hostapd-common - 2022-07-29-b704dc72-4.1
+< hostapd-utils - 2022-07-29-b704dc72-4.1
+---
+> hostapd-common - 2022-07-29-b704dc72-5.1
+> hostapd-utils - 2022-07-29-b704dc72-5.1
+140c140
+< iwinfo - 2022-09-22-4a43b0d4-1
+---
+> iwinfo - 2022-10-14-0496c722-1
+143c143
+< jshn - 2022-05-15-d2223ef9-1
+---
+> jshn - 2022-09-27-ea560134-1
+145c145
+< kernel - 5.15.72-1-51c22b8e018ab5e6c9471349f4442b55
+---
+> kernel - 5.15.72-1-f9af8247e62b6960103262557d5c9fe7
+353c353
+< libblobmsg-json20220515 - 2022-05-15-d2223ef9-1
+---
+> libblobmsg-json20220927 - 2022-09-27-ea560134-1
+360c360
+< libcurl4 - 7.85.0-3.1
+---
+> libcurl4 - 7.85.0-4.1
+386,388c386,388
+< libiwinfo-data - 2022-09-22-4a43b0d4-1
+< libiwinfo-lua - 2022-09-22-4a43b0d4-1
+< libiwinfo20210430 - 2022-09-22-4a43b0d4-1
+---
+> libiwinfo-data - 2022-10-14-0496c722-1
+> libiwinfo-lua - 2022-10-14-0496c722-1
+> libiwinfo20210430 - 2022-10-14-0496c722-1
+390c390
+< libjson-script20220515 - 2022-05-15-d2223ef9-1
+---
+> libjson-script20220927 - 2022-09-27-ea560134-1
+396c396
+< liblzma - 5.2.6-1
+---
+> liblzma - 5.2.7-1
+428c428
+---
+441c441
+< libubox20220515 - 2022-05-15-d2223ef9-1
+---
+> libubox20220927 - 2022-09-27-ea560134-1
+466c466
+< luci-app-ddns - git-22.255.51142-74cf149
+---
+> luci-app-ddns - git-22.275.66320-85ff9db
+487c487
+< luci-app-wireguard - git-21.322.66896-8ae208d
+---
+> luci-app-wireguard - git-22.278.48139-a53fc77
+619,621c619,621
+---
+624,625c624,625
+---
+627,632c627,632
+---
+634,638c634,638
+---
+640c640
+---
+642,643c642,643
+---
+646c646
+---
+648c648
+---
+650c650
+---
+652,654c652,654
+---
+656,657c656,657
+---
+674,676c674,676
+< rpcd - 2022-09-12-e80d0b2d-1
+< rpcd-mod-file - 2022-09-12-e80d0b2d-1
+< rpcd-mod-iwinfo - 2022-09-12-e80d0b2d-1
+---
+> rpcd - 2022-09-21-8c852b65-1
+> rpcd-mod-file - 2022-09-21-8c852b65-1
+> rpcd-mod-iwinfo - 2022-09-21-8c852b65-1
+728,729c728,729
+< wpa-cli - 2022-07-29-b704dc72-4.1
+< wpad-openssl - 2022-07-29-b704dc72-4.1
+---
+> wpa-cli - 2022-07-29-b704dc72-5.1
+> wpad-openssl - 2022-07-29-b704dc72-5.1
+734,735c734,735
+< xz - 5.2.6-1
+< xz-utils - 5.2.6-1
+---
+> xz - 5.2.7-1
+> xz-utils - 5.2.7-1
+
+
+
+
+
+
+
+
+
+
+
+
+
