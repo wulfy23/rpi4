@@ -532,6 +532,9 @@ Fsub="builds/rpi-4_snapshot_7.1.59-2_r20894_extra"
 Bname="rpi4.64-snapshot-29290-7.1.59-2-r20894-ext4-sys.img.gz"
 
 
+Fsub="builds/rpi-4_snapshot_7.1.75-2_r21243_extra"
+Bname="rpi4.64-snapshot-29297-7.1.75-2-r21243-ext4-sys.img.gz"
+
 
 
 

@@ -9,6 +9,13 @@
 
 
 
+
+                ############################# r212xxx
+                  -afaict argon theme is now broken?
+                  -no more updatecheck bar at all :(
+
+
+
 		############################# 22.03 + r20xxx untested > .7 tested a bit
 
 
@@ -37,11 +44,23 @@
            
           -updatecheck bar (flash and msg is not functional > hotfix in progress)
           workaround for no flash button/link in updatecheck bar once logged in (subversions before 7)
+
 ```
 sed -i 's/\!sysauth=\!/\!sysauth_https=\!/g' /bin/updatecheck.sh
 ```
+edit 20221111 above probably not enough sadly...
+
+may be some weeks if at all it comes back (without some help) ... i'm going to check stabe/release
+to see if it's still working there first...
+
            
             TOFIX
+           
+           -20221111 getting disk full messages... likely something on my end maybe, need to
+            look into if it's just versioned rubbish buildup or something more 'fast'
+            is happening
+
+
            -possible acme changes/new workarounds needed
            -ipv6 wan connection on my link hits firstboot failsafe code
             (not coming up) afaik this has been an issue going back 7+months
