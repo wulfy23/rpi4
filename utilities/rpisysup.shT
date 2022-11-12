@@ -539,6 +539,7 @@ Bname="rpi4.64-snapshot-29297-7.1.75-2-r21243-ext4-sys.img.gz"
 
 
 		#echo "no current build available"; exit 0
+		echo "no current build available"; exit 0
 	;; ############################################################## ENDCURRENT
 
 
@@ -597,6 +598,7 @@ Bname="rpi4.64-snapshot-29290-7.1.59-2-r20894-ext4-sys.img.gz"
 
 
 	#		echo "no testing build available"; exit 0
+			echo "no testing build available"; exit 0
 	;; ############################################################## ENDTESTING
 
 
