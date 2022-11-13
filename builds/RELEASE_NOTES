@@ -13,6 +13,19 @@
                 ############################# r212xxx
                   -afaict argon theme is now broken?
                   -no more updatecheck bar at all :(
+                  -dnsmasq(default variant?) on master now has no ipset support and
+                   does not correctly identify/setup nftsets in parrallel support
+
+
+                  -NOTE from subversion 5 we are testing FW4/NFTABLES please dont
+                   install 'current' / master if you are unfamiliar with manually
+                   verifying some fundamental functions on the command line
+                   (firewall rules, services running etc.) at least for a week
+                   or three...
+ 
+                   While I am reasonably comfortable with general function... it's
+                   edge cases or legacy logic we need to verify is up to chuff...
+
 
 
 

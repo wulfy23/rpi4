@@ -532,14 +532,22 @@ Fsub="builds/rpi-4_snapshot_7.1.59-2_r20894_extra"
 Bname="rpi4.64-snapshot-29290-7.1.59-2-r20894-ext4-sys.img.gz"
 
 
+
+### ipset not in dnsmasq anymore
 Fsub="builds/rpi-4_snapshot_7.1.75-2_r21243_extra"
 Bname="rpi4.64-snapshot-29297-7.1.75-2-r21243-ext4-sys.img.gz"
+
+
+### test build with firewall4 and no iptables stuff at all-ish
+Fsub="builds/rpi-4_snapshot_7.1.75-11_r21243_extra"
+Bname="rpi4.64-snapshot-29299-7.1.75-11-r21243-ext4-sys.img.gz"
+
 
 
 
 
 		#echo "no current build available"; exit 0
-		echo "no current build available"; exit 0
+		#echo "no current build available"; exit 0
 	;; ############################################################## ENDCURRENT
 
 

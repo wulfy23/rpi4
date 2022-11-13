@@ -5,6 +5,13 @@
 
 
 
+             r212xx(5)
+                 -remove argon theme (if selected luci breaks)
+                 -try native fw4 / nftsets as ipset is broken / not present
+                  in masq binary
+                     -this means banip will likely not work (if a legacy version and
+                      some other stuff i.e. maybe vpn policy or custom fw rules etc)
+
 
        
        7.1.59-2_r20894 + 22.03.2 (mainline wifi cve fixes good if using wifi)
