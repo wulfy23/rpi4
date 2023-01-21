@@ -10,6 +10,32 @@
 
 
 
+
+
+
+
+
+
+                ############################# 23.03.3
+                   -as im not really running / tracking this branch much key
+                    application / application config changes or other
+                    may take time to surface (please report!)
+
+                   -vpn-policy-routing > pbr
+                    you'll need to update/change your config/ENABLED_SERVICES
+                    if you use this service, as yet i'm not auto handling this
+                    due to unknown complexities with config migration
+                    if app handles(config migration) let me know and i'll try to add some logic
+                    for the service autostart fixup
+
+                    IF YOU RUN THIS SERVICE suggest putting config file in place or checking if
+                    its automigrated before updating... and update your ENABLED_SERVICES with 'pbr'
+                    before upgrading
+
+                    (app name change midrelease is kinda odd)
+
+
+
                 ############################# r212xxx
                   -afaict argon theme is now broken?
                   -no more updatecheck bar at all :(
@@ -25,6 +51,9 @@
  
                    While I am reasonably comfortable with general function... it's
                    edge cases or legacy logic we need to verify is up to chuff...
+
+
+
 
 
 

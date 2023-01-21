@@ -5,6 +5,44 @@
 
 
 
+
+       22.03.3
+                 -undo r212 tests from below (no code for auto revert any ipset / fw config stuff for downgrade)
+                  (yet)
+
+
+			Unknown package 'luci-app-vpn-policy-routing' > pbr-iptables
+                      
+                        "luci-app-pbr" does not support or 'pulls-in' only pbr which in turn
+                        tries to pull in fw4 < nftables which messes up iptables selections
+                        so no gui for pbr any more :(
+
+                        let me know if you want the old one back
+
+
+                        remove argon ipk just in case will test and attempt next week
+
+
+
+                 -JUST IN CASE
+                     -add quick updatecheck/update to LUCI > SYSTEM > COMMANDS for those who really struggle with ssh etc.
+
+                 -TODO areas to test or potential known / anticipated quirks
+                     -confirm updatecheck + argon is broken
+                     -banip package still exists? and/or last stable still backportable?
+                     -httpsdnsproxy state / status... afair 22.03.2 removed our mods?, check this is the case
+                     -wifi, as above should be mainline but need feedback on function / other?
+                     -possibly strip / remove many unused/old 'fancy' stuff over course of point release
+                     -PACKAGE NAME CHANGES(removals etc.)? or other changes in the package selections?
+                     -improve scavenging and limits on build metadata to better prevent disk fill etc.
+                      (could just be an issue for me at present)
+                  -POSSIBLY after initial build / over course of point release
+                     -pi foundation / pty ltd bootfiles update / tests? (wait for issues with current ver first)
+                     -assess alternate fw3/fw4 package selection options and single codebase viability based on those
+                     -drop or update helper binaries as needed (mostly master but may apply here)
+
+
+
              r212xx(5)
                  -remove argon theme (if selected luci breaks)
                  -try native fw4 / nftsets as ipset is broken / not present
