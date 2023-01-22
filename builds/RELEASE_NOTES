@@ -2,18 +2,14 @@
 
         ##################################### RELEASE NOTES
 
-        note: there is no ujail(added back r19003 removed post due to simple-adblock issue)
-              or fw4 on the master builds
-              (but I am happy to make one for you if you wish)
 
 
 
+          NOTE: UPGRADE PROCESS (at least for me) IS NOW TAKING QUITE A BIT LONGER
+                SO PLEASE ALLOW AROUND 12MINS BEFORE COMING BACK/LOGGINGIN/CHECKING INTERNET
+                ETC
 
-
-
-
-
-
+                APOLOGIES, I'LL LOOK AT THIS TO SEE WHAT CAN BE DONE
 
 
                 ############################# 23.03.3
@@ -51,6 +47,23 @@
  
                    While I am reasonably comfortable with general function... it's
                    edge cases or legacy logic we need to verify is up to chuff...
+
+
+
+
+##########################################################################################3
+########################################### DEMARK COMMENTS BELOW GETTING OLD
+###########################################################################################
+
+
+        note: there is no ujail(added back r19003 removed post due to simple-adblock issue)
+              or fw4 on the master builds
+              (but I am happy to make one for you if you wish)
+
+
+
+
+
 
 
 
