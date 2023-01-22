@@ -352,11 +352,15 @@ Bname="rpi4.64-22.03.2-29291-2.1.9-5-r19803-ext4-sys.img.gz"
 Fsub="builds/rpi-4_22.03.3_2.1.11.9-4_r20028_extra"
 Bname="rpi4.64-22.03.3-29293-2.1.11.9-4-r20028-ext4-sys.img.gz"
 
+
+#buggy keeps adding UPDATE on next upgrade
 Fsub="builds/rpi-4_22.03.3_2.1.11.9-5_r20028_extra"
 Bname="rpi4.64-22.03.3-29293-2.1.11.9-5-r20028-ext4-sys.img.gz"
 
 
 
+Fsub="builds/rpi-4_22.03.3_2.1.11.9-6_r20028_extra"
+Bname="rpi4.64-22.03.3-29295-2.1.11.9-6-r20028-ext4-sys.img.gz"
 
 
 #		echo "no release build available"; exit 0
