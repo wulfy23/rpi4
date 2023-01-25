@@ -1,0 +1,871 @@
+#!/bin/sh
+
+
+
+
+
+#credits: bobafett vgaetera ...tba
+
+
+
+
+
+
+
+
+
+
+############################################################################## this is how it works...
+
+
+
+#####################################################step1 ### enable the logic as a whole
+#uci set network.globals.persistent_nic='1'
+#uci commit network
+
+######################################################step2 ### for every usb nic
+#uci set network.rummy.mac_original='00:00:e8:00:44:bf'
+#uci commit network
+
+################################################ update the uci logical interface underlying device eth+last6chars
+#uci set network.rummy.device="eth0044bf"
+#uci commit network
+
+
+
+################# TIPS
+### for extra wan interfaces repeat step2...#################################################################3caveats:
+
+### first wan(all usb) need to be added
+### NOTE: if you have wan + wan6 only use new device name on wan6 
+### i.e. dont put identical mac_original twice (for now... still testing this)
+
+### macaddr in device section will work if using fancy naming(picked up by netifd on rename)
+### macaddr in interface section will work (picked up by this script/or os whichever changes first?)
+
+### check /etc/config/sqm and/or /etc/config/luci_statistics(sqm_collectd) if the wan device name needs updating
+
+
+################# CAVEATS
+#no device bridges etc. for now
+#usb only
+
+
+
+
+
+
+
+###################################### EXAMPLE config format
+#config globals 'globals'
+#	option persistent_nic '1'
+
+#config interface 'rummy'
+#	option device 'eth0044bf'
+#	option mac_original '00:00:e8:00:44:bf'
+#	option proto 'dhcp'
+
+#config interface 'wan'
+#	option device 'ethdc03bf'
+#	option mac_original '00:00:e8:dc:03:bf'
+#	option proto 'dhcp'
+
+
+		
+
+
+
+
+
+
+
+nicmove_enabled() {
+	local nmENABLED
+	nmENABLED=$(uci -q get network.globals.persistent_nic)
+	case "$nmENABLED" in
+		1) return 0; ;;
+		*) return 1; ;;
+	esac
+}
+
+
+
+
+
+
+
+
+
+
+uci_nic_find() {
+
+	local FN="uci_nic_find"
+	local ucidevONE
+
+	case "${1}" in
+
+		interfaces_all) #<network>.THIS(shortname)
+			uci show network | grep '=interface$' | cut -d'.' -f1,2 | cut -d'=' -f1 | cut -d'.' -f2
+		;;
+		
+		ucidev) #takes single word network.WORD.device
+			local uciDEVWORD="${2}"
+			local ucidevONE=$(uci -q get network.${uciDEVWORD}.device)
+		
+
+			if [ -z "$ucidevONE" ]; then
+				return 1
+			fi
+
+			#CALLEDMANYTIMES
+			#echV "$FN> devONE: $ucidevONE" ### echV "${FN}DBG> devONE: $ucidevONE $uciDEVWORD ${*}"
+
+
+			if ifconfig | grep -E "[a-z]" | awk '{print $1}' | grep -q "${2}"; then
+				echV "$FN> rawdevpresent: ${2}"
+			fi
+			if [ ! -z "$(uci show network | grep 'ports=' | grep "${2}'$")" ]; then
+				echV "$FN> THIS HAS A DEVICE SECTION"
+			fi #network.@device[0].ports='eth0' #uci show network | grep 'ports=' | grep "'"eth0"'$")
+			
+
+
+			echo "$ucidevONE"
+
+
+			return 0
+		;;
+	esac
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+nic_has_interface() {
+	
+	local lookupMAC="${1}"
+	local netdev_CUR="${2}"
+	local uciLINE #uciPFX
+	local netdev_MATCHES #means all is good AKA dev matches
+
+	local FN="nic_has_interface"
+
+
+
+	if [ "$(uci show network | grep 'mac_original=' | wc -l)" -eq 0 ]; then
+		echV "$FN> no mac_originals setup" debug; return 1
+	fi
+
+	
+
+	if echo "$netdev_CUR" | grep -q '^wlan'; then
+		echV "$FN> skipping wifi interface ${netdev_CUR}" debug; return 1
+	fi
+
+
+	echV "$FN> 222 net+add checking for uci+network interface $lookupMAC" debug
+
+	while read uciLINE; do
+		[ -z "$uciLINE" ] && continue #echV "uciLINE: $uciLINE"	
+		#NOPEALLCALLS [ -n "$EDEBUG" ] && echV "$FN> edebug1wan+wan6check uciline $UCILINE" debug
+
+
+		if [ ! -z "$(uci -q get network.${uciLINE}.mac_original)" ] && \
+			[ "$(uci -q get network.${uciLINE}.mac_original)" = "${lookupMAC}" ]; then
+
+			
+
+			#[ -n "$EDEBUG" ] && echV "$FN> edebug2wan+wan6check uci_find_dev ucidev $(uci_nic_find ucidev "${uciLINE}")"
+
+
+
+
+			if ! uci_nic_find ucidev "${uciLINE}"; then
+				echV "${uciLINE} has no .device section" #probably wifi
+			elif [ "$(uci_nic_find ucidev "${uciLINE}")" != "$netdev_CUR" ]; then
+				echV "devmanagedNOTmatch: uci:$(uci_nic_find ucidev "${uciLINE}") cur:$netdev_CUR" debug
+				KICKME="${uciLINE}"			
+
+				if [ ! -z "$(uci -q get network."${uciLINE}".macaddr)" ]; then
+					HASMACADDR="${uciLINE}"
+					UCIMACADDR="$(uci -q get network."${uciLINE}".macaddr)"
+				fi
+
+			else
+				netdev_MATCHES=1 #@!> ifdown X; ifup X; if macaddr
+			fi
+
+
+
+		fi
+done <<CCC
+$(uci_nic_find interfaces_all)
+CCC
+
+
+
+
+if [ ! -z "$netdev_MATCHES" ]; then
+	echV "MATCHES: $netdev_MATCHES"; return 0
+elif [ ! -z "$KICKME" ]; then
+	return 0
+fi
+
+return 1
+
+}
+
+
+
+
+
+
+
+
+
+
+kick_a_nic() {
+	
+	local FN="kick_a_nic"
+	local dNAME="${1}"
+	local dNAMEto="${2}"
+
+
+
+	echV "$FN $1 > $2" msg #echV "$FN $1 > $2" #debug
+
+
+
+	###################	echV "hasmac: ${HASMACADDR}" WHEN CHANGE TO STATIC DID NOT APPLY JUST TRY ifdown and ifup
+	ifdown ${KICKME}
+
+
+
+
+	
+	######IFTDEBUG echV "ip link set ${dNAME} down $(ip link set ${dNAME} down)" debug
+	#echV "ip link set ${dNAME} down" debug
+	ip link set ${dNAME} down
+	
+	#######IFTDEBUG echV "ip link set ${dNAME} name $dNAMEto $(ip link set ${dNAME} name $dNAMEto)" debug
+	#echV "ip link set ${dNAME} name $dNAMEto" debug
+	ip link set ${dNAME} name $dNAMEto
+	sleep 2 #NEEDED!
+
+
+
+
+	if [ ! -z "${UCIMACADDR}" ]; then
+		echV "macaddr: ${netdev_MAC_presented} > ${UCIMACADDR}" msg #echV "setmacddr: $UCIMACADDR" debug
+		ip link set dev $dNAMEto address $UCIMACADDR
+		#sleep 1
+	fi
+
+
+	##################HMMM maybe try just ifup? or its network restart :(
+	######TDEBUG echV "$(ip link set ${dNAMEto} up $(ip link set ${dNAMEto} up)" debug
+	#echV "ip link set ${dNAMEto} up" debug
+	ip link set ${dNAMEto} up
+	sleep 2
+	#sleep 6
+
+
+	#echV "TRYWITHNOIFUP(nexthplug)"
+	ifup ${KICKME}
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+echV() {
+
+	DDm=$(date +%Y%m%d-%H%M%S)
+	
+
+	local M_PFX="${2}"
+
+	local MDSENT
+
+
+
+	if [ ! -z "${SLOG}" ]; then
+		echo "${DDm}-$SNAME-${M_PFX}: ${1}" >>$SLOG
+	fi
+
+
+	case "${2}" in
+		msg)
+			#logger -t "vM$SNAME" "> ${1}"
+			echo "vM$SNAME> ${1}" >/dev/kmsg
+			return 0
+		;;
+	esac
+
+
+
+	case "${2}" in
+		logger)
+			logger -t "vM$SNAME" "> ${1}"
+			#return 0
+		;;
+	esac
+
+
+
+	if [ -z "${2}" ]; then
+			echo "vBLANKONE[K]$SNAME> ${1}" >/dev/kmsg ### echo "vBLANKONE[E]$SNAME > ${1}"
+			return 0
+	fi
+
+
+
+	if [ "$2" = "debug" ] && [ -z "$TDEBUG" ]; then return 0; fi
+
+
+	case "${2}" in
+		debug)
+			echo "vD${SNAME}> ${1}" > /dev/kmsg
+			echo "vED${SNAME}> ${1}"
+			MDSENT=1
+		;;
+		#*) msg hitting this
+		#	logger -t "Z${SNAME}" "> ${1}"
+		#;;
+	esac
+		#msg)
+		#	logger -t "M$SNAME" "echV> ${1}"
+		#;;
+
+
+
+
+
+	if [ ! -z "$TDEBUG" ] && [ -z "$MDSENT" ]; then
+		echo "vEKKK-${SNAME}: ${1}" >/dev/kmsg #echo "vEKKK${DDm}-$SNAME: ${1}" >/dev/kmsg
+	fi
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	case "${INTERFACE}" in
+			"SQM"*|"gre"*|"erspan"*|"teq"*|"ip6"*|"sit"*|"tunl"*|"ifb"*|"dummy"*)
+				exit 0
+			;;
+	esac
+
+	################################################################ SKIP net remove
+	case "${HOTPLUG_TYPE}" in
+	net)
+		#################################
+		case "$ACTION" in
+			remove)
+				exit 0
+			;;
+		esac
+		#################################
+	;;
+	iface)
+		:
+	;;
+	#*)
+	#	echV "$sname HTYPEdbg OTHER ${HOTPLUG_TYPE}" debug #echo "$sname HTYPEdbg OTHER ${HOTPLUG_TYPE}"
+	#;;
+	esac
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###########################
+SDERIVED="000-nicmove3.1SHuntTOtmpTEST>KICKANIC"
+SVERSION="5.2.3-3.11"
+sFROM=$(basename $(dirname $script))
+
+
+
+
+
+
+
+
+sname="kickanic"
+DDD=$(date +%Y%m%d-%H%M%S)
+
+
+ACT="${ACTION:-"none"}"
+HT="$HOTPLUG_TYPE"
+
+
+
+
+TMPd="/tmp/$sname"; mkdir -p "${TMPd}" #storeonrootfswhiletesting... powerremovedidnotcomeupright #TMPd="/tmp"
+###########################
+
+
+#SNAME="NICMOVE_${HOTPLUG_TYPE}_${ACTION}_$(date +%Y%m%d-%H%M%S)"
+#SNAME="${sname}_${HOTPLUG_TYPE}_${ACTION}_$(date +%Y%m%d-%H%M%S)"
+SNAME="${sname}_${HOTPLUG_TYPE}_${ACTION}"
+SLOG="${TMPd}/${sname}-$IFACE-$DEVICENAME-$INTERFACE-$DEVICE"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#EDEBUG #[ ! -z "$EDEBUG" ] &&
+#TDEBUG=1
+
+
+
+############# TMPtoINItoTOGGLE
+#if grep -q 'DC:A6:32:56:31:77' /proc/cmdline 2>/dev/null; then
+#	TDEBUG=1
+#	#EDEBUG=1 #SHOWSMORESTUFF DEVPATHallCALLS etc
+#fi
+
+
+
+eval $(grep '^HOTPLUG_NICMOVE_MAINTAINER=' /root/wrt.ini 2>/dev/null)
+if [ ! -z "$HOTPLUG_NICMOVE_MAINTAINER" ]; then
+	TDEBUG=1
+#	#EDEBUG=1 #SHOWSMORESTUFF DEVPATHallCALLS etc
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+if [ ! -z "$TDEBUG" ]; then
+	DBGSLEEP=2
+
+
+	###
+	[ ! -z "$EDEBUG" ] && set > ${TMPd}/SET${DDD}_${INTERFACE}_${ACTION}
+
+
+else
+	SLOG=
+fi #[ ! -z "$TDEBUG" ] && DBGSLEEP=2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+if ! nicmove_enabled; then
+	###################################PRINTSTOOOFTENdebugtho
+	echV "${INTERFACE} nicmove is not enabled" debug
+	#@?> nmSUMMARY_OFF="${nmSUMMARY_L} [OFFglobal]"
+	exit 0
+else
+	: #nmSUMMARY_L="${nmSUMMARY_L} [ON]"
+	############ #echV "nicmove is enabled" debug
+fi #sleep ${DBGSLEEP:-"0"}
+
+
+
+
+
+
+
+
+############################################################################### TMP DISABLED TO ALLOW FOR UPDATES
+#if ! grep -q "^/etc/hotplug.d/net/000-kickanic" /etc/sysupgrade.conf; then
+#	nmSUMMARY_L="${nmSUMMARY_L} [sysupgrade.conf add]"
+#	echo "/etc/hotplug.d/net/000-kickanic" >> /etc/sysupgrade.conf
+#fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	case "${HOTPLUG_TYPE}" in
+	net)
+		MSGs_H="${HOTPLUG_TYPE}_${ACTION}_${INTERFACE}"
+	;;
+	iface)
+		MSGs_H="${HOTPLUG_TYPE}_${ACTION}"
+	;;
+	*)
+		echV "$sname HTYPEdbg OTHER ${HOTPLUG_TYPE}" debug #echo "$sname HTYPEdbg OTHER ${HOTPLUG_TYPE}"
+	;;
+	esac
+
+
+
+
+
+	
+	case "$DEVPATH" in
+		*"/net/wlan"*)
+			NIC_TYPE="wifi"
+			MSGs_N="${MSGs_N} wifi"
+		;;
+		*"/usb1"*|*"/usb2"*)
+			NIC_TYPE="usb"
+			MSGs_N="${MSGs_N} usb"
+		;;
+		#"SQM"*|"gre"*|"erspan"*|"teq"*|"dummy"*)
+		#	: #setignorefortheseabove
+		#;;
+		*)
+			NIC_TYPE="unknown[$DEVPATH]"
+		;; #echV "NOTUSB: $INTERFACE d:$DEVPATH"; exit 0; 
+	esac
+
+
+
+
+#case "${INTERFACE}" in
+#	"SQM"*|"gre"*|"erspan"*|"teq"*|"dummy"*)
+#		NIC_TYPE="ignore"
+#		MSGs_N="${MSGs_N} ignore"
+#esac
+#######################################3#		#exit 0
+#########dummy #gretap erspan #[   31.557276] vDkickanic_net_add>  [SKIPWIFI] i:wlan0 dc:a6:32:56:31:78  wifi
+
+
+
+
+
+
+
+	case "$NIC_TYPE" in
+		usb) :; ;;
+		*)
+			MSGs_NORUN="${MSGs_NORUN} notusb[${INTERFACE}:d>$DEVPATH]"
+			#MSGs_NORUN="NOTUSB: $INTERFACE d:$DEVPATH"; #exit 0
+		;;
+	esac
+	###wifi) :; ;;
+
+
+
+
+
+
+
+
+
+
+
+
+if [ "$ACTION" = "add" ] && [ "$SUBSYSTEM" = "net" ]; then
+	netdev_MAC_presented="$(cat /sys/"$DEVPATH"/address)"
+fi
+
+#LOWER nmSUMMARY_L="${nmSUMMARY_L} ${netdev_MAC_presented}"
+
+
+
+
+
+#case ACT remove/move just [ON]
+#case "${ACT}" in
+#	add|move) #<moveforpeelTMP add)
+#		echV "########################### SUMMARY ${nmSUMMARY_L}" debug
+#	;;
+#esac
+
+
+
+
+
+
+
+
+
+
+
+case "$INTERFACE" in
+	"wlan"*)
+		nmSUMMARY_L="${nmSUMMARY_L} [SKIPWIFI]"
+	;;
+	#"SQM"*|"gre"*|"erspan"*|"teq"*|"dummy"*)
+	#	nmSUMMARY_L="${nmSUMMARY_L} [SKIP_${INTERFACE}]"
+	#;;
+	*)
+		nmSUMMARY_L="${nmSUMMARY_L} [ON]"
+	;;
+esac
+
+
+
+
+
+
+
+
+
+
+nmSUMMARY_L="${nmSUMMARY_L} i:${INTERFACE}"
+
+
+#MAC
+nmSUMMARY_L="${nmSUMMARY_L} ${netdev_MAC_presented}"
+
+
+
+
+
+
+
+
+
+
+
+
+
+case "$INTERFACE" in
+	"wlan"*)
+		echV "${nmSUMMARY_L} ${MSGs_N}" debug
+		#HASHOTPLUGMSGs_HisINHEADER echV "${nmSUMMARY_L} ${MSGs_H} ${MSGs_N}" debug
+		### echV "########################### SUMMARY ${nmSUMMARY_L} ${MSGs_H} ${MSGs_N}" debug
+		exit 0 #HASLOWERSKIPPINGSTUFF in UCI_HAS_INTERFACE and OTHER PLACES
+	;;
+
+
+	#"SQM"*|"gre"*|"erspan"*|"teq"*|"dummy"*)
+	#	: #EXIT BELOW also MSGnoRUN TBA ABOVE
+	#;;
+
+
+
+	*)
+		echV "############## SUMMARY ${nmSUMMARY_L} ${MSGs_H} ${MSGs_N}" debug
+		#echV "########################### SUMMARY ${nmSUMMARY_L}" debug
+		#echV "########################### START_H ${MSGs_H}" debug
+		#echV "########################### START_N ${MSGs_N}" debug
+		[ ! -z "$EDEBUG" ] && echV "### DEVPATH: ${DEVPATH}" debug
+	;;
+esac
+
+
+
+
+
+
+
+
+
+#case "$NIC_TYPE" in
+#	"ignore")
+#		echV "${nmSUMMARY_L} ${MSGs_N}" debug
+#		exit 0
+#	;;
+#esac
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+if [ "$ACTION" = "add" ] && [ "$SUBSYSTEM" = "net" ]; then
+
+
+
+
+	###############################################################
+	#case "$NIC_TYPE" in
+	#	usb) :; ;;
+	#	#MOVEDupMSGs_NORUN *) echV "NOTUSB: $INTERFACE d:$DEVPATH"; exit 0; ;;
+	#	#MOVEDupMSGs_NORUN *) echV "NOTUSB: $INTERFACE d:$DEVPATH"; exit 0; ;;
+	#esac
+	###wifi) :; ;;
+	##############################################################3
+	##############################################################3
+	##############################################################3
+	######case "$DEVPATH" in
+	######	*"/usb1"*|*"/usb2"*) :; ;;
+	######	*) echV "NOTUSB: $INTERFACE d:$DEVPATH"; exit 0; ;;
+	#######esac
+	##############################################################3
+
+
+
+
+
+
+
+
+
+	netdev_MAC_presented="$(cat /sys/"$DEVPATH"/address)"
+	if nic_has_interface "$netdev_MAC_presented" "$INTERFACE"; then
+		#echV "INTERFACE:$INTERFACE $netdev_MAC_presented is mac_original known to /etc/config/network"
+		echV "INTERFACE:$INTERFACE $netdev_MAC_presented is mac_original known to /etc/config/network" msg
+		if [ ! -z "$KICKME" ]; then
+			netdev_MAC_moveto="$(echo $netdev_MAC_presented | sed 's|:||g')"
+			netdev_MAC_moveto="$(echo $netdev_MAC_moveto | tail -c7)"
+			#FUNCTIONHASAPRINT echo "000-kickanic_rename> ${INTERFACE} eth${netdev_MAC_moveto}" >/dev/kmsg
+			kick_a_nic "${INTERFACE}" "eth${netdev_MAC_moveto}"
+			exit 0
+		fi
+	else
+	
+
+
+
+
+
+
+
+		### SKIPTHISMESSAGEFORWIFI-EVENTUALLYUPPEREXIT-FORNOW nic_has_interace prints DEBUG skipping wlan*
+		#case "$INTERFACE" in
+		#	"wlan"*)
+		case "$NIC_TYPE" in
+			wifi*)
+				:
+			;;
+			
+
+			usb)
+				echV "INTERFACE:$INTERFACE $netdev_MAC_presented is mac_original unknown to /etc/config/network" msg
+				echV "###################     WARNING     #################" msg
+				echV "   ALL USB ADAPTERS MUST BE SETUP TO HANDLE BOOT     " msg
+				echV "                    DETECTION PROPERLY               " msg
+				echV "###################     WARNING     #################" msg
+
+			;;
+
+
+
+
+
+
+
+			*)
+				#echV "INTERFACE:$INTERFACE $netdev_MAC_presented is mac_original unknown to /etc/config/network" debug
+				echV "INTERFACE:$INTERFACE $netdev_MAC_presented is mac_original unknown to /etc/config/network" msg
+
+
+
+
+			;;
+		esac
+
+		exit 0
+
+
+
+
+	fi
+fi
+
+
+
+
+exit 0
+
