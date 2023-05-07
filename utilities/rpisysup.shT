@@ -371,6 +371,9 @@ Fsub="builds/rpi-4_22.03.5_2.1.15-2_r20134_extra"
 Bname="rpi4.64-22.03.5-29299-2.1.15-2-r20134-ext4-sys.img.gz"
 
 
+#fix nft override to ipt
+Fsub="builds/rpi-4_22.03.5_2.1.15-3_r20134_extra"
+Bname="rpi4.64-22.03.5-29299-2.1.15-3-r20134-ext4-sys.img.gz"
 
 
 
@@ -448,6 +451,10 @@ Bname="rpi4.64-22.03.3-29293-2.1.11.9-4-r20028-ext4-sys.img.gz"
 
 Fsub="builds/rpi-4_22.03.5_2.1.15-2_r20134_extra"
 Bname="rpi4.64-22.03.5-29299-2.1.15-2-r20134-ext4-sys.img.gz"
+
+#fix nft override to ipt
+Fsub="builds/rpi-4_22.03.5_2.1.15-3_r20134_extra"
+Bname="rpi4.64-22.03.5-29299-2.1.15-3-r20134-ext4-sys.img.gz"
 
 
 		#echo "no stable build available"; exit 0
