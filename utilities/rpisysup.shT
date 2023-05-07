@@ -366,6 +366,10 @@ Bname="rpi4.64-22.03.3-29295-2.1.11.9-6-r20028-ext4-sys.img.gz"
 Fsub="builds/rpi-4_22.03.3_2.1.11.9-12_r20028_extra"
 Bname="rpi4.64-22.03.3-29299-2.1.11.9-12-r20028-ext4-sys.img.gz"
 
+#beta 22.03.5 basic install test only
+Fsub="builds/rpi-4_22.03.5_2.1.15-2_r20134_extra"
+Bname="rpi4.64-22.03.5-29299-2.1.15-2-r20134-ext4-sys.img.gz"
+
 
 
 
@@ -442,6 +446,8 @@ Fsub="builds/rpi-4_22.03.3_2.1.11.9-4_r20028_extra"
 Bname="rpi4.64-22.03.3-29293-2.1.11.9-4-r20028-ext4-sys.img.gz"
 
 
+Fsub="builds/rpi-4_22.03.5_2.1.15-2_r20134_extra"
+Bname="rpi4.64-22.03.5-29299-2.1.15-2-r20134-ext4-sys.img.gz"
 
 
 		#echo "no stable build available"; exit 0
