@@ -3,6 +3,11 @@
     ___________________________________________________   CHANGELOG
 
 
+       22.03.5 / 2.1.15-5
+                 -readd forgotten manual add of legacy/ipt banip/luciappbanip
+                 -add stdalone legacy banip pkg to git/utilities for manual installation by user
+       22.03.5 / 2.1.15-3
+                 -fix nft>ipt subsystem primary fw
        22.03.5 / 2.1.15-2
                  -no changes only a basic install test done
 

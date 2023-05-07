@@ -376,6 +376,12 @@ Fsub="builds/rpi-4_22.03.5_2.1.15-3_r20134_extra"
 Bname="rpi4.64-22.03.5-29299-2.1.15-3-r20134-ext4-sys.img.gz"
 
 
+#readdbanip
+Fsub="builds/rpi-4_22.03.5_2.1.15-5_r20134_extra"
+Bname="rpi4.64-22.03.5-29299-2.1.15-5-r20134-ext4-sys.img.gz"
+
+
+
 
 #		echo "no release build available"; exit 0
     ;; ############################################################## ENDRELEASE 
@@ -456,6 +462,9 @@ Bname="rpi4.64-22.03.5-29299-2.1.15-2-r20134-ext4-sys.img.gz"
 Fsub="builds/rpi-4_22.03.5_2.1.15-3_r20134_extra"
 Bname="rpi4.64-22.03.5-29299-2.1.15-3-r20134-ext4-sys.img.gz"
 
+#readdbanip
+Fsub="builds/rpi-4_22.03.5_2.1.15-5_r20134_extra"
+Bname="rpi4.64-22.03.5-29299-2.1.15-5-r20134-ext4-sys.img.gz"
 
 		#echo "no stable build available"; exit 0
     ;; ############################################################## ENDSTABLE
