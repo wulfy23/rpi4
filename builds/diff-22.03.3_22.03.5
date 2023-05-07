@@ -1,0 +1,361 @@
+
+
+
+
+
+#> peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.22.03.3 openwrt-22.03.5-bcm27xx-bcm2711-rpi-4.manifest > diff-22.03.3_22.03.5
+
+
+
+
+
+
+
+
+
+4c4
+< adblock - 4.1.5-4
+---
+> adblock - 4.1.5-7
+
+
+
+13,14c13,14
+< base-files - 1498-r20028-43d71ad93e
+< bash - 5.1.16-1
+
+
+
+---
+> base-files - 1502-r20134-5f15225c1e
+> bash - 5.2.15-1
+
+
+
+18,25c18,25
+< bind-check - 9.18.10-2
+< bind-dig - 9.18.10-2
+< bind-dnssec - 9.18.10-2
+< bind-host - 9.18.10-2
+< bind-libs - 9.18.10-2
+< bind-nslookup - 9.18.10-2
+< bind-rndc - 9.18.10-2
+< bind-tools - 9.18.10-2
+---
+> bind-check - 9.18.11-1
+> bind-dig - 9.18.11-1
+> bind-dnssec - 9.18.11-1
+> bind-host - 9.18.11-1
+> bind-libs - 9.18.11-1
+> bind-nslookup - 9.18.11-1
+> bind-rndc - 9.18.11-1
+> bind-tools - 9.18.11-1
+
+
+
+56,57c56,57
+< comgt - 0.32-34
+< comgt-ncm - 0.32-34
+---
+> comgt - 0.32-35
+> comgt-ncm - 0.32-35
+
+
+
+
+65c65
+< curl - 7.86.0-2
+---
+> curl - 8.0.1-1
+
+
+
+
+80c80
+< dnsmasq-full - 2.86-15
+---
+> dnsmasq-full - 2.86-16
+105,107c105,107
+< hostapd-common - 2022-01-16-cff80b4f-15.2
+< hostapd-utils - 2022-01-16-cff80b4f-15.2
+< htop - 3.2.1-1
+---
+> hostapd-common - 2022-01-16-cff80b4f-16.2
+> hostapd-utils - 2022-01-16-cff80b4f-16.2
+> htop - 3.2.2-1
+
+
+
+
+
+109c109
+< https-dns-proxy - 2022-10-15-10
+---
+> https-dns-proxy - 2022-10-15-11
+
+
+
+
+
+113,114c113,114
+< ip-bridge - 5.15.0-3
+< ip-full - 5.15.0-3
+---
+> ip-bridge - 5.15.0-4
+> ip-full - 5.15.0-4
+135c135
+< irqbalance - 1.9.2-1
+---
+> irqbalance - 1.9.2-2
+
+
+
+
+
+142,342c142,342
+< kernel - 5.10.161-1-61a27be69d8fdf73a5b94559a7a5730a
+---
+> kernel - 5.10.176-1-226c4dc22addf8a1948f0054a86ec23f
+354c354
+< libcurl4 - 7.86.0-2
+---
+> libcurl4 - 8.0.1-1
+387,388c387,388
+< liblucihttp-lua - 2022-07-08-6e68a106-1
+< liblucihttp0 - 2022-07-08-6e68a106-1
+---
+> liblucihttp-lua - 2023-03-15-9b5b683f-1
+> liblucihttp0 - 2023-03-15-9b5b683f-1
+411,412c411,412
+< libopenssl-conf - 1.1.1s-1
+< libopenssl1.1 - 1.1.1s-1
+---
+> libopenssl-conf - 1.1.1t-3
+> libopenssl1.1 - 1.1.1t-3
+421c421
+---
+430c430
+< libsqlite3-0 - 3400000-1
+---
+> libsqlite3-0 - 3410200-1
+439c439
+< libuclient20201210 - 2021-05-14-6a6011df-1
+---
+> libuclient20201210 - 2023-04-13-007d9454-1
+455c455
+< luci - git-20.074.84698-ead5e81
+---
+> luci - git-23.093.42303-d58cd69
+457c457
+< luci-app-adblock - git-22.291.61192-cc92603
+---
+> luci-app-adblock - git-23.049.70484-d2c0e80
+459c459
+< luci-app-ddns - git-22.339.34822-6da87df
+---
+> luci-app-ddns - git-23.118.79498-4390b4d
+461,462c461,462
+< luci-app-firewall - git-22.089.67563-7e3c1b4
+< luci-app-https-dns-proxy - 2021-11-22-7
+---
+> luci-app-firewall - git-23.093.42704-1c01c64
+> luci-app-https-dns-proxy - 2022-10-15-11
+465,471c465,471
+< luci-app-mosquitto - git-20.252.39179-596c291
+< luci-app-mwan3 - git-21.340.50573-2af8158
+< luci-app-nft-qos - git-22.026.38400-f30b673
+< luci-app-nlbwmon - git-23.013.73652-e29915d
+< luci-app-openvpn - git-23.013.73113-4015bcb
+< luci-app-opkg - git-22.273.29004-9f6876b
+< luci-app-simple-adblock - 1.9.3-3
+---
+> luci-app-mosquitto - git-23.093.40713-165196a
+> luci-app-mwan3 - git-23.093.40772-fa4dc75
+> luci-app-nft-qos - git-23.093.40817-45de661
+> luci-app-nlbwmon - git-23.119.78260-8aaf581
+> luci-app-openvpn - git-23.093.42303-4b07c72
+> luci-app-opkg - git-23.093.42303-e16f620
+> luci-app-simple-adblock - 1.9.5-1
+473,474c473,474
+< luci-app-sqm - git-21.164.25180-005c09a
+< luci-app-statistics - git-23.002.71119-463850a
+---
+> luci-app-sqm - git-23.063.28820-8c4562d
+> luci-app-statistics - git-23.093.42314-fcb96f5
+481,483c481,483
+< luci-app-xinetd - git-21.229.30494-2f1f46e
+< luci-base - git-22.361.69894-438c598
+< luci-compat - git-22.069.45071-03bb0e2
+---
+> luci-app-xinetd - git-23.093.42380-65c3b3b
+> luci-base - git-23.119.80898-65ef406
+> luci-compat - git-23.093.42303-ef4cd04
+489,491c489,491
+< luci-mod-network - git-22.345.48602-4853e7b
+< luci-mod-status - git-22.302.42268-2878b35
+< luci-mod-system - git-23.013.73113-588381e
+---
+> luci-mod-network - git-23.118.74641-4b1cbff
+> luci-mod-status - git-23.093.42411-713f701
+> luci-mod-system - git-23.118.78821-0c02883
+496,497c496,497
+< luci-proto-modemmanager - git-21.231.25157-5ff3ef7
+< luci-proto-ncm - git-22.204.40786-69d981a
+---
+> luci-proto-modemmanager - git-23.093.42704-02e0766
+> luci-proto-ncm - git-23.093.40896-fb322f5
+500,503c500,503
+< luci-proto-wireguard - git-22.327.45657-14403fe
+< luci-theme-bootstrap - git-22.288.45147-96ec0cd
+< luci-theme-material - git-22.339.35089-7af4a64
+< luci-theme-openwrt - git-21.285.74425-1c3b32d
+---
+> luci-proto-wireguard - git-23.093.40597-18a1842
+> luci-theme-bootstrap - git-23.093.42704-b47268a
+> luci-theme-material - git-23.093.42303-f4d5a1a
+> luci-theme-openwrt - git-23.093.42303-f4d5a1a
+518,519c518,519
+< mwan3 - 2.11.4-1
+< nano - 7.1-1
+---
+> mwan3 - 2.11.6-1
+> nano - 7.2-2
+539c539
+< openssl-util - 1.1.1s-1
+---
+> openssl-util - 1.1.1t-3
+547c547
+< pbr-iptables - 1.0.1-14
+---
+> pbr-iptables - 1.1.1-1
+
+
+
+
+
+
+
+
+
+591,599c591,599
+---
+613,615c613,615
+---
+618,619c618,619
+---
+621,626c621,626
+---
+628,632c628,632
+---
+634c634
+---
+636,637c636,637
+---
+640c640
+---
+642c642
+---
+644c644
+---
+646,648c646,648
+---
+650,651c650,651
+---
+678c678
+
+
+
+
+
+
+< simple-adblock - 1.9.3-6
+---
+> simple-adblock - 1.9.5-1
+
+
+
+
+
+685c685
+< ss - 5.15.0-3
+---
+> ss - 5.15.0-4
+
+
+
+
+
+688,689c688,689
+< tc-full - 5.15.0-3
+< tc-mod-iptables - 5.15.0-3
+---
+> tc-full - 5.15.0-4
+> tc-mod-iptables - 5.15.0-4
+
+
+
+700c700
+< uclient-fetch - 2021-05-14-6a6011df-1
+---
+> uclient-fetch - 2023-04-13-007d9454-1
+720c720
+
+
+
+< wireless-regdb - 2022.08.12-1
+---
+> wireless-regdb - 2023.02.13-1
+
+
+722,723c722,723
+< wpa-cli - 2022-01-16-cff80b4f-15.2
+< wpad-openssl - 2022-01-16-cff80b4f-15.2
+---
+> wpa-cli - 2022-01-16-cff80b4f-16.2
+> wpad-openssl - 2022-01-16-cff80b4f-16.2
+
+
+
+
+
+730,731c730,731
+< yt-dlp - 2023.1.6-1
+< zerotier - 1.10.2-1
+---
+> yt-dlp - 2023.3.4-1
+> zerotier - 1.10.3-1
+
+
+
+
+733,743c733,742
+< zoneinfo-africa - 2022f-1
+< zoneinfo-asia - 2022f-1
+< zoneinfo-atlantic - 2022f-1
+< zoneinfo-australia-nz - 2022f-1
+< zoneinfo-core - 2022f-1
+< zoneinfo-europe - 2022f-1
+< zoneinfo-india - 2022f-1
+< zoneinfo-northamerica - 2022f-1
+< zoneinfo-pacific - 2022f-1
+< zoneinfo-poles - 2022f-1
+< zoneinfo-southamerica - 2022f-1
+---
+> zoneinfo-africa - 2023c-2
+> zoneinfo-america - 2023c-2
+> zoneinfo-asia - 2023c-2
+> zoneinfo-atlantic - 2023c-2
+> zoneinfo-australia-nz - 2023c-2
+> zoneinfo-core - 2023c-2
+> zoneinfo-europe - 2023c-2
+> zoneinfo-indian - 2023c-2
+> zoneinfo-pacific - 2023c-2
+> zoneinfo-poles - 2023c-2
+
+
+
+
+
+
+
+
