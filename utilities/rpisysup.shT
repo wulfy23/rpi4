@@ -4,12 +4,12 @@
 
 
 
-if [ -f /etc/banip/banip.sources.gz ] && [ "$(zcat /etc/banip/banip.sources.gz | grep wulfy23 | wc -l)" = "0" ]; then
-#	echo "no wulfyblock updating"
-	curl -sSL https://github.com/wulfy23/rpi4/raw/master/utilities/banip.sources.gz > /etc/banip/banip.sources.gz
-else
-	: #echo "wulfyblock present"
-fi
+#if [ -f /etc/banip/banip.sources.gz ] && [ "$(zcat /etc/banip/banip.sources.gz | grep wulfy23 | wc -l)" = "0" ]; then
+###	echo "no wulfyblock updating"
+#	curl -sSL https://github.com/wulfy23/rpi4/raw/master/utilities/banip.sources.gz > /etc/banip/banip.sources.gz
+#else
+#	: #echo "wulfyblock present"
+#fi
 
 
 
