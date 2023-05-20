@@ -3,6 +3,13 @@
     ___________________________________________________   CHANGELOG
 
 
+       22.03.5 / 2.1.15-6+
+                 -add banip config cover copy for ipt / nft incompatibility issues
+                  	(tba auto putback on cross installation)
+                 -add preliminary banip custom / internally hosted blocklist
+			(tba periodic sync, scope of list/s, https enablement, adblock also?)
+                        (pruning, possible fw optimisation also)
+
        22.03.5 / 2.1.15-5
                  -readd forgotten manual add of legacy/ipt banip/luciappbanip
                  -add stdalone legacy banip pkg to git/utilities for manual installation by user
