@@ -14,7 +14,7 @@
 
 
                 ############################# r23001 snapshot nft beta / test / cleanup build
-                   -HAVE NOT TESTED THIS YET
+                   -HAVE NOT TESTED THIS YET > EDIT basic test
                    -RECOMMEND putting on an entirely separate SDCARD if you will be testing this
                    -BACKUP your banip(masq?/other?) config file if you are downgrading back to 22.x
                    -Also suggest switching off rpi4.qos if you are using it before upgrading

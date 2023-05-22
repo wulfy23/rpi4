@@ -609,6 +609,10 @@ Bname="rpi4.64-snapshot-29299-7.1.75-11-r21243-ext4-sys.img.gz"
 Fsub="builds/rpi-4_snapshot_7.1.93-5_r23001_extra"
 Bname="rpi4.64-snapshot-29306-7.1.93-5-r23001-ext4-sys.img.gz"
 
+#rm argon
+Fsub="builds/rpi-4_snapshot_7.1.93-6_r23001_extra"
+Bname="rpi4.64-snapshot-29307-7.1.93-6-r23001-ext4-sys.img.gz"
+
 
 
 		#echo "no current build available"; exit 0
@@ -668,6 +672,9 @@ Bname="rpi4.64-snapshot-29290-7.1.59-2-r20894-ext4-sys.img.gz"
 Fsub="builds/rpi-4_snapshot_7.1.93-5_r23001_extra"
 Bname="rpi4.64-snapshot-29306-7.1.93-5-r23001-ext4-sys.img.gz"
 
+#rmargon
+Fsub="builds/rpi-4_snapshot_7.1.93-6_r23001_extra"
+Bname="rpi4.64-snapshot-29307-7.1.93-6-r23001-ext4-sys.img.gz"
 
 
 
