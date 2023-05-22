@@ -12,10 +12,37 @@
 
 
 
-                ############################# 23.03.5 beta
-                   -basic test only (upgrade worked)
-                    likely persisting quirks plus possible new ones
 
+                ############################# r23001 snapshot nft beta / test / cleanup build
+                   -HAVE NOT TESTED THIS YET
+                   -RECOMMEND putting on an entirely separate SDCARD if you will be testing this
+                   -BACKUP your banip(masq?/other?) config file if you are downgrading back to 22.x
+                   -Also suggest switching off rpi4.qos if you are using it before upgrading
+
+                   It has been some time since last master build. There were some changes in
+                   fundamental package selections.
+                 
+                   Before cleaning it up more, good to have an image out there for various
+                   carp / foundation issues to be known
+
+                   1. It's bigger
+                   2. Last time I tried master it was running fairly quick, i'd say a little
+                      faster than 22.03.x but that's decent too will report back here anything
+                      in this of note
+                   3. No update to rpi bootstrap (elf/dat) has been made (yet)
+                   4. Apparently wifi may be whacky on these boards of recent month(s)...
+                      not planning on touching wifi but lets see how it fairs and is
+                      a good point of comparison with 22.x
+
+
+                      * stage2 custom info was not visible... likely a 22.03.5 thing?... 
+                          or my serial stuff which seemed a little off too...
+
+
+                ############################# 23.03.5
+                   -um... rev5 general function ok
+                    a few app things creeping in maybe
+                    of note: update base is there but not flash link
 
                 ############################# 23.03.3
                    -as im not really running / tracking this branch much key

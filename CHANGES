@@ -3,6 +3,42 @@
     ___________________________________________________   CHANGELOG
 
 
+
+       r23001 7.1.19? master nft native testing build / various other changes
+
+
+         TBA
+                 -probably start ripping out some stuff... likely qos stuff short term 
+                 -banip config auto-migration auto-recovery
+                  -other migration stuff that might come up (net hooks and stuff nobody uses
+                   i.e. hoplimit/cellular fixup options and whatnot
+                 -perftweaks retesting / simplification
+                 -package kull / revise inclusions etc
+
+         DONE
+                 -sslmbtls now selected default conflicts with openssl explicit -
+                 -mbtlswpad as above explicit -
+                 -pbr-iptables > just pbr add the luci app too
+                 -ummm... dont dual fw with preferenced default anymore based on
+                  now changed to zz? iptables-legacy, instead use translation
+                  iptables packages (good testing should ensue)
+                 -re-include banip (aka the new nft version)
+
+
+                -images a bit bigger (~7Mish)
+
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ du -chs rpi-4_snapshot_7.1.93-2_r23001_extra/*
+84M	rpi-4_snapshot_7.1.93-2_r23001_extra/rpi4.64-snapshot-29303-7.1.93-2-r23001-ext4-fac.img.gz
+84M	rpi-4_snapshot_7.1.93-2_r23001_extra/rpi4.64-snapshot-29303-7.1.93-2-r23001-ext4-sys.img.gz
+74M	rpi-4_snapshot_7.1.93-2_r23001_extra/rpi4.64-snapshot-29303-7.1.93-2-r23001-rtfs.tar.gz
+
+vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ du -chs rpi-4_22.03.5_2.1.15-5_r20134_extra/*
+77M	rpi-4_22.03.5_2.1.15-5_r20134_extra/rpi4.64-22.03.5-29299-2.1.15-5-r20134-ext4-fac.img.gz
+77M	rpi-4_22.03.5_2.1.15-5_r20134_extra/rpi4.64-22.03.5-29299-2.1.15-5-r20134-ext4-sys.img.gz
+
+
+
+
        22.03.5 / 2.1.15-6+
                  -add banip config cover copy for ipt / nft incompatibility issues
                   	(tba auto putback on cross installation)
