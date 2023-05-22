@@ -614,6 +614,9 @@ Fsub="builds/rpi-4_snapshot_7.1.93-6_r23001_extra"
 Bname="rpi4.64-snapshot-29307-7.1.93-6-r23001-ext4-sys.img.gz"
 
 
+#overwrite rpi4.qos with layer_cake
+Fsub="builds/rpi-4_snapshot_7.1.93-7_r23001_extra"
+Bname="rpi4.64-snapshot-29309-7.1.93-7-r23001-ext4-sys.img.gz"
 
 		#echo "no current build available"; exit 0
 		#echo "no current build available"; exit 0
@@ -677,6 +680,9 @@ Fsub="builds/rpi-4_snapshot_7.1.93-6_r23001_extra"
 Bname="rpi4.64-snapshot-29307-7.1.93-6-r23001-ext4-sys.img.gz"
 
 
+#overwrite rpi4.qos with layer_cake
+Fsub="builds/rpi-4_snapshot_7.1.93-7_r23001_extra"
+Bname="rpi4.64-snapshot-29309-7.1.93-7-r23001-ext4-sys.img.gz"
 
 
 

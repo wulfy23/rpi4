@@ -7,13 +7,19 @@
        r23001 7.1.19? master nft native testing build / various other changes
 
 
+
+                 7) copy layer_cake over rpi4.qos and leave rpi4.qos.disabled
+
          TBA
                  -probably start ripping out some stuff... likely qos stuff short term 
-                 -banip config auto-migration auto-recovery
+                  -script config(masq) clean of legacy ipset stuff from above
+                 -banip config auto-migration &&|| auto-recovery
                   -other migration stuff that might come up (net hooks and stuff nobody uses
                    i.e. hoplimit/cellular fixup options and whatnot
                  -perftweaks retesting / simplification
                  -package kull / revise inclusions etc
+                   -remove (TBA) orphaned? iptables-mod-* and kmod-ipt* / ip6t etc. ipks
+                 -try newer argon theme and or find newdeps &&|| integrate &&|| modify teencily
 
          DONE
                  -sslmbtls now selected default conflicts with openssl explicit -
@@ -23,7 +29,8 @@
                   now changed to zz? iptables-legacy, instead use translation
                   iptables packages (good testing should ensue)
                  -re-include banip (aka the new nft version)
-
+                 -6) argon (old verson in use with 22.x) remove as is broken?
+                     (no UI after upgrade if selected)
 
                 -images a bit bigger (~7Mish)
 
