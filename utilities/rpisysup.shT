@@ -618,6 +618,16 @@ Bname="rpi4.64-snapshot-29307-7.1.93-6-r23001-ext4-sys.img.gz"
 Fsub="builds/rpi-4_snapshot_7.1.93-7_r23001_extra"
 Bname="rpi4.64-snapshot-29309-7.1.93-7-r23001-ext4-sys.img.gz"
 
+
+#add back / bump argon to 2.3.1 on master build/s
+#disable nft.user manual banipsets and sqm quickfixes from initial nft build
+Fsub="builds/rpi-4_snapshot_7.1.93-12_r23001_extra"
+Bname="rpi4.64-snapshot-29316-7.1.93-12-r23001-ext4-sys.img.gz"
+
+
+
+
+
 		#echo "no current build available"; exit 0
 		#echo "no current build available"; exit 0
 	;; ############################################################## ENDCURRENT
@@ -684,6 +694,10 @@ Bname="rpi4.64-snapshot-29307-7.1.93-6-r23001-ext4-sys.img.gz"
 Fsub="builds/rpi-4_snapshot_7.1.93-7_r23001_extra"
 Bname="rpi4.64-snapshot-29309-7.1.93-7-r23001-ext4-sys.img.gz"
 
+
+#add back / bump argon to 2.3.1 on master build/s
+Fsub="builds/rpi-4_snapshot_7.1.93-12_r23001_extra"
+Bname="rpi4.64-snapshot-29316-7.1.93-12-r23001-ext4-sys.img.gz"
 
 
 	#		echo "no testing build available"; exit 0

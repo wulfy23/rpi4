@@ -8,6 +8,12 @@
 
 
 
+                 9) put back argon using no mods on latest 20230521 argon
+                    theme 2.3.1 tested and seems to work ok
+                    (config app possibly later) 
+                 9) /etc/custom/nft.user -> disable prev code (simple banlist
+                    and nft set add prev static sets to prevent sqm errs)
+                    until hooks or need arises in a clearer fashion
                  7) copy layer_cake over rpi4.qos and leave rpi4.qos.disabled
 
          TBA
@@ -31,19 +37,6 @@
                  -re-include banip (aka the new nft version)
                  -6) argon (old verson in use with 22.x) remove as is broken?
                      (no UI after upgrade if selected)
-
-                -images a bit bigger (~7Mish)
-
-vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ du -chs rpi-4_snapshot_7.1.93-2_r23001_extra/*
-84M	rpi-4_snapshot_7.1.93-2_r23001_extra/rpi4.64-snapshot-29303-7.1.93-2-r23001-ext4-fac.img.gz
-84M	rpi-4_snapshot_7.1.93-2_r23001_extra/rpi4.64-snapshot-29303-7.1.93-2-r23001-ext4-sys.img.gz
-74M	rpi-4_snapshot_7.1.93-2_r23001_extra/rpi4.64-snapshot-29303-7.1.93-2-r23001-rtfs.tar.gz
-
-vert@peanut:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ du -chs rpi-4_22.03.5_2.1.15-5_r20134_extra/*
-77M	rpi-4_22.03.5_2.1.15-5_r20134_extra/rpi4.64-22.03.5-29299-2.1.15-5-r20134-ext4-fac.img.gz
-77M	rpi-4_22.03.5_2.1.15-5_r20134_extra/rpi4.64-22.03.5-29299-2.1.15-5-r20134-ext4-sys.img.gz
-
-
 
 
        22.03.5 / 2.1.15-6+

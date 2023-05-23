@@ -34,6 +34,9 @@
                       not planning on touching wifi but lets see how it fairs and is
                       a good point of comparison with 22.x
 
+                   5. interesting delay for wan carrier could be from me using kickanic,
+                      docsis update, netifd or similar 30-50 secs hang after nic
+                      renamed to lan bringup... can live with but kinda hefty in context
 
                       * stage2 custom info was not visible... likely a 22.03.5 thing?... 
                           or my serial stuff which seemed a little off too...
