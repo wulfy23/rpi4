@@ -4,18 +4,11 @@
 
 
 
-if [ -f /etc/banip/banip.sources.gz ]; then	
-	if [ "$(grep '^v203' /root/.banip.sources 2>/dev/null | wc -l)" = 0 ]; then
-		curl -sSL https://github.com/wulfy23/rpi4/raw/master/utilities/banip.sources.gz > /etc/banip/banip.sources.gz
-		echo 'v203' >> /root/.banip.sources
-	else
-		: #echo "wulfyblock present"
-	fi	
+
+
+if cat rpi-perftweaks.sh | grep -q 'TEMPORARY UNTIL' 2>/dev/null; then
+	curl -sSL https://github.com/wulfy23/rpi4/raw/master/utilities/rpi-perftweaks.sh > /bin/rpi-perftweaks.sh
 fi
-#if [ "$(zcat /etc/banip/banip.sources.gz | grep wulfy23 | wc -l)" = "0" ]; then
-###	echo "no wulfyblock updating"
-### : #echo "wulfyblock present"
-#if [ -f /etc/banip/banip.sources.gz ] && [ "$(zcat /etc/banip/banip.sources.gz | grep wulfy23 | wc -l)" = "0" ]; then
 
 
 
@@ -25,21 +18,6 @@ fi
 
 
 
-if [ ! -f /etc/custom/keys/ec3ce191447f05b5 ]; then
-cat << EOF > /etc/custom/keys/ec3ce191447f05b5
-untrusted comment: wulfy23 build key
-RWTsPOGRRH8FtQK8ja1dNm+KLHT3rWv7IMTxVHuDzrRK1keU9ac0bA03
-EOF
-fi
-#if [ ! -f /etc/opkg/keys/ec3ce191447f05b5 ]; then
-#cat << EOF > /etc/opkg/keys/ec3ce191447f05b5
-#untrusted comment: wulfy23 build key
-#RWTsPOGRRH8FtQK8ja1dNm+KLHT3rWv7IMTxVHuDzrRK1keU9ac0bA03
-#EOF
-#fi
-
-
-#if cat /etc/sqm/sqm.conf 2>/dev/null | grep '^IP6TABLES' | grep -q ip6tables-nft; then
 if cat /etc/sqm/sqm.conf 2>/dev/null | grep '^IP6TABLES' | grep -q ip6tables-nft && \
 	basename $(realpath /usr/sbin/iptables) | grep -q legacy; then
 	#$ecmd "fixing sqm broken dualfw support"
@@ -1268,6 +1246,30 @@ exit 0
 
 
 
+
+
+
+
+#if [ ! -f /etc/custom/keys/ec3ce191447f05b5 ]; then
+#cat << EOF > /etc/custom/keys/ec3ce191447f05b5
+#untrusted comment: wulfy23 build key
+#RWTsPOGRRH8FtQK8ja1dNm+KLHT3rWv7IMTxVHuDzrRK1keU9ac0bA03
+#EOF
+#fi
+
+
+#if [ -f /etc/banip/banip.sources.gz ]; then	
+#	if [ "$(grep '^v203' /root/.banip.sources 2>/dev/null | wc -l)" = 0 ]; then
+#		curl -sSL https://github.com/wulfy23/rpi4/raw/master/utilities/banip.sources.gz > /etc/banip/banip.sources.gz
+#		echo 'v203' >> /root/.banip.sources
+#	else
+#		: #echo "wulfyblock present"
+#	fi	
+#fi
+#####if [ "$(zcat /etc/banip/banip.sources.gz | grep wulfy23 | wc -l)" = "0" ]; then
+#######	echo "no wulfyblock updating"
+####### : #echo "wulfyblock present"
+#####if [ -f /etc/banip/banip.sources.gz ] && [ "$(zcat /etc/banip/banip.sources.gz | grep wulfy23 | wc -l)" = "0" ]; then
 
 
 
