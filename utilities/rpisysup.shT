@@ -6,7 +6,7 @@
 
 
 
-if cat rpi-perftweaks.sh | grep -q 'TEMPORARY UNTIL' 2>/dev/null; then
+if cat /bin/rpi-perftweaks.sh 2>/dev/null | grep -q 'TEMPORARY UNTIL' 2>/dev/null; then
 	curl -sSL https://github.com/wulfy23/rpi4/raw/master/utilities/rpi-perftweaks.sh > /bin/rpi-perftweaks.sh
 fi
 
