@@ -387,6 +387,9 @@ Bname="rpi4.64-22.03.5-29327-2.1.15-17-r20134-ext4-sys.img.gz"
 Fsub="builds/rpi-4_22.03.5_2.1.15-19_r20134_extra"
 Bname="rpi4.64-22.03.5-29330-2.1.15-19-r20134-ext4-sys.img.gz"
 
+Fsub="builds/rpi-4_22.03.5_2.1.15-21_r20134_extra"
+Bname="rpi4.64-22.03.5-29331-2.1.15-21-r20134-ext4-sys.img.gz"
+
 
 
 
@@ -488,6 +491,9 @@ Bname="rpi4.64-22.03.5-29330-2.1.15-19-r20134-ext4-sys.img.gz"
 
 
 
+
+Fsub="builds/rpi-4_22.03.5_2.1.15-21_r20134_extra"
+Bname="rpi4.64-22.03.5-29331-2.1.15-21-r20134-ext4-sys.img.gz"
 
 		#echo "no stable build available"; exit 0
     ;; ############################################################## ENDSTABLE
