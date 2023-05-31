@@ -22,6 +22,8 @@
 
 
                 ############################# rpi4.qos ipset cleanup
+                    rpi-4_snapshot_7.1.93-17_r23001_extra+
+
                    -migration to and from master(nft) on prev master builds for anyone
                     using (or used in the past) rpi4.qos seems to have created a
                     sort of ipset migration race condition (my masq failed to start
@@ -37,8 +39,9 @@
                     present let me know if this happens...
 
                     it may however cause a long "hang" (approx additional
-                    120secs max) when stopping sqm or upgrading... apologies for this
-
+                    120secs max) when stopping sqm or upgrading...
+                    the first time it runs, apologies for this
+                   
 
 
                     just to clarify / restate;
