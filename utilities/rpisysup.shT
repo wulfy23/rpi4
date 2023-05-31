@@ -18,12 +18,12 @@ fi
 
 
 
-if cat /etc/sqm/sqm.conf 2>/dev/null | grep '^IP6TABLES' | grep -q ip6tables-nft && \
-	basename $(realpath /usr/sbin/iptables) | grep -q legacy; then
-	#$ecmd "fixing sqm broken dualfw support"
-	logger "fixing sqm broken dualfw support"
-	sed -i 's/^IP/#IP/g' /etc/sqm/sqm.conf
-fi
+#if cat /etc/sqm/sqm.conf 2>/dev/null | grep '^IP6TABLES' | grep -q ip6tables-nft && \
+#	basename $(realpath /usr/sbin/iptables) | grep -q legacy; then
+#	#$ecmd "fixing sqm broken dualfw support"
+#	logger "fixing sqm broken dualfw support"
+#	sed -i 's/^IP/#IP/g' /etc/sqm/sqm.conf
+#fi
 
 
 
@@ -604,6 +604,13 @@ Bname="rpi4.64-snapshot-29316-7.1.93-12-r23001-ext4-sys.img.gz"
 
 
 
+#rpiqos cleanups httpsdnsandsimple cleanups nextkey
+Fsub="builds/rpi-4_snapshot_7.1.93-17_r23001_extra"
+Bname="rpi4.64-snapshot-29326-7.1.93-17-r23001-ext4-sys.img.gz"
+
+
+
+
 
 
 		#echo "no current build available"; exit 0
@@ -677,6 +684,9 @@ Bname="rpi4.64-snapshot-29309-7.1.93-7-r23001-ext4-sys.img.gz"
 Fsub="builds/rpi-4_snapshot_7.1.93-12_r23001_extra"
 Bname="rpi4.64-snapshot-29316-7.1.93-12-r23001-ext4-sys.img.gz"
 
+#rpiqos cleanups httpsdnsandsimple cleanups nextkey
+Fsub="builds/rpi-4_snapshot_7.1.93-17_r23001_extra"
+Bname="rpi4.64-snapshot-29326-7.1.93-17-r23001-ext4-sys.img.gz"
 
 	#		echo "no testing build available"; exit 0
 #			echo "no testing build available"; exit 0

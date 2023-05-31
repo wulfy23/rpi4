@@ -13,6 +13,57 @@
 
 
 
+                ############################# master pbr include
+                   -noticed a new firewall config include script related to pbr
+                    its benign for now (need to check on downgrade) 
+                    if not enabled but i'd prefer it wasn't there
+                    for everyone if I had a choice, will leave for now and
+                    re-examine if/when more nft custom hooks are altered
+
+
+                ############################# rpi4.qos ipset cleanup
+                   -migration to and from master(nft) on prev master builds for anyone
+                    using (or used in the past) rpi4.qos seems to have created a
+                    sort of ipset migration race condition (my masq failed to start
+                    all of a sudden (current master WITHOUT rpi4.qos running for
+                    several boots
+
+                    i've added ipset cleanup code to the build to try to prevent
+                    masq issues / bloating of dhcp config
+                    (well technically it should have cleaned this from the
+                     beginning anyway)
+
+                    while i'm hoping it does not trash any user ipsets that are
+                    present let me know if this happens...
+
+                    it may however cause a long "hang" (approx additional
+                    120secs max) when stopping sqm or upgrading... apologies for this
+
+
+
+                    just to clarify / restate;
+                       on MASTER: rpi4.qos is actually layer_cake (so sqm still starts)
+                              (scraping will happen on next upgrade/firstboot)
+
+                       on RELEASE: rpi4.qos is still there with scraping on sqm stop
+                                   AND firstboot
+
+
+
+
+                     -simple-adblock / https-dns-proxy here we go again, this time
+                      just try to scrub dhcp config of these services prior to
+                      and before firstboot
+                        22.03.5-13+
+                        r23001-7 plus
+
+
+
+
+
+
+
+
                 ############################# r23001 snapshot nft beta / test / cleanup build
                    -HAVE NOT TESTED THIS YET > EDIT basic test
                    -RECOMMEND putting on an entirely separate SDCARD if you will be testing this
