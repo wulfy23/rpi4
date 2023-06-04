@@ -7,7 +7,14 @@
 
 
 
-               pbr) default disable pbr
+        release 2.1.17
+                   -many packages have updates specifically brcmusbfirmware and
+                    ca-certs and related download utils, publish an "updated"
+                    22.03.5 build
+
+                   -also significant fixes below included
+
+               pbr) default disable pbr (i.e. startup ENABLED_SERVICES="pbr" etc.)
              
 
        r23001 7.1.19? master nft native testing build / various other changes

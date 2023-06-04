@@ -1,0 +1,111 @@
+
+
+vert@MSI:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.22.03.5 manifest.22.03.5update1 | grep -v python | grep -v collect
+
+
+29c29
+< brcmfmac-firmware-usb - 20220411-1
+---
+> brcmfmac-firmware-usb - 20230515-1
+
+
+32,33c32,33
+< ca-bundle - 20211016-1
+< ca-certificates - 20211016-1
+---
+> ca-bundle - 20230311-1
+> ca-certificates - 20230311-1
+
+
+
+39,55c39,55
+---
+65c65
+< curl - 8.0.1-1
+---
+> curl - 8.1.1-1
+
+
+109c109
+< https-dns-proxy - 2022-10-15-11
+---
+> https-dns-proxy - 2023-05-25-1
+354c354
+< libcurl4 - 8.0.1-1
+---
+> libcurl4 - 8.1.1-1
+421c421
+---
+
+
+447c447
+< libxml2 - 2.10.3-1
+---
+> libxml2 - 2.10.4-1
+
+
+462c462
+< luci-app-https-dns-proxy - 2022-10-15-11
+---
+> luci-app-https-dns-proxy - 2022-10-15-14
+
+
+474c474
+< luci-app-statistics - git-23.093.42314-fcb96f5
+---
+> luci-app-statistics - git-23.153.53801-38f5b55
+
+
+489c489
+< luci-mod-network - git-23.118.74641-4b1cbff
+---
+> luci-mod-network - git-23.150.26444-c5db28c
+
+
+515c515
+< mt7601u-firmware - 20220411-1
+---
+> mt7601u-firmware - 20230515-1
+
+
+518c518
+< mwan3 - 2.11.6-1
+---
+> mwan3 - 2.11.7-1
+
+
+547c547
+< pbr-iptables - 1.1.1-1
+---
+> pbr-iptables - 1.1.1-7
+613,615c613,615
+---
+
+
+
+---
+663,664c663,664
+< r8152-firmware - 20220411-1
+< r8169-firmware - 20220411-1
+---
+> r8152-firmware - 20230515-1
+> r8169-firmware - 20230515-1
+
+
+678c678
+< simple-adblock - 1.9.5-1
+---
+> simple-adblock - 1.9.5-2
+
+
+
+720c720
+< wireless-regdb - 2023.02.13-1
+---
+> wireless-regdb - 2023.05.03-1
+
+
+
+
+
+
