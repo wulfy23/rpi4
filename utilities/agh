@@ -1,0 +1,1215 @@
+#!/bin/sh /etc/rc.common
+
+
+
+
+
+
+
+if type extra_command 1>/dev/null 2>&1; then
+	extra_command "resume" "re-activate client redirects"
+	extra_command "pause" "remove client redirects"
+else
+	EXTRA_COMMANDS='pause resume'
+	EXTRA_HELP='	pause	Allows domain(s) in current block-list and config
+	resume	Checks if specified domain is found in current block-list
+	update	Force-downloads all enabled block-list
+	sizes	Displays the file-sizes of enabled block-lists'
+fi
+
+
+
+
+
+
+AGH_DEPS="kmod-dummy adguardhome"
+
+
+#######################!/bin/sh
+AGH_CONFIG_WORKDIR="/restorefiles/${AGH_SNAME}" #option workdir /var/adguardhome FOR NON PERSISTE ETC>
+########################################### NOTE DONT CHANGE THESE YET NOT SUPPORTED
+########################################### NOTE DONT CHANGE THESE YET NOT SUPPORTED
+########################################### NOTE DONT CHANGE THESE YET NOT SUPPORTED
+AGH_SNAME="${AGH_SNAME:-"agh"}"
+AGH_TOPOLOGY="internal" #53:primary
+AGH_FORCE_REDIRECT_CLIENTS=1
+AGH_ADMIN_PASSWORD="adguardhomeowner"
+AGH_ADMIN_PORT="3001"
+AGH_SVC_PORT="${AGH_SVC_PORT:-"53"}"
+########################################################AGH_IFACE_LOGICAL="${AGH_SNAME}"
+AGH_IFACE_LOGICAL="${AGH_IFACE_LOGICAL:-"${AGH_SNAME}"}"
+AGH_IFACE_IP4="${AGH_IFACE_IP:-"172.16.231.1"}"
+tN=1
+AGH_IFACE_PHYS="dummy${tN}"
+######################################################################################
+AGH_PATH_CONFIG="/etc/${AGH_SNAME}.yaml" #option workdir /etc/adguardhome.yaml
+AGH_PATH_YAML="/etc/${AGH_SNAME}.yaml" #option workdir /etc/adguardhome.yaml
+######################################################### DERIVED DO NOT EDIT
+AGH_PATH_MASQ_INCLUDE="/tmp/dnsmasq.d/${AGH_SNAME}"
+AGH_SVC_SOCKET4="${AGH_IFACE_IP4}:${AGH_SVC_PORT}"
+############################################# @WIP TBA MAYBE
+############################################# @WIP TBA MAYBE
+############################################# @WIP TBA MAYBE
+#AGH_LISTEN_IPV6=
+#AGH_CLIENT_LIST
+############################################# @WIP TBA MAYBE
+############################################# @WIP TBA MAYBE
+############################################# @WIP TBA MAYBE
+
+
+
+
+
+
+ecmd="echo $AGH_SNAME>"
+msg_out() {
+	$ecmd "$AGH_SNAME> ${*}"
+	echo "$AGH_SNAME> $*" > /dev/kmsg
+}
+
+
+
+
+
+if [ -z "$AGH_TOPOLOGY" ]; then exit 0; fi
+
+
+
+
+
+
+
+loop_check() {	
+
+	tN=1
+	if ip link list dummy${tN} 2>/dev/null 1>/dev/null; then
+		dumMSG="${dumMSG} [dummy${tN}>ok]"
+	else
+		dumMSG="${dumMSG} [dummy${tN}>create]"
+		ip link add dummy${tN} type dummy
+	fi
+	####################################### $ecmd "$dumMSG"
+	#$ecmd "$dumMSG"
+	msg_out "$dumMSG"
+
+}
+
+
+
+
+
+
+
+
+
+
+
+agh_firewall_uci() {
+
+	case "$1" in
+	setup)
+
+	if [ "$(uci show firewall | grep 'firewall.agh=include' | wc -l)" = "0" ]; then
+		msg_out "adding uci firewall"
+		uci -q set firewall.${AGH_SNAME}=include
+		uci -q set firewall.${AGH_SNAME}.fw4_compatible='1'
+		uci -q set firewall.${AGH_SNAME}.type='script'
+		uci -q set firewall.${AGH_SNAME}.path='/etc/custom/firewall.agh'
+		uci -q set firewall.${AGH_SNAME}.reload='1'
+		#uci -q set firewall.${AGH_SNAME}.enabled='1'
+		uci -q set firewall.${AGH_SNAME}.enabled='0'
+		uci -q commit firewall
+	fi
+
+
+
+
+
+
+
+		msg_out "writing /etc/custom/firewall.agh"
+
+
+mkdir -p /etc/custom
+
+cat << CCC > /etc/custom/firewall.agh
+#!/bin/sh
+
+if [ -f /tmp/.agh.firewall ]; then
+
+	echo "Redirecting client DNS"
+	if ! iptables -S -t nat 2>/dev/null | grep -q "172.16.231"; then
+
+		echo "Create NAT rules"
+		iptables -t nat -I PREROUTING -i br-lan -p udp ! --source 172.16.231.1 ! --destination 172.16.231.1 --dport 53 -j DNAT --to 172.16.231.1 2>/dev/null
+		iptables -t nat -I PREROUTING -i br-lan -p tcp ! --source 172.16.231.1 ! --destination 172.16.231.1 --dport 53 -j DNAT --to 172.16.231.1 2>/dev/null
+
+	else
+		echo "NAT rules in place"
+	fi
+
+
+
+
+
+
+else
+
+	echo "Destroy NAT rules"
+	iptables -t nat -D PREROUTING -i br-lan -p udp ! --source 172.16.231.1 ! --destination 172.16.231.1 --dport 53 -j DNAT --to 172.16.231.1 2>/dev/null
+	iptables -t nat -D PREROUTING -i br-lan -p tcp ! --source 172.16.231.1 ! --destination 172.16.231.1 --dport 53 -j DNAT --to 172.16.231.1 2>/dev/null
+	#rm /tmp/.agh.firewall 2>/dev/null
+
+
+
+
+fi
+
+
+#iptables -S -t nat 2>/dev/null
+#iptables -S -t nat 2>/dev/null
+#sleep 5
+
+
+
+
+CCC
+chmod +x /etc/custom/firewall.agh
+
+	;;
+
+
+
+	enable)
+		:
+		uci -q set firewall.${AGH_SNAME}.enabled='1'
+		uci -q commit firewall
+		#/etc/init.d/firewall reload
+	;;
+
+
+	disable)
+
+
+
+		:
+		uci -q set firewall.${AGH_SNAME}.enabled='0'
+		uci -q commit firewall
+	;;
+
+
+	pause)
+		:
+
+	;;
+
+
+	resume)
+
+	;;
+
+
+
+	esac
+
+}
+
+
+
+
+
+
+
+
+#agh_firewall_uci
+#exit 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+check_dep() {
+	DEPS_NEEDED=""
+	DEPS_OK=""
+
+
+
+	if [ ! -z "$(command -v AdGuardHome)" ]; then
+		/etc/init.d/adguardhome stop; sleep 5
+		/etc/init.d/adguardhome disable
+	fi
+
+
+
+	for CHECK_DEP in ${*}; do
+		if [ ! -f /usr/lib/opkg/info/$CHECK_DEP.control ]; then
+			DEPS_NEEDED="${DEPS_NEEDED} $CHECK_DEP"
+		else
+			DEPS_OK="${DEPS_OK} $CHECK_DEP"
+		fi
+	done
+
+
+
+
+
+	if [ ! -z "$DEPS_NEEDED" ]; then
+		msg_out "deps: $DEPS_NEEDED [install] $DEPS_OK [ok]"
+		opkg update #&& opkg install adguardhome
+	
+		for DEP_INST in ${DEPS_NEEDED}; do
+
+			msg_out "opkg install $DEP_INST"
+			opkg install $DEP_INST
+			case "$DEP_INST" in
+				adguardhome)
+					/etc/init.d/adguardhome stop; sleep 5
+					/etc/init.d/adguardhome disable
+				;;
+			esac
+		done
+	else
+		msg_out "$DEPS_OK [ok]"
+	fi
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+agh_setup() {
+
+
+
+
+
+	if [ -f /root/.$AGH_SNAME.setup ]; then return 0; fi
+
+
+	if [ ! -d /restorefiles/config_pre_agh ]; then
+		msg_out "backing up original configs /restorefiles/config_pre_agh"
+		mkdir -p /restorefiles/config_pre_agh
+		cp -a /etc/config/network /restorefiles/config_pre_agh/
+		cp -a /etc/config/firewall /restorefiles/config_pre_agh/
+		cp -a /etc/config/dhcp /restorefiles/config_pre_agh/
+		cp -a /etc/config/adguardhome /restorefiles/config_pre_agh/ 2>/dev/null
+		cp -a /etc/adguardhome.yaml /restorefiles/config_pre_agh/ 2>/dev/null
+		cp -arf /var/adguardhome /restorefiles/config_pre_agh/ 2>/dev/null
+	fi
+
+
+
+
+
+	msg_out "check dependancies [opkg update]"
+	check_dep "$AGH_DEPS"
+
+
+
+
+
+
+
+if [ ! -f "${AGH_PATH_CONFIG}" ]; then
+
+	echo "agh_init: CONFIG_UCI ${AGH_PATH_CONFIG} [add]"
+cat << TTT > /etc/config/agh
+config agh config
+	# Where to store persistent data by AdGuard Home
+	option workdir ${AGH_CONFIG_WORKDIR}
+	# config yaml
+	option configpath ${AGH_PATH_YAML:-/etc/agh.yaml}
+
+TTT
+
+
+else
+	echo "agh_init: CONFIG_UCI ${AGH_PATH_CONFIG} [ok]"
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+if [ ! "${AGH_PATH_YAML}" ]; then
+
+#echo "Creating ${AGH_PATH_YAML}"
+	echo "agh-init: yaml:${AGH_PATH_YAML} [create]"
+
+
+
+
+
+
+#@socket4
+
+cat << 'TTT' > ${AGH_PATH_YAML}
+
+bind_host: 172.16.231.1
+bind_port: 3001
+beta_bind_port: 0
+users:
+  - name: admin
+    password: $2a$10$RiAX6Y./EpNP37TYRYwsFeV2MzAw8ENA7pc/82dFdf9iod0lPkczW
+auth_attempts: 5
+block_auth_min: 15
+http_proxy: ""
+language: ""
+debug_pprof: false
+web_session_ttl: 720
+dns:
+  bind_hosts:
+    - 172.16.231.1
+  port: 53
+  statistics_interval: 1
+  querylog_enabled: true
+  querylog_file_enabled: true
+  querylog_interval: 2160h
+  querylog_size_memory: 1000
+  anonymize_client_ip: false
+  protection_enabled: true
+  blocking_mode: default
+  blocking_ipv4: ""
+  blocking_ipv6: ""
+  blocked_response_ttl: 10
+  parental_block_host: family-block.dns.adguard.com
+  safebrowsing_block_host: standard-block.dns.adguard.com
+  ratelimit: 20
+  ratelimit_whitelist: []
+  refuse_any: true
+  upstream_dns:
+    - https://dns10.quad9.net/dns-query
+  upstream_dns_file: ""
+  bootstrap_dns:
+    - 9.9.9.10
+    - 149.112.112.10
+    - 2620:fe::10
+    - 2620:fe::fe:10
+  all_servers: false
+  fastest_addr: false
+  fastest_timeout: 1s
+  allowed_clients: []
+  disallowed_clients: []
+  blocked_hosts:
+    - version.bind
+    - id.server
+    - hostname.bind
+  trusted_proxies:
+    - 127.0.0.0/8
+    - ::1/128
+  cache_size: 4194304
+  cache_ttl_min: 0
+  cache_ttl_max: 0
+  cache_optimistic: false
+  bogus_nxdomain: []
+  aaaa_disabled: false
+  enable_dnssec: false
+  edns_client_subnet: false
+  max_goroutines: 300
+  handle_ddr: true
+  ipset: []
+  ipset_file: ""
+  filtering_enabled: true
+  filters_update_interval: 24
+  parental_enabled: false
+  safesearch_enabled: false
+  safebrowsing_enabled: false
+  safebrowsing_cache_size: 1048576
+  safesearch_cache_size: 1048576
+  parental_cache_size: 1048576
+  cache_time: 30
+  rewrites: []
+  blocked_services: []
+  upstream_timeout: 10s
+  private_networks: []
+  use_private_ptr_resolvers: true
+  local_ptr_upstreams: []
+  serve_http3: false
+  use_http3_upstreams: false
+tls:
+  enabled: false
+  server_name: ""
+  force_https: false
+  port_https: 443
+  port_dns_over_tls: 853
+  port_dns_over_quic: 853
+  port_dnscrypt: 0
+  dnscrypt_config_file: ""
+  allow_unencrypted_doh: false
+  certificate_chain: ""
+  private_key: ""
+  certificate_path: ""
+  private_key_path: ""
+  strict_sni_check: false
+filters:
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt
+    name: AdGuard DNS filter
+    id: 1
+  - enabled: false
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_2.txt
+    name: AdAway Default Blocklist
+    id: 2
+whitelist_filters: []
+user_rules: []
+dhcp:
+  enabled: false
+  interface_name: ""
+  local_domain_name: lan
+  dhcpv4:
+    gateway_ip: ""
+    subnet_mask: ""
+    range_start: ""
+    range_end: ""
+    lease_duration: 86400
+    icmp_timeout_msec: 1000
+    options: []
+  dhcpv6:
+    range_start: ""
+    lease_duration: 86400
+    ra_slaac_only: false
+    ra_allow_slaac: false
+clients:
+  runtime_sources:
+    whois: true
+    arp: true
+    rdns: true
+    dhcp: true
+    hosts: true
+  persistent: []
+log_file: ""
+log_max_backups: 0
+log_max_size: 100
+log_max_age: 3
+log_compress: false
+log_localtime: false
+verbose: false
+os:
+  group: ""
+  user: ""
+  rlimit_nofile: 0
+schema_version: 14
+
+TTT
+
+#fi
+
+
+else
+	echo "agh-init: yaml:${AGH_PATH_YAML} [ok]"
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#########################if ! grep -q "^${AGH_CONFIG_WORKDIR:-/var/agh}$" /etc/sysupgrade.conf 2>/dev/null; then
+if ! grep -q "^${AGH_CONFIG_WORKDIR}" /etc/sysupgrade.conf 2>/dev/null; then
+
+	echo "agh_init: workdir upgrade ${AGH_CONFIG_WORKDIR} to /etc/sysupgrade.conf [add]"
+	
+	#@@@&&METAPERSIST
+	echo "${AGH_CONFIG_WORKDIR} #AGH" >> /etc/sysupgrade.conf
+
+else
+	echo "agh_init: workdir upgrade ${AGH_CONFIG_WORKDIR} to /etc/sysupgrade.conf [ok]"
+fi
+
+
+
+
+
+
+
+
+################################if ! grep -q "^${AGH_PATH_YAML}$" /etc/sysupgrade.conf 2>/dev/null; then
+if ! grep -q "^${AGH_PATH_YAML} " /etc/sysupgrade.conf 2>/dev/null; then
+	echo "agh_init: yaml upgrade  ${AGH_PATH_YAML} to /etc/sysupgrade.conf [add]"
+	echo "${AGH_PATH_YAML} #AGH" >> /etc/sysupgrade.conf
+else
+	echo "agh_init: yaml upgrade  ${AGH_PATH_YAML} to /etc/sysupgrade.conf [ok]"
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	loop_check
+
+
+
+if [ -z "$(uci -q show network | grep "^network.${AGH_SNAME}=interface$")" ]; then
+	echo "agh-init: interface: ${AGH_IFACE_LOGICAL}:${AGH_IFACE_IP4} [create]"
+
+
+
+#	cat << UUU
+
+uci -q set network.${AGH_IFACE_LOGICAL}=interface
+uci -q set network.${AGH_IFACE_LOGICAL}.device="dummy${tN}"
+uci -q set network.${AGH_IFACE_LOGICAL}.proto='static'
+uci -q set network.${AGH_IFACE_LOGICAL}.ipaddr="${AGH_IFACE_IP4}"
+uci -q set network.${AGH_IFACE_LOGICAL}.netmask='255.255.255.0'
+uci -q set network.${AGH_IFACE_LOGICAL}.auto='1'
+
+uci -q commit network
+
+#UUU
+
+
+
+else
+	echo "agh-init: interface: ${AGH_IFACE_LOGICAL}:${AGH_IFACE_PHYS}:${AGH_IFACE_IP4} [present]"
+fi
+
+
+
+########################################### i.e. defaults with DUMMY NUM ISUP but no IP
+
+	agh_firewall_uci setup
+
+
+
+
+
+
+if [ "$(ifconfig dummy1 | grep 172.16.231.1 | wc -l)" = "0" ]; then
+
+	echo "ifup ${AGH_IFACE_LOGICAL} [sleep 12]"
+	ifup ${AGH_IFACE_LOGICAL}
+	sleep 12
+else
+	echo "interface active up ip ok"
+fi
+
+
+
+	touch /root/.$AGH_SNAME.setup
+
+
+
+}
+
+
+
+
+#if [ -f /etc/adguardhome.yaml ]; then
+	: #back it up / migrate blocks etc
+#fi
+#####################################cat /etc/adguardhome.yaml | sed -n -e "/user_rules/,/dhcp/p" | grep @
+#set -x
+#######################echo "agh-init: interface AGH adding internal interface: ${AGH_IFACE_LOGICAL}:172.16.231.1"
+###################network.agh=interface #if [ -z "$(uci -q show network | grep "^network.agh=interface$")" ]; then
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+agh_status() {
+	
+	cat <<TTT
+	echo "AGH_SVC_SOCKET:${AGH_SVC_SOCKET4}"
+TTT
+
+
+
+	if [ -f /tmp/dnsmasq.d/agh ]; then
+		echo "/tmp/dnsmasq.d/agh:$(cat /tmp/dnsmasq.d/agh 2>/dev/null)"
+	else
+		echo "/tmp/dnsmasq.d/agh:[nope]"
+	fi
+
+
+
+	ps wwww | grep AdGuardH | grep -v grep
+	lsof -i -nP | grep '^AdGu'
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+agh_firewall() {
+
+
+	case "$1" in
+		#setup) : ;;
+		enable)
+			msg_out "enable_firewall_redirect"
+			agh_firewall_uci enable
+			touch /tmp/.agh.firewall
+			/etc/custom/firewall.agh
+		;;
+		disable)
+			msg_out "disable_firewall_redirect"
+			agh_firewall_uci disable
+			rm /tmp/.agh.firewall 2>/dev/null
+			/etc/custom/firewall.agh
+		;;
+		remove)
+			:
+		;;
+	esac
+
+}
+
+
+
+
+
+#firewall.pbr=include
+#firewall.pbr.fw4_compatible='1'
+#firewall.pbr.type='script'
+#firewall.pbr.path='/usr/share/pbr/pbr.firewall.include'
+
+
+
+
+
+
+
+
+
+
+
+
+
+agh_body() {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+################# OUTER WRAPPER IF WE ARE LISTENING THEN ALL IS OK?
+if lsof -i -nP | grep '172.16.231.1:53' | grep -q '^AdGu'; then
+	echo "we are listening"
+elif lsof -i -nP | grep '172.16.231.1:53' | grep -q '^dnsmas' || [ ! -f "/tmp/dnsmasq.d/${AGH_SNAME}" ]; then
+
+	echo "dnsmasq resetup include / exclude and restart to free socket"
+
+
+	if ! grep -q 'except-interface=dummy1' /tmp/dnsmasq.d/agh 2>/dev/null; then
+		echo "dnsmasq readd exclude"
+		echo 'except-interface=dummy1' >> /tmp/dnsmasq.d/agh
+
+		#@@@/root/wrt.ini && !fboot finished then skip
+	
+
+	fi
+
+
+	echo "dnsmasq restart wait 10sec"
+	/etc/init.d/dnsmasq restart
+	sleep 10 #waits anyway?
+	
+
+
+elif ! grep -q 'except-interface=dummy1' /tmp/dnsmasq.d/agh 2>/dev/null; then
+		echo "dnsmasq readd exclude alt"
+		echo 'except-interface=dummy1' >> /tmp/dnsmasq.d/agh
+
+
+	echo "dnsmasq restart wait 10sec"
+	/etc/init.d/dnsmasq restart
+	sleep 10 #waits anyway?
+
+
+else
+	#@@@is flagfile?
+	echo "dnsmasq exclude seems applied"
+fi
+
+
+
+
+
+
+
+
+
+case "$1" in
+	post)
+
+##################### @@@ POST START ETC... i.e. here is a 53 is taken or masq is owning CHECK
+if lsof -i -nP | grep '172.16.231.1:53' | grep -q '^dnsmas'; then
+	
+	echo "Listening masq has taken socket"
+	: #moved to above
+	#echo "dnsmasq remove from agh interface"
+	#if ! grep -q 'except-interface=dummy1' /tmp/dnsmasq.d/agh 2>/dev/null; then
+	#	echo "dnsmasq remove from agh interface"
+	#	echo 'except-interface=dummy1' >> /tmp/dnsmasq.d/agh
+
+		#@@@/root/wrt.ini && !fboot finished then skip
+	#	/etc/init.d/dnsmasq restart
+	#	sleep 10
+
+	#fi
+
+elif lsof -i -nP | grep '172.16.231.1:53' | grep -q '^AdGu'; then
+	echo "Listening ok"
+	lsof -i -nP | grep '172.16.231.1:53' | grep '^AdGu'
+else
+	echo "Listening issue"
+	lsof -i -nP | grep ':53'
+	lsof -i -nP | grep '172.16.231'
+fi
+
+
+
+
+	;;
+
+esac
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#elif [ "$action" = "start" ] || [ "$action" = "resume" ]; then
+if [ "$action" = "resume" ] || [ "$action" = "enable" ] || [ "$action" = "start" ]; then
+
+	agh_firewall enable
+
+elif [ "$action" = "stop" ] || [ "$action" = "pause" ]; then
+
+	agh_firewall disable
+
+#elif [ "$action" = "disable" ]; then
+	#agh_firewall removeTBA
+
+fi
+
+}
+
+
+
+
+
+
+
+
+##################################################################################
+#if ! grep -q "list notinterface 'agh'" /etc/config/dhcp 2>/dev/null; then
+#	uci -q add dhcp.@dnsmasq[0].notinterface='agh'
+#	uci commit dhcp
+#fi
+###################################################################################
+
+
+
+#set -x
+########### START
+
+
+
+
+
+
+
+
+
+
+
+
+#prereq_checka() {
+	#if [ -f /root/${0}.prereq ]; then return 0; fi
+	#opkg list-installed | awk '{print $1}' > /tmp/.opkg.installed
+	#if [ !
+	#fi
+#}
+
+
+	#prereq_checka
+
+
+
+
+
+
+
+
+
+
+
+
+
+#set -x
+#if [ "$action" = "status" ]; then #if [ "$ACTION" = "status" ]; then
+#	echo "ACTION:$action"
+#	agh_status
+#	exit 1
+#fi
+
+
+
+
+#exit 1
+
+#echo "################# dbg run status"
+#agh_status
+
+
+
+
+
+
+
+
+#set -x
+case "$action" in
+	status)
+		#echo "ACTION:$action"
+		agh_status
+		exit 1
+	;;
+
+	enable|disable|enabled)
+		:
+	;;
+
+	*)
+		agh_setup
+		agh_body
+	;;
+
+
+
+esac
+
+
+
+
+
+#exit 1
+
+
+
+
+
+
+
+
+case "$action" in
+	start)
+		echo "admin 172.16.231.1:3001 user:admin password:adguardhomeowner"
+	;;
+esac
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+######################!/bin/sh /etc/rc.common
+PROG=/usr/bin/AdGuardHome
+
+
+USE_PROCD=1
+
+# starts after network starts
+#START=21
+START=31
+# stops before networking stops
+STOP=89
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+start_service() {
+
+  config_load agh
+  config_get WORK_DIR config workdir
+  config_get CONFIG_PATH config configpath
+
+  [ -d "$WORK_DIR" ] || mkdir -m 0755 -p "$WORK_DIR"
+
+  procd_open_instance
+  procd_set_param command "$PROG" -c "$CONFIG_PATH" -w "$WORK_DIR" --no-check-update
+  procd_set_param stdout 1
+  procd_set_param stderr 1
+  procd_close_instance
+
+
+	#set -x
+	case "$action" in
+	status)
+		: #echo "ACTION:$action"
+		#agh_status
+		#exit 1
+	;;
+
+	enable|disable|enabled)
+		:
+	;;
+
+	*)
+		: #agh_setup
+		agh_body post
+	;;
+	esac
+
+
+
+
+
+#exit 1
+
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
