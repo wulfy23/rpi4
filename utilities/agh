@@ -362,26 +362,23 @@ fi
 
 
 
-if [ ! "${AGH_PATH_YAML}" ]; then
+if [ ! -f "${AGH_PATH_YAML}" ]; then
 
 #echo "Creating ${AGH_PATH_YAML}"
 	echo "agh-init: yaml:${AGH_PATH_YAML} [create]"
 
 
 
-
-
-
 #@socket4
 
-cat << 'TTT' > ${AGH_PATH_YAML}
+cat << TTT > ${AGH_PATH_YAML}
 
 bind_host: 172.16.231.1
 bind_port: 3001
 beta_bind_port: 0
 users:
   - name: admin
-    password: $2a$10$RiAX6Y./EpNP37TYRYwsFeV2MzAw8ENA7pc/82dFdf9iod0lPkczW
+    password: \$2a\$10\$RiAX6Y./EpNP37TYRYwsFeV2MzAw8ENA7pc/82dFdf9iod0lPkczW
 auth_attempts: 5
 block_auth_min: 15
 http_proxy: ""
@@ -531,6 +528,8 @@ else
 fi
 
 
+
+#exit 0
 
 
 
