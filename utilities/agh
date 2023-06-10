@@ -27,12 +27,12 @@ fi
 AGH_DEPS="kmod-dummy adguardhome"
 
 
+AGH_SNAME="${AGH_SNAME:-"agh"}"
 #######################!/bin/sh
 AGH_CONFIG_WORKDIR="/restorefiles/${AGH_SNAME}" #option workdir /var/adguardhome FOR NON PERSISTE ETC>
 ########################################### NOTE DONT CHANGE THESE YET NOT SUPPORTED
 ########################################### NOTE DONT CHANGE THESE YET NOT SUPPORTED
 ########################################### NOTE DONT CHANGE THESE YET NOT SUPPORTED
-AGH_SNAME="${AGH_SNAME:-"agh"}"
 AGH_TOPOLOGY="internal" #53:primary
 AGH_FORCE_REDIRECT_CLIENTS=1
 AGH_ADMIN_PASSWORD="adguardhomeowner"

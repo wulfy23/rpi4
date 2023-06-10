@@ -6,6 +6,14 @@
 
 
 
+        release 2.1.17(5+)
+                   -default disable "adguardhome and agh" to facilitate 
+                    manual enabling via ENABLED_SERVICES where included
+                    in this / future builds
+
+                   -add /etc/init.d/agh (adguardhome) initial test
+                    'loader' (build centric service)
+
 
         release 2.1.17
                    -many packages have updates specifically brcmusbfirmware and
