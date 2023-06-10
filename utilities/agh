@@ -9,12 +9,14 @@
 if type extra_command 1>/dev/null 2>&1; then
 	extra_command "resume" "re-activate client redirects"
 	extra_command "pause" "remove client redirects"
+	extra_command "test" "test [domain] #test dns query"
+
 else
-	EXTRA_COMMANDS='pause resume'
+	EXTRA_COMMANDS='pause resume test'
 	EXTRA_HELP='	pause	Allows domain(s) in current block-list and config
 	resume	Checks if specified domain is found in current block-list
 	update	Force-downloads all enabled block-list
-	sizes	Displays the file-sizes of enabled block-lists'
+	test	test [domain] Send test dns query via AGH'
 fi
 
 
@@ -683,6 +685,28 @@ fi
 
 
 
+
+
+agh_test() {
+
+	L_ADDR="$1"
+	if [ -z "$L_ADDR" ]; then
+		L_ADDR="wulfy23.xyz"
+	fi
+
+	if [ -z "$(command -v dig)" ]; then
+		echo "install dig"
+	else
+		#dig -r +retry=0 +timeout=2 ${L_ADDR} @172.16.231.1 -p53 2>&1
+		dig -r +retry=0 +timeout=2 ${L_ADDR} @172.16.231.1 -p53 2>&1
+	fi
+}
+
+
+
+
+
+
 agh_status() {
 	
 	cat <<TTT
@@ -700,6 +724,7 @@ TTT
 
 
 	ps wwww | grep AdGuardH | grep -v grep
+	#echo "########### test query"; agh_test
 	lsof -i -nP | grep '^AdGu'
 
 }
@@ -799,57 +824,26 @@ agh_body() {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ################# OUTER WRAPPER IF WE ARE LISTENING THEN ALL IS OK?
 if lsof -i -nP | grep '172.16.231.1:53' | grep -q '^AdGu'; then
-	echo "we are listening"
+	#echo "we are listening"
+	AGH_LISTENING=1
 elif lsof -i -nP | grep '172.16.231.1:53' | grep -q '^dnsmas' || [ ! -f "/tmp/dnsmasq.d/${AGH_SNAME}" ]; then
 
 	echo "dnsmasq resetup include / exclude and restart to free socket"
-
-
 	if ! grep -q 'except-interface=dummy1' /tmp/dnsmasq.d/agh 2>/dev/null; then
 		echo "dnsmasq readd exclude"
 		echo 'except-interface=dummy1' >> /tmp/dnsmasq.d/agh
-
-		#@@@/root/wrt.ini && !fboot finished then skip
-	
-
 	fi
-
+	#@@@/root/wrt.ini && !fboot finished then skip
 
 	echo "dnsmasq restart wait 10sec"
 	/etc/init.d/dnsmasq restart
 	sleep 10 #waits anyway?
 	
-
-
 elif ! grep -q 'except-interface=dummy1' /tmp/dnsmasq.d/agh 2>/dev/null; then
 		echo "dnsmasq readd exclude alt"
 		echo 'except-interface=dummy1' >> /tmp/dnsmasq.d/agh
-
 
 	echo "dnsmasq restart wait 10sec"
 	/etc/init.d/dnsmasq restart
@@ -889,31 +883,34 @@ if lsof -i -nP | grep '172.16.231.1:53' | grep -q '^dnsmas'; then
 	#fi
 
 elif lsof -i -nP | grep '172.16.231.1:53' | grep -q '^AdGu'; then
-	echo "Listening ok"
-	lsof -i -nP | grep '172.16.231.1:53' | grep '^AdGu'
+	AGH_LISTENING=1
 else
-	echo "Listening issue"
-	lsof -i -nP | grep ':53'
-	lsof -i -nP | grep '172.16.231'
+	:
 fi
+
+
+
+
+	if [ -z "$AGH_LISTENING" ]; then
+		echo "Listening issue"
+		lsof -i -nP | grep ':53'
+		lsof -i -nP | grep '172.16.231'
+	
+
+	else
+		echo "Listening ok"
+		lsof -i -nP | grep '172.16.231.1:53' | grep '^AdGu'
+	fi
+
 
 
 
 
 	;;
 
+
+
 esac
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1026,6 +1023,14 @@ case "$action" in
 		:
 	;;
 
+
+
+test)
+	#if [ "$action" = "test" ]; then
+	agh_test "$1"
+	exit 0
+
+	;;
 	*)
 		agh_setup
 		agh_body
@@ -1212,4 +1217,10 @@ start_service() {
 
 
 
+		
+
+
+		### dig -r +retry=0 +trace stackexchange.com @172.16.231.1 -p53
+		#dig -r +retry=0 +trace wulfy23.xyz @172.16.231.1 -p53 2>&1 | grep -E '(Revi|wulfy)'
+		#dig -r +retry=0 +timeout=2 wulfy23.xyz @172.16.231.1 -p53 2>&1 | grep -E '(Revi|wulfy)'
 
