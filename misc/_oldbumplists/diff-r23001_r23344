@@ -1,0 +1,197 @@
+
+
+
+
+
+
+
+vert@MSI:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.r23001 manifest.r23344  | grep -v python | grep -v kmod | grep -v perl
+4,5c4,5
+
+
+
+< acme-acmesh - 3.0.1-10
+< acme-common - 1.0.3
+---
+> acme-acmesh - 3.0.1-11
+> acme-common - 1.0.4
+6a7
+
+
+
+> adguardhome - 0.107.29-1
+15,16c16
+
+
+
+< banip - 0.8.6-2
+< base-files - 1531-r23001-38c150612c
+---
+> base-files - 1532-r23344-b8e3fa2d12
+35c35
+
+
+
+< busybox - 1.36.0-1
+---
+> busybox - 1.36.1-1
+37,38c37,38
+< ca-bundle - 20211016-1
+< ca-certificates - 20211016-1
+---
+> ca-bundle - 20230311-1
+> ca-certificates - 20230311-1
+
+
+
+44,60c44,60
+< collectd - 5.12.0-42
+< collectd-mod-conntrack - 5.12.0-42
+< collectd-mod-cpu - 5.12.0-42
+< collectd-mod-disk - 5.12.0-42
+< collectd-mod-entropy - 5.12.0-42
+< collectd-mod-exec - 5.12.0-42
+< collectd-mod-interface - 5.12.0-42
+< collectd-mod-irq - 5.12.0-42
+< collectd-mod-iwinfo - 5.12.0-42
+< collectd-mod-load - 5.12.0-42
+< collectd-mod-memory - 5.12.0-42
+< collectd-mod-network - 5.12.0-42
+< collectd-mod-ping - 5.12.0-42
+< collectd-mod-processes - 5.12.0-42
+< collectd-mod-rrdtool - 5.12.0-42
+< collectd-mod-sqm - 5.12.0-42
+< collectd-mod-thermal - 5.12.0-42
+---
+> collectd - 5.12.0-43
+> collectd-mod-conntrack - 5.12.0-43
+> collectd-mod-cpu - 5.12.0-43
+> collectd-mod-disk - 5.12.0-43
+> collectd-mod-entropy - 5.12.0-43
+> collectd-mod-exec - 5.12.0-43
+> collectd-mod-interface - 5.12.0-43
+> collectd-mod-irq - 5.12.0-43
+> collectd-mod-iwinfo - 5.12.0-43
+> collectd-mod-load - 5.12.0-43
+> collectd-mod-memory - 5.12.0-43
+> collectd-mod-network - 5.12.0-43
+> collectd-mod-ping - 5.12.0-43
+> collectd-mod-processes - 5.12.0-43
+> collectd-mod-rrdtool - 5.12.0-43
+> collectd-mod-sqm - 5.12.0-43
+> collectd-mod-thermal - 5.12.0-43
+70c70
+< curl - 8.0.1-1
+---
+> curl - 8.1.1-1
+113c113
+< https-dns-proxy - 2022-10-15-12
+---
+> https-dns-proxy - 2023-05-25-1
+128d127
+< iptables-mod-geoip - 3.24-1
+131d129
+< iptables-mod-quota2 - 3.24-1
+134a133
+> iptables-zz-legacy - 1.8.8-1
+142c141
+< jshn - 2022-09-27-ea560134-1
+---
+> jshn - 2023-05-23-75a3b870-1
+144,349c143,348
+< kernel - 5.15.112-1-91cbabd8053c0fcf8ec6b3f377bee02b
+---
+> kernel - 6.1.32-1-6dbbbe5f721a07182c581131feeef2b3
+354,355c353,354
+< libblobmsg-json20220927 - 2022-09-27-ea560134-1
+< libbpf710 - 7.1.0-b01941c8-1
+---
+> libblobmsg-json20230523 - 2023-05-23-75a3b870-1
+> libbpf1 - 1.2.0-1
+358c357
+< libcap - 2.68-1
+---
+> libcap - 2.69-1
+361c360
+< libcurl4 - 8.0.1-1
+---
+> libcurl4 - 8.1.1-1
+379a379,380
+> libip4tc2 - 1.8.8-1
+> libip6tc2 - 1.8.8-1
+388c389
+< libjson-script20220927 - 2022-09-27-ea560134-1
+---
+> libjson-script20230523 - 2023-05-23-75a3b870-1
+417,418c418,419
+< libopenssl-conf - 3.0.8-9
+< libopenssl3 - 3.0.8-9
+---
+> libopenssl-conf - 3.0.8-10
+> libopenssl3 - 3.0.8-10
+422c423
+< libpci - 3.8.0-2
+---
+> libpci - 3.10.0-1
+427c428
+---
+440c441
+< libubox20220927 - 2022-09-27-ea560134-1
+---
+> libubox20230523 - 2023-05-23-75a3b870-1
+453c454
+< libxml2 - 2.11.3-1
+---
+> libxml2 - 2.11.4-1
+464d464
+< luci-app-banip - git-23.133.15879-e6c3364
+466c466
+< luci-app-ddns - git-23.118.79453-d9dcf98
+---
+> luci-app-ddns - git-23.158.77262-a4a4273
+478d477
+< luci-app-pbr - 1.1.1-7
+482c481
+< luci-app-statistics - git-23.093.38867-dd11114
+---
+> luci-app-statistics - git-23.151.54709-c9c3959
+489c488
+< luci-base - git-23.118.79121-6fb185f
+---
+> luci-base - git-23.158.78004-23a246e
+498c497
+< luci-mod-network - git-23.118.74544-b2476ba
+---
+> luci-mod-network - git-23.150.26360-9b12a48
+529c528
+< netifd - 2023-04-17-7de5440a-1
+---
+> netifd - 2023-06-04-ec9dba72-1
+548,549c547,548
+< openssl-util - 3.0.8-9
+< openvpn-easy-rsa - 3.0.8-4
+---
+> openssl-util - 3.0.8-10
+> openvpn-easy-rsa - 3.1.3-1
+556c555
+< pbr - 1.1.1-7
+---
+> pbr-iptables - 1.1.1-7
+558,559c557,558
+< pciutils - 3.8.0-2
+---
+> pciutils - 3.10.0-1
+
+
+
+< rpcd-mod-rpcsys - 2023-03-14-d9788300-1
+740a736
+> xtables-legacy - 1.8.8-1
+
+
+
+
+
+
+
+

@@ -658,6 +658,13 @@ Bname="rpi4.64-snapshot-29326-7.1.93-17-r23001-ext4-sys.img.gz"
 
 
 
+#kernel 6.1 test
+Fsub="builds/rpi-4_snapshot_7.3.9-5_r23344_extra"
+Bname="rpi4.64-snapshot-29350-7.3.9-5-r23344-ext4-sys.img.gz"
+
+
+
+
 
 		#echo "no current build available"; exit 0
 		#echo "no current build available"; exit 0
@@ -733,6 +740,11 @@ Bname="rpi4.64-snapshot-29316-7.1.93-12-r23001-ext4-sys.img.gz"
 #rpiqos cleanups httpsdnsandsimple cleanups nextkey
 Fsub="builds/rpi-4_snapshot_7.1.93-17_r23001_extra"
 Bname="rpi4.64-snapshot-29326-7.1.93-17-r23001-ext4-sys.img.gz"
+
+
+#kernel 6.1 test
+Fsub="builds/rpi-4_snapshot_7.3.9-5_r23344_extra"
+Bname="rpi4.64-snapshot-29350-7.3.9-5-r23344-ext4-sys.img.gz"
 
 	#		echo "no testing build available"; exit 0
 #			echo "no testing build available"; exit 0
