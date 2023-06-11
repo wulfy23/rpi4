@@ -10,14 +10,16 @@ if type extra_command 1>/dev/null 2>&1; then
 	extra_command "resume" "re-activate client redirects"
 	extra_command "pause" "remove client redirects"
 	extra_command "test" "test [domain] #test dns query"
+	extra_command "update" "update stuff"
 
 else
 	EXTRA_COMMANDS='pause resume test'
 	EXTRA_HELP='	pause	Allows domain(s) in current block-list and config
 	resume	Checks if specified domain is found in current block-list
-	update	Force-downloads all enabled block-list
+	update	Update itself and/or attempt to clear and refresh to latest code
 	test	test [domain] Send test dns query via AGH'
 fi
+
 
 
 
@@ -106,6 +108,8 @@ loop_check() {
 
 
 
+
+
 agh_firewall_uci() {
 
 	case "$1" in
@@ -134,36 +138,147 @@ agh_firewall_uci() {
 
 mkdir -p /etc/custom
 
-cat << CCC > /etc/custom/firewall.agh
-#!/bin/sh
+cat << 'CCC' > /etc/custom/firewall.agh
 
-if [ -f /tmp/.agh.firewall ]; then
 
-	echo "Redirecting client DNS"
+
+
+WR="/etc/custom/firewall.agh"
+
+
+
+
+FW_IPT_BINis="$(realpath $(command -v iptables))"; FW_IPT_BINis="${FW_IPT_BINis:-unknown}"
+FW_INITD_FW3cnt="$(cat /etc/init.d/firewall | grep fw3 | wc -l)"
+FW_INITD_FW4cnt="$(cat /etc/init.d/firewall | grep fw4 | wc -l)"
+
+
+###nft
+LAN_NETWORK="$(ip route | grep 'dev br-lan' | head -n1 | awk '{print $1}')"
+
+
+
+
+
+
+
+if [ "${FW_INITD_FW3cnt:-0}" -gt 3 ]; then
+	FW_PRIMARY="fw3"
+elif [ "${FW_INITD_FW4cnt:-0}" -gt 3 ]; then
+	FW_PRIMARY="fw4"
+else
+	FW_PRIMARY="unknown"
+fi
+#echo "FW_PRIMARY: $FW_PRIMARY"
+#echo "FW_IPT_BINis: $FW_IPT_BINis"
+
+
+case "${FW_IPT_BINis}" in
+	*"legacy"*)
+		FW_IPT_BINis="iptables"
+	;;
+	*"nft"*)
+		FW_IPT_BINis="iptables-nft"
+	;;
+	*"unknown"*)
+		:
+	;;
+esac
+
+
+
+#echo "FW_PRIMARY: $FW_PRIMARY"
+#echo "FW_IPT_BINis: $FW_IPT_BINis"
+
+
+echo "${WR}> FW: $FW_PRIMARY $FW_IPT_BINis"
+
+
+
+
+
+agh_firewall_on() {
+
+	case "$FW_PRIMARY" in
+		fw3)
+
+	echo "${WR}> Redirecting client DNS"
 	if ! iptables -S -t nat 2>/dev/null | grep -q "172.16.231"; then
 
-		echo "Create NAT rules"
+		echo "${WR}> Create NAT rules"
 		iptables -t nat -I PREROUTING -i br-lan -p udp ! --source 172.16.231.1 ! --destination 172.16.231.1 --dport 53 -j DNAT --to 172.16.231.1 2>/dev/null
 		iptables -t nat -I PREROUTING -i br-lan -p tcp ! --source 172.16.231.1 ! --destination 172.16.231.1 --dport 53 -j DNAT --to 172.16.231.1 2>/dev/null
 
 	else
-		echo "NAT rules in place"
+		echo "${WR}> NAT rules in place"
 	fi
 
 
 
+	;;
 
 
+
+	fw4)
+		nft add rule nat pre udp dport 53 ip saddr ${LAN_NETWORK} dnat 172.16.231.1:53
+	;;
+
+
+	*)
+		echo "${WR}> firewall unknown"
+	;;
+esac
+
+
+
+}
+
+
+
+
+
+
+
+agh_firewall_off() {
+
+	case "$FW_PRIMARY" in
+		fw3)
+
+			echo "${WR} Destroy NAT rules"
+			iptables -t nat -D PREROUTING -i br-lan -p udp ! --source 172.16.231.1 ! --destination 172.16.231.1 --dport 53 -j DNAT --to 172.16.231.1 2>/dev/null
+			iptables -t nat -D PREROUTING -i br-lan -p tcp ! --source 172.16.231.1 ! --destination 172.16.231.1 --dport 53 -j DNAT --to 172.16.231.1 2>/dev/null
+			#rm /tmp/.agh.firewall 2>/dev/null
+
+		;;
+
+		fw4)
+			echo "${WR} Destroy NAT rules"
+			nft del rule nat pre udp dport 53 ip saddr ${LAN_NETWORK} dnat 172.16.231.1:53
+		;;
+
+
+
+		*)
+			echo "${WR}> firewall unknown"
+		;;
+	esac
+}
+
+
+
+
+
+
+
+
+
+if [ -f /tmp/.agh.firewall ]; then
+
+	agh_firewall_on
 
 else
 
-	echo "Destroy NAT rules"
-	iptables -t nat -D PREROUTING -i br-lan -p udp ! --source 172.16.231.1 ! --destination 172.16.231.1 --dport 53 -j DNAT --to 172.16.231.1 2>/dev/null
-	iptables -t nat -D PREROUTING -i br-lan -p tcp ! --source 172.16.231.1 ! --destination 172.16.231.1 --dport 53 -j DNAT --to 172.16.231.1 2>/dev/null
-	#rm /tmp/.agh.firewall 2>/dev/null
-
-
-
+	agh_firewall_off
 
 fi
 
@@ -171,6 +286,19 @@ fi
 #iptables -S -t nat 2>/dev/null
 #iptables -S -t nat 2>/dev/null
 #sleep 5
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -191,9 +319,6 @@ chmod +x /etc/custom/firewall.agh
 
 
 	disable)
-
-
-
 		:
 		uci -q set firewall.${AGH_SNAME}.enabled='0'
 		uci -q commit firewall
@@ -202,17 +327,31 @@ chmod +x /etc/custom/firewall.agh
 
 	pause)
 		:
+		touch /tmp/.agh.paused
+		rm /tmp/.agh.firewall 2>/dev/null
+		#uci -q set firewall.${AGH_SNAME}.enabled='0'
+		#uci -q commit firewall
+
 
 	;;
 
 
 	resume)
-
+		#rm /tmp/.agh.paused 2>/dev/null
+		if [ ! -f /tmp/.agh.paused ]; then
+			echo "not paused"
+			exit 1
+		fi
+		#touch /tmp/.agh.firewall
+		rm /tmp/.agh.paused 2>/dev/null
+		agh_firewall enable
 	;;
 
 
 
 	esac
+
+	#sh /etc/custom/firewall.agh #???
 
 }
 
@@ -360,14 +499,9 @@ fi
 
 
 
-
-
 if [ ! -f "${AGH_PATH_YAML}" ]; then
 
-#echo "Creating ${AGH_PATH_YAML}"
-	echo "agh-init: yaml:${AGH_PATH_YAML} [create]"
-
-
+	msg_out "agh-init: yaml:${AGH_PATH_YAML} [create]"
 
 #@socket4
 
@@ -389,7 +523,7 @@ dns:
   bind_hosts:
     - 172.16.231.1
   port: 53
-  statistics_interval: 1
+  statistics_interval: 90
   querylog_enabled: true
   querylog_file_enabled: true
   querylog_interval: 2160h
@@ -474,10 +608,46 @@ filters:
     url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt
     name: AdGuard DNS filter
     id: 1
-  - enabled: false
+  - enabled: true
     url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_2.txt
     name: AdAway Default Blocklist
     id: 2
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_33.txt
+    name: Steven Black's List
+    id: 1686397392
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_32.txt
+    name: The NoTracking blocklist
+    id: 1686397393
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_30.txt
+    name: Phishing URL Blocklist (PhishTank and OpenPhish)
+    id: 1686397394
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_12.txt
+    name: Dandelion Sprout's Anti-Malware List
+    id: 1686397395
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_8.txt
+    name: NoCoin Filter List
+    id: 1686397396
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_10.txt
+    name: Scam Blocklist by DurableNapkin
+    id: 1686397397
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_31.txt
+    name: Stalkerware Indicators List
+    id: 1686397398
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_9.txt
+    name: The Big List of Hacked Malware Web Sites
+    id: 1686397399
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_11.txt
+    name: Malicious URL Blocklist (URLHaus)
+    id: 1686397400
 whitelist_filters: []
 user_rules: []
 dhcp:
@@ -529,72 +699,28 @@ fi
 
 
 
-#exit 0
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#########################if ! grep -q "^${AGH_CONFIG_WORKDIR:-/var/agh}$" /etc/sysupgrade.conf 2>/dev/null; then
 if ! grep -q "^${AGH_CONFIG_WORKDIR}" /etc/sysupgrade.conf 2>/dev/null; then
-
-	echo "agh_init: workdir upgrade ${AGH_CONFIG_WORKDIR} to /etc/sysupgrade.conf [add]"
-	
+	echo "agh_init: sysupgrade-workdir ${AGH_CONFIG_WORKDIR} to /etc/sysupgrade.conf [add]"
 	#@@@&&METAPERSIST
 	echo "${AGH_CONFIG_WORKDIR} #AGH" >> /etc/sysupgrade.conf
-
 else
-	echo "agh_init: workdir upgrade ${AGH_CONFIG_WORKDIR} to /etc/sysupgrade.conf [ok]"
+	echo "agh_init: sysupgrade-workdir ${AGH_CONFIG_WORKDIR} to /etc/sysupgrade.conf [ok]"
 fi
 
 
-
-
-
-
-
-
-################################if ! grep -q "^${AGH_PATH_YAML}$" /etc/sysupgrade.conf 2>/dev/null; then
 if ! grep -q "^${AGH_PATH_YAML} " /etc/sysupgrade.conf 2>/dev/null; then
-	echo "agh_init: yaml upgrade  ${AGH_PATH_YAML} to /etc/sysupgrade.conf [add]"
+	echo "agh_init: sysupgrade-yaml  ${AGH_PATH_YAML} to /etc/sysupgrade.conf [add]"
 	echo "${AGH_PATH_YAML} #AGH" >> /etc/sysupgrade.conf
 else
-	echo "agh_init: yaml upgrade  ${AGH_PATH_YAML} to /etc/sysupgrade.conf [ok]"
+	echo "agh_init: sysupgrade-yaml  ${AGH_PATH_YAML} to /etc/sysupgrade.conf [ok]"
 fi
 
-
-
-
-
-
-
-
+################################if ! grep -q "^${AGH_PATH_YAML}$" /etc/sysupgrade.conf 2>/dev/null; then
+#########################if ! grep -q "^${AGH_CONFIG_WORKDIR:-/var/agh}$" /etc/sysupgrade.conf 2>/dev/null; then
 
 
 
@@ -642,19 +768,14 @@ fi
 
 
 if [ "$(ifconfig dummy1 | grep 172.16.231.1 | wc -l)" = "0" ]; then
-
-	echo "ifup ${AGH_IFACE_LOGICAL} [sleep 12]"
+	msg_out "ifup ${AGH_IFACE_LOGICAL} [sleep 7]"
 	ifup ${AGH_IFACE_LOGICAL}
-	sleep 12
+	sleep 7
 else
-	echo "interface active up ip ok"
+	msg_out "interface active up ip ok"
 fi
 
-
-
 	touch /root/.$AGH_SNAME.setup
-
-
 
 }
 
@@ -726,6 +847,15 @@ TTT
 	#echo "########### test query"; agh_test
 	lsof -i -nP | grep '^AdGu'
 
+
+	cWD="$(uci get agh.config.workdir)"
+	if [ -d "$cWD" ]; then
+		cWDsz="$(du -chs $cWD | tail -n1 | awk '{print $1}')"
+		msg_out "WORKDIR: ${cWD}:${cWDsz}"
+	fi
+
+
+
 }
 
 
@@ -774,7 +904,6 @@ TTT
 
 agh_firewall() {
 
-
 	case "$1" in
 		#setup) : ;;
 		enable)
@@ -800,14 +929,6 @@ agh_firewall() {
 
 
 
-#firewall.pbr=include
-#firewall.pbr.fw4_compatible='1'
-#firewall.pbr.type='script'
-#firewall.pbr.path='/usr/share/pbr/pbr.firewall.include'
-
-
-
-
 
 
 
@@ -818,9 +939,6 @@ agh_firewall() {
 
 
 agh_body() {
-
-
-
 
 
 ################# OUTER WRAPPER IF WE ARE LISTENING THEN ALL IS OK?
@@ -862,6 +980,8 @@ fi
 
 
 
+
+
 case "$1" in
 	post)
 
@@ -894,8 +1014,6 @@ fi
 		echo "Listening issue"
 		lsof -i -nP | grep ':53'
 		lsof -i -nP | grep '172.16.231'
-	
-
 	else
 		echo "Listening ok"
 		lsof -i -nP | grep '172.16.231.1:53' | grep '^AdGu'
@@ -921,20 +1039,22 @@ esac
 
 
 #elif [ "$action" = "start" ] || [ "$action" = "resume" ]; then
-if [ "$action" = "resume" ] || [ "$action" = "enable" ] || [ "$action" = "start" ]; then
+#@BUG w /tmp/.agh.paused if [ "$action" = "resume" ] || [ "$action" = "enable" ] || [ "$action" = "start" ]; then
+#if [ "$action" = "resume" ] && [ ! -f /tmp/.agh.paused ]; then
+#	:
+#fi
+#elif [ "$action" = "resume" ] || [ "$action" = "enable" ] || [ "$action" = "start" ]; then
 
+if [ "$action" = "resume" ] && [ ! -f /tmp/.agh.paused ]; then
 	agh_firewall enable
-
 elif [ "$action" = "stop" ] || [ "$action" = "pause" ]; then
-
 	agh_firewall disable
-
 #elif [ "$action" = "disable" ]; then
 	#agh_firewall removeTBA
-
 fi
 
 }
+
 
 
 
@@ -999,21 +1119,41 @@ fi
 
 
 #exit 1
-
 #echo "################# dbg run status"
 #agh_status
-
-
-
-
-
-
-
-
 #set -x
+#echo "ACTION:$action"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 case "$action" in
+
+
+	update)
+		rm /root/.agh.setup
+		rm /etc/custom/firewall.agh 2>/dev/null
+		curl -sSL https://github.com/wulfy23/rpi4/raw/master/utilities/agh > /etc/init.d/agh
+		exit 0
+		#curl -sSL https://github.com/wulfy23/rpi4/raw/master/utilities/agh > /etc/init.d/agh
+	;;
+
+
+
 	status)
-		#echo "ACTION:$action"
 		agh_status
 		exit 1
 	;;
@@ -1022,14 +1162,11 @@ case "$action" in
 		:
 	;;
 
-
-
-test)
-	#if [ "$action" = "test" ]; then
-	agh_test "$1"
-	exit 0
-
+	test)
+		agh_test "$1"
+		exit 0
 	;;
+
 	*)
 		agh_setup
 		agh_body
@@ -1044,9 +1181,7 @@ esac
 
 
 #exit 1
-
-
-
+#if [ "$action" = "test" ]; then
 
 
 
@@ -1055,26 +1190,9 @@ esac
 case "$action" in
 	start)
 		echo "admin 172.16.231.1:3001 user:admin password:adguardhomeowner"
+		rm /tmp/.agh.paused 2>/dev/null
 	;;
 esac
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1130,15 +1248,6 @@ STOP=89
 
 
 
-
-
-
-
-
-
-
-
-
 start_service() {
 
   config_load agh
@@ -1154,6 +1263,8 @@ start_service() {
   procd_close_instance
 
 
+
+ 
 	#set -x
 	case "$action" in
 	status)
@@ -1168,16 +1279,10 @@ start_service() {
 
 	*)
 		: #agh_setup
+		sleep 12
 		agh_body post
 	;;
 	esac
-
-
-
-
-
-#exit 1
-
 
 
 
@@ -1191,6 +1296,7 @@ start_service() {
 
 
 
+#exit 1
 
 
 

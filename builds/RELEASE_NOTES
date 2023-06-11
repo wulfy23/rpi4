@@ -13,6 +13,14 @@
 
 
 
+                ############################# rpi-4_22.03.5_2.1.17-10+ are 'testing' flavour
+                   -larger image contains adguardhome and intended for testing with
+                    ENABLED_SERVICES="... agh" in /root/wrt.ini
+
+                    DO NOT INSTALL UNLESS YOU ARE ADVANCED
+
+
+
                 ############################# master pbr include
                    -noticed a new firewall config include script related to pbr
                     its benign for now (need to check on downgrade) 
