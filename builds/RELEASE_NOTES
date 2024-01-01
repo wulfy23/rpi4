@@ -30,6 +30,15 @@
                         removed luci-app-simpleadblock to make it build (package renamed? removed?)
                         (just the luci app...)
 
+                        no upgradebar / (luci update notice) in 23.05 :(
+
+                        didnt get around to polishing the agh integration moved to hotplug for
+                        watcher but dont think the one included works :(
+
+			TODO: remove fakeinternet / wireshark helper packages
+                              hmmm.... acme put some scheduled tasks in... never seen that...
+                              fix agh integration / hotplug / settings derivation
+
 
 
 		KEY EXPIRED so HAVE to start new, FORCE or download new key;
