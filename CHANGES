@@ -5,6 +5,9 @@
 
 
 
+                   -fix updatecheckbar add fail error (terminal) on moderm luci
+                    on initial login post sysupgrade
+
 
         release 2.1.17(5+)
                    -default disable "adguardhome and agh" to facilitate 

@@ -2,13 +2,18 @@
 
 
 
-
-
-
-
-if cat /bin/rpi-perftweaks.sh 2>/dev/null | grep -q 'TEMPORARY UNTIL' 2>/dev/null; then
-	curl -sSL https://github.com/wulfy23/rpi4/raw/master/utilities/rpi-perftweaks.sh > /bin/rpi-perftweaks.sh
+if [ ! -f /etc/custom/keys/a01ad0f277372936 ]; then
+cat <<CCC > /etc/custom/keys/a01ad0f277372936
+untrusted comment: Local build key
+RWSgGtDydzcpNmZelXTkp7HIL8rKbOCko51g/HTGaH1nJFmVe6huT0Tz
+CCC
 fi
+
+
+
+#if cat /bin/rpi-perftweaks.sh 2>/dev/null | grep -q 'TEMPORARY UNTIL' 2>/dev/null; then
+#	curl -sSL https://github.com/wulfy23/rpi4/raw/master/utilities/rpi-perftweaks.sh > /bin/rpi-perftweaks.sh
+#fi
 
 
 
@@ -24,11 +29,6 @@ fi
 #	logger "fixing sqm broken dualfw support"
 #	sed -i 's/^IP/#IP/g' /etc/sqm/sqm.conf
 #fi
-
-
-
-
-
 
 
 
@@ -396,6 +396,15 @@ Fsub="builds/rpi-4_22.03.5_2.1.17-2_r20134_extra"
 Bname="rpi4.64-22.03.5-29331-2.1.17-2-r20134-ext4-sys.img.gz"
 
 
+######################################## nicelines
+Fsub="builds/rpi-4_23.05.2_3.0.6-3_r23630_extra"
+Bname="rpi4.64-23.05.2-29356-3.0.6-3-r23630-ext4-sys.img.gz"
+
+
+
+
+
+
 #		echo "no release build available"; exit 0
     ;; ############################################################## ENDRELEASE 
 
@@ -504,6 +513,12 @@ Bname="rpi4.64-22.03.5-29331-2.1.15-21-r20134-ext4-sys.img.gz"
 Fsub="builds/rpi-4_22.03.5_2.1.17-2_r20134_extra"
 Bname="rpi4.64-22.03.5-29331-2.1.17-2-r20134-ext4-sys.img.gz"
 
+
+
+
+######################################## nicelines
+Fsub="builds/rpi-4_23.05.2_3.0.6-3_r23630_extra"
+Bname="rpi4.64-23.05.2-29356-3.0.6-3-r23630-ext4-sys.img.gz"
 
 
 

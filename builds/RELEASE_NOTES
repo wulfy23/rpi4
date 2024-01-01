@@ -8,7 +8,27 @@
                 SO PLEASE ALLOW AROUND 12MINS BEFORE COMING BACK/LOGGINGIN/CHECKING INTERNET
                 ETC
 
-                APOLOGIES, I'LL LOOK AT THIS TO SEE WHAT CAN BE DONE
+
+		20231231 -> 23.05.2
+		###################################### rpi4.64-23.05.2-29356-3.0.6-3-r23630-ext4-sys.img.gz
+		Um... no time to maintain much but hate to leave stale images up so have to bite the
+		bullet and push forward...
+
+                Build is "as-is" for an option (nft) for others, likely mostly usable for those needing
+                the usbboot features but that might be about it...
+
+
+		NOTES:
+			console (AMA1 > AMA2 or whatever) is instantiated differently so you'll
+                        probably see some output errors about /dev/console not existing until
+                        I fix ( or you can change your /boot/cmdline.txt andor /etc/inittab )
+
+                        pulled alot of custom setup / migrate stuff out mostly for services
+                        as i'm not up to date with them, still need to pull out sqm stuff
+                        start with a fresh install maybe if unsure but upgrade mostly worked for me
+
+                        removed luci-app-simpleadblock to make it build (package renamed? removed?)
+                        (just the luci app...)
 
 
 
@@ -24,9 +44,6 @@
                 ############################# master pbr include
                    -noticed a new firewall config include script related to pbr
                     its benign for now (need to check on downgrade) 
-                    if not enabled but i'd prefer it wasn't there
-                    for everyone if I had a choice, will leave for now and
-                    re-examine if/when more nft custom hooks are altered
 
 
                 ############################# rpi4.qos ipset cleanup
@@ -71,10 +88,6 @@
 
 
 
-
-
-
-
                 ############################# r23001 snapshot nft beta / test / cleanup build
                    -HAVE NOT TESTED THIS YET > EDIT basic test
                    -RECOMMEND putting on an entirely separate SDCARD if you will be testing this
@@ -95,10 +108,16 @@
                    4. Apparently wifi may be whacky on these boards of recent month(s)...
                       not planning on touching wifi but lets see how it fairs and is
                       a good point of comparison with 22.x
+                       edit: afaik maybe got better after this around late may
 
                    5. interesting delay for wan carrier could be from me using kickanic,
                       docsis update, netifd or similar 30-50 secs hang after nic
                       renamed to lan bringup... can live with but kinda hefty in context
+                       edit: hmmm... actually watching the wan usb nic coming up
+                             seems like it could be coming up earlier also possibly
+                             and HFC modem going into reset because of something
+                             local / changing the MAC late?
+                      
 
                       * stage2 custom info was not visible... likely a 22.03.5 thing?... 
                           or my serial stuff which seemed a little off too...
