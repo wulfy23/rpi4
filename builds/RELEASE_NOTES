@@ -32,6 +32,15 @@
 
 
 
+		KEY EXPIRED so HAVE to start new, FORCE or download new key;
+
+> curl -sSL https://github.com/wulfy23/rpi4/raw/master/utilities/a01ad0f277372936 > /etc/opkg/keys/a01ad0f277372936
+
+
+
+
+
+
 
                 ############################# rpi-4_22.03.5_2.1.17-10+ are 'testing' flavour
                    -larger image contains adguardhome and intended for testing with
