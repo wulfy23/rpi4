@@ -5,6 +5,24 @@
 
 
 
+
+        23.05.2 (.6+)
+                   -putback banip fboot logic as had some (quick and dirty) automigrate stuff
+                    to try to handle new config migration / backups and restores
+                       (also has logic for DLWRAPPER=1 fix /bin/dlwrapper for new banip
+                       process name)
+                    dont think the above works fully tho'... if issues reinstall --maintainer!!!
+
+
+                   -add luci-app-adblock-fast and properly disable that service on fboot
+                    (unless in ENABLED_SERVICES= as usual)
+                    hmmmm ib must have replaced simple-adblock with adblock-fast automatically?
+			NOTETOSELF: fixup explicit selections for next build/s
+
+
+
+
+         guessing below 2.1.1x....
                    -fix updatecheckbar add fail error (terminal) on moderm luci
                     on initial login post sysupgrade
 

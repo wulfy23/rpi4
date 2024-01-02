@@ -396,10 +396,13 @@ Fsub="builds/rpi-4_22.03.5_2.1.17-2_r20134_extra"
 Bname="rpi4.64-22.03.5-29331-2.1.17-2-r20134-ext4-sys.img.gz"
 
 
-######################################## nicelines
+
+######################################## adblock-fast not autodisabled
 Fsub="builds/rpi-4_23.05.2_3.0.6-3_r23630_extra"
 Bname="rpi4.64-23.05.2-29356-3.0.6-3-r23630-ext4-sys.img.gz"
 
+Fsub="builds/rpi-4_23.05.2_3.0.6-9_r23630_extra"
+Bname="rpi4.64-23.05.2-29360-3.0.6-9-r23630-ext4-sys.img.gz"
 
 
 
@@ -516,9 +519,13 @@ Bname="rpi4.64-22.03.5-29331-2.1.17-2-r20134-ext4-sys.img.gz"
 
 
 
-######################################## nicelines
+######################################## adblock-fast not autodisabled
 Fsub="builds/rpi-4_23.05.2_3.0.6-3_r23630_extra"
 Bname="rpi4.64-23.05.2-29356-3.0.6-3-r23630-ext4-sys.img.gz"
+
+Fsub="builds/rpi-4_23.05.2_3.0.6-9_r23630_extra"
+Bname="rpi4.64-23.05.2-29360-3.0.6-9-r23630-ext4-sys.img.gz"
+
 
 
 

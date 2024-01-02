@@ -19,13 +19,33 @@
 
 
 		NOTES:
-			console (AMA1 > AMA2 or whatever) is instantiated differently so you'll
-                        probably see some output errors about /dev/console not existing until
-                        I fix ( or you can change your /boot/cmdline.txt andor /etc/inittab )
 
-                        pulled alot of custom setup / migrate stuff out mostly for services
+                        its likely that many config files have changed significantly and i'm no
+                        longer handling fixups so suggest installing fresh or go through services
+                        one by one and -reinstall --maintainer or copy PACKAGE-opkg over the config
+                        in /etc/config, specifically, banip and adblock maybe dnsmasq etc. etc.
+
+
+			edit: nope below AMA1 is master/kernel 6.1 only
+                         ref: https://github.com/raspberrypi/linux/issues/5566#issuecomment-1667431600
+
+                      afair master didnt have the /dev/serialX hotplug.json device creation handling
+
+                              console (AMA1 > AMA2 or whatever) is instantiated differently so you'll
+                              probably see some output errors about /dev/console not existing until
+                              fixed ( or you can change your /boot/cmdline.txt andor /etc/inittab )
+
+
+
+                        pulled alot of custom setup (lots more to ditch) /
+                        migrate stuff out mostly for services
                         as i'm not up to date with them, still need to pull out sqm stuff
                         start with a fresh install maybe if unsure but upgrade mostly worked for me
+
+			APOLOGIES: Forgot was running/testing snapshot last and I did have to
+                        use/copy the new banip config file / fix compat issues...
+                        Also trashed alot of dnsmasq oldstyle ipset entries
+
 
                         removed luci-app-simpleadblock to make it build (package renamed? removed?)
                         (just the luci app...)
