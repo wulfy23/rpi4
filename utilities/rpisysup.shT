@@ -405,6 +405,9 @@ Fsub="builds/rpi-4_23.05.2_3.0.6-9_r23630_extra"
 Bname="rpi4.64-23.05.2-29360-3.0.6-9-r23630-ext4-sys.img.gz"
 
 
+######################################## nicelines
+Fsub="builds/rpi-4_23.05.2_3.0.6-25_r23630_extra"
+Bname="rpi4.64-23.05.2-29373-3.0.6-25-r23630-ext4-sys.img.gz"
 
 
 
@@ -526,6 +529,10 @@ Bname="rpi4.64-23.05.2-29356-3.0.6-3-r23630-ext4-sys.img.gz"
 Fsub="builds/rpi-4_23.05.2_3.0.6-9_r23630_extra"
 Bname="rpi4.64-23.05.2-29360-3.0.6-9-r23630-ext4-sys.img.gz"
 
+
+######################################## nicelines
+Fsub="builds/rpi-4_23.05.2_3.0.6-25_r23630_extra"
+Bname="rpi4.64-23.05.2-29373-3.0.6-25-r23630-ext4-sys.img.gz"
 
 
 
@@ -687,6 +694,7 @@ Bname="rpi4.64-snapshot-29350-7.3.9-5-r23344-ext4-sys.img.gz"
 
 
 
+		echo "no current build available"; exit 0
 
 		#echo "no current build available"; exit 0
 		#echo "no current build available"; exit 0
@@ -767,6 +775,9 @@ Bname="rpi4.64-snapshot-29326-7.1.93-17-r23001-ext4-sys.img.gz"
 #kernel 6.1 test
 Fsub="builds/rpi-4_snapshot_7.3.9-5_r23344_extra"
 Bname="rpi4.64-snapshot-29350-7.3.9-5-r23344-ext4-sys.img.gz"
+		
+
+echo "no current build available"; exit 0
 
 	#		echo "no testing build available"; exit 0
 #			echo "no testing build available"; exit 0

@@ -4,7 +4,9 @@
 
 
 
-        23.05.2 (.11+)
+        23.05.2 (.25+)
+                   
+                   -update boot elf dat
                    -remove dvb firmwares (outdated/large/unused?)
                    -remove fboot pre populate /etc/simple-adblock.servers.gz and from sysupgrade.conf insertion
                    -remove local run-acme (dupe > unfinished mod?)
@@ -26,7 +28,8 @@
                    -rm local brcmfmac bins -> may effect setup for 400/CM4 wifi depending on what
                     UPSTREAM now includes in image... can putback if anyone has issues
                     may make them postinst dl fixers if needed
-              ---~5M free'd (total)
+                    (kept minimal cyfmac for now)
+               ---~5M free'd (total)
                    -check modemmanager hotplug disablers if service not used > still needed
                    -rm nano bin from alpine (v6?) used for/with nano colours
                    -scavenge fboot /root/wrt.ini semi-tmp code
@@ -36,7 +39,7 @@
 
                    -update local copy of argon 2.3.1 to 'newer' one
                    -add 'safebackup' to rpi-support.sh ROUTER/backup.tar.gz for 10mins
-                   -
+                   -remove luci banner msg support underlying resources
                    -
                    -
                    -

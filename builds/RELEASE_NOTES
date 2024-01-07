@@ -4,14 +4,15 @@
 
 
 
-          NOTE: UPGRADE PROCESS (at least for me) IS NOW TAKING QUITE A BIT LONGER
-                SO PLEASE ALLOW AROUND 12MINS BEFORE COMING BACK/LOGGINGIN/CHECKING INTERNET
-                ETC
+
+
 
 
 		20240105on -> 23.05.2 (.21+)
                        -shrink base build (to 22.05 level -7M) below by removing large crud and
                        -speed up upgrade fboot approx 20%
+                       -hmmm... unable to disable acme (keeps messing with cron) but pretty uneventful
+                        could be something local... keep working on it / looking for hints
 
 
 		20231231 -> 23.05.2
@@ -75,6 +76,12 @@
 
 
 
+
+
+
+          NOTE: UPGRADE PROCESS (at least for me) IS NOW TAKING QUITE A BIT LONGER
+                SO PLEASE ALLOW AROUND 12MINS BEFORE COMING BACK/LOGGINGIN/CHECKING INTERNET
+                ETC
 
 
 
