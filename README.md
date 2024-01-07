@@ -2,25 +2,23 @@
 
 # OpenWrt builds for the rpi-4
 
-NOTE: Hetzner (wulfy23.info) hosting expired on the 9/Aug/2022 therefore the account was closed on the 8/Aug/2022
-
-
 
 see: <s>https://forum.openwrt.org/t/rpi4-community-build/69998 to request packages, provide feedback etc.</s> 
-i'm no longer active on the forums... and builds are <s>discontinued</s> on life support
 
-a few build users have reached out regarding continuation of builds...
+builds are on life support;
+   -cleanup and removal of stale/legacy/unused 'features' or smooth running/setup functions and
+   -basic functional testing of stable release/s 23.05.x
+   -minimal feature additions updation of optimizations where known and/or obvious
+   -cleanup/simplifying of key/current user instructions especially around upgrades/backups and must
+    know steps
+    *add wincp or ssh+nano etc. simple guide* (for wrt.ini)
+    *add luci app cmd backup button for mainstream migration*
 
-given github issues is available to us
+github issues is available to us
 
 - https://github.com/wulfy23/rpi4/issues
 
-it's probably the least I can do to attempt to build images which
-contain critical fixes for CVE's or key bumps
-
-
-anticipate degradation in master based builds and potential discontinuation of them, leaving only release builds available
-- factory images if present are primarily for use by existing users of the build
+   -support is minimal at best and thankyou to long time users who lend a hand there
 
 
 
@@ -28,7 +26,6 @@ anticipate degradation in master based builds and potential discontinuation of t
 
 ### Credit and source courtesy of the OpenWrt team, contributors and the great folks on the forum.
 
-<sup>the two kind $10(AUD) donators who helped facilitate image storage and distribution over the last year</sup><br>
 <sup>github https://github.com for a solid and open platform</sup><br><br>
 
 
@@ -46,10 +43,7 @@ anticipate degradation in master based builds and potential discontinuation of t
 <sup>@bkpepe, @neheb github mentoring</sup><br>
 <sup>[Van Tech Corner](https://www.youtube.com/channel/UCczXrZ5r1nCMACiaipGqbtw)</sup><br>
 <sup>[MaroonMed](https://www.maroonmed.com/berry-on-a-bush-router-on-a-stick-raspberry-pi-4-inter-vlan-openwrt-router/)</sup><br>
-<sup>sqm-dscp-logic: hisham2630(ultimate-sqm-settings-layer-cake-dscp-marks) (and others) @ldir @dlakelan</sup><br>
 <sup>@lynx, @moeller0, @dlakelan + others sqm-autorate (lte/3g/variable-bw-links) (no longer active - use upstream direct)</sup><br>
-<sup>argonone code: @DarkElvenAngel</sup><br>
-<sup>@dairyman and the rooter peoples</sup><br>
 <sup>plenty-of-others: if i have learnt or borrowed something from you thankyou...</sup><br>
 
 
@@ -79,39 +73,27 @@ anticipate degradation in master based builds and potential discontinuation of t
 
 ## features
 - automatic re-install of packages post-upgrade (or not)
-- luci updatecheck notice with one-click flash
 - optimised / patched rpi-eeprom-update
-- login sysinfo and sh/bash profile blingification
 - usbboot-support/auto-fsck (wip->multiboot/partresize/live-mode)
 - usb persisent nic naming (optional)
-- pre/post upgrade OS snapshotting or restore assumming bootability and extrapart is enabled
-- easy user setup variables via wrt.ini (lanip, ntp-server, etc.) with luci editing
+- easy user setup variables via wrt.ini (lanip, ntp-server, etc.)
 - expansion of partition to whole sdcard on sysupgrade
-- webui full-ish text editor (conditional/semi-stale)
-- webui browser ssh terminal (wip conditional/to finish test further)
+- pre/post upgrade OS snapshotting or restore assumming bootability and extrapart is enabled
 - smb/sshfs mount helper
-- nano colors, fake 'man' command
-- OLD youtube-download webui (wip requires external storage) (removed/disabled 2022-09)
 
 ## scripts
 - rpi-sysup-online.sh automated upgrade
 - package restore (sysupgrade -R)
 - rpi-throttlewatch.sh ( test thermal/scaling )
-- some 'locate' command setup+tweaks
-- OLD? (may have broken around 2022-03) rpi4-official-opkg.sh for security and bugfixes from master (this may not work post around 2022/03)
-
+- some 'locate' command setup+tweaks + fake 'man' command
 
 ## opt-in/out
 - persistent logs / statistics / nlbwmon / upgrade-data
-- sqmdscp console/other priority @> rpi4.qos
 - lucisshon, wifiadminboot
-- fwcustom geoip-db(git dl)
 
 ## utilities
 - speedtest-ookla(git-dl'd)
-- qemu(git-manual-dl wip needs a tester)
 - base64, tac, stat, blkid, etc. etc.
-
 
 ## packages
 - bash (w-temperature@ps1)
@@ -119,6 +101,28 @@ anticipate degradation in master based builds and potential discontinuation of t
 - openvpn + kmod-tun + wireguard + mwan3 + vpn-pbr
 - banip + adblock
 - many many more... if you call in the next 15mins, you will recieve a free toaster!
+
+
+
+
+
+
+########################### REMOVED / VERSION DEPENDANT / LEGACY
+<sup>@dairyman and the rooter peoples</sup><br>
+<sup>argonone code: @DarkElvenAngel</sup><br>
+<sup>the two kind $10(AUD) donators who helped facilitate image storage and distribution over the last year</sup><br>
+<sup>sqm-dscp-logic: hisham2630(ultimate-sqm-settings-layer-cake-dscp-marks) (and others) @ldir @dlakelan</sup><br>
+- luci updatecheck notice with one-click flash REMOVED202312 > luci > system > commands check or run
+- webui full-ish text editor (conditional/semi-stale)
+- fwcustom geoip-db(git dl) REMOVED
+- sqmdscp console/other priority @> rpi4.qos > REMOVED ~ 2023 ~ in most / all nft based builds (master and 23.05.x)
+- login sysinfo and sh/bash profile blingification
+- youtube-download webui (wip requires external storage) (removed/disabled 2022-09)
+- webui browser ssh terminal (wip conditional/to finish test further)
+- OLD/MASTERONLY? (may have broken around 2022-03) rpi4-official-opkg.sh for security and bugfixes from master (this may not work post around 2022/03)
+- nano colors (mainline), script highlighting tmp removed 202312
+
+
 
 
 

@@ -9,6 +9,11 @@
                 ETC
 
 
+		20240105on -> 23.05.2 (.21+)
+                       -shrink base build (to 22.05 level -7M) below by removing large crud and
+                       -speed up upgrade fboot approx 20%
+
+
 		20231231 -> 23.05.2
 		###################################### rpi4.64-23.05.2-29356-3.0.6-3-r23630-ext4-sys.img.gz
 		Um... no time to maintain much but hate to leave stale images up so have to bite the
@@ -19,6 +24,9 @@
 
 
 		NOTES:
+
+                        hmmm cannot disable acme... could be build specific bug or normal?
+                        (adds / re-adds cronjob)
 
                         its likely that many config files have changed significantly and i'm no
                         longer handling fixups so suggest installing fresh or go through services

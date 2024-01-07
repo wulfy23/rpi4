@@ -4,6 +4,42 @@
 
 
 
+        23.05.2 (.11+)
+                   -remove dvb firmwares (outdated/large/unused?)
+                   -remove fboot pre populate /etc/simple-adblock.servers.gz and from sysupgrade.conf insertion
+                   -remove local run-acme (dupe > unfinished mod?)
+                    edit: appears this used to remove/notinsert acme installed cronjob is service disabled
+                   -remove some ancient built in default ipsets never/rarely used (rpi4.qos)? from
+                    /etc/custom/firewall/dscp/
+              ---1M free'd                   
+                   -remove usr/share/nano/ syntax helpers (stale/infreq-use/space) .5M
+                   -remove automated/unfinished/unused backup/stats/userscript->cronhelper 'tasks.sh' 
+                   -remove wiresharkhelper/fakeinternet etc. (iptablesrelated/stale luci custom pkgs)  
+
+                   -hmmmm... acme -> acme-acmesh etc. etc. work TBA desc...
+
+                   luci / uhttpd mass cleanup
+                   -remove phpv7 custom pages / logic editor/youtube-dlpage something
+                   (no longer functional)
+                   -rm youtube-dl > yt-dlp package its approx 4M so post inst or popularity too low
+                    given webUI above is removed
+                   -rm local brcmfmac bins -> may effect setup for 400/CM4 wifi depending on what
+                    UPSTREAM now includes in image... can putback if anyone has issues
+                    may make them postinst dl fixers if needed
+              ---~5M free'd (total)
+                   -check modemmanager hotplug disablers if service not used > still needed
+                   -rm nano bin from alpine (v6?) used for/with nano colours
+                   -scavenge fboot /root/wrt.ini semi-tmp code
+                          -ROOTFSEXPAND=1 backport no longer needed
+                          -POWERPROFILE='quick' backport no longer needed
+                          -cmdlineopt pci perf cleanup no longer needed
+
+                   -update local copy of argon 2.3.1 to 'newer' one
+                   -add 'safebackup' to rpi-support.sh ROUTER/backup.tar.gz for 10mins
+                   -
+                   -
+                   -
+                   -
 
 
         23.05.2 (.6+)
@@ -18,6 +54,11 @@
                     (unless in ENABLED_SERVICES= as usual)
                     hmmmm ib must have replaced simple-adblock with adblock-fast automatically?
 			NOTETOSELF: fixup explicit selections for next build/s
+
+
+                   -removed init.d 'custom' services (outdated/not tested in ages/nobody uses)
+                       -ntop-chroot, alpine-chroot, graphana, bullseye? etc. etc.
+ 
 
 
 
