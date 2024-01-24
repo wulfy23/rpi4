@@ -6,6 +6,11 @@
 
 
 
+		two builds below seem to not install argon config app, when resolved manually
+                bing background is not enabled like in previous theme version
+
+		was gonna try fix but it's erroring out on me... will just dump a config if does
+		not exist
 
 
 		20240105on -> 23.05.2 (.21+)

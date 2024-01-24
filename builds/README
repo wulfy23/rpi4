@@ -4,9 +4,30 @@
 
 	NOTE: These builds are for the most part getting stale now
           for my liking (unvalidated tweaks, app specific workarounds)
-          They can break at any time. If you are not confident in
-          verifying basic function, best hold off on any available update
-          for 3-7 days minimum.
+          and however the move to 23.05.x has brought about an
+          opportunity to scrub out a decent amount of crud.
+
+
+          This move also sees no more graphical (constant) updatecheck
+          bar in luci. (there are luci > system > commands to check
+          and run an semi-auto update although the upgrade just spins
+          so it's pretty ambiguous and >
+
+
+
+```
+rpi-sysup-online.sh -R
+```
+
+
+or scp the image to tmp and standard-ish
+
+
+```
+sysupgrade -R /tmp/rpi4........img.gz
+```
+
+will be a better way for those that are comfortable
 
 
 

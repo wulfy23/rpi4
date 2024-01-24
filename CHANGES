@@ -4,7 +4,39 @@
 
 
 
-        23.05.2 (.25+)
+                 30+
+                    -add --force-overwrite to package restore (websockets ttyd < docker vim? etc)
+
+
+        23.05.2 (.27+)
+                   -add adclock-fast servers entry to dnsmasq upgrade scrubbing
+
+                   -5 etc/config files were static... check validy and/or move out and make dynamic
+                    so as not to interfere with original src if possible (makes stale checking easier)
+
+                     irqbalance  nft-qos  oled  qosify  v2raya  zerotier
+
+
+                      -v2raya might be ok, we dont include the package afaik it just enables it
+                      -oled is ok / remove for now, we dont use
+                      -zerotier needs to be dynamicised / removed... the pre-pop disabled tunnel
+                       (wulfy23) is not really used
+
+                      -irqbalance may be ok... I disable the service on firstboot?
+
+                      -qosify mods could be stale
+                      -nftqos mods and customopts I think but package currently has issues /
+                       custom mods need updating???
+
+                  31)
+                    -add preinit mount root cp of default config files to /etc/config-original
+                     for simpler restore of a versions dependant vanilla
+                      -add > rpi-support.sh configorig SERVICENAME #put a vanilla config for this rev
+                       (sysupgrade default)
+
+
+
+        23.05.2 (.25)
                    
                    -update boot elf dat
                    -remove dvb firmwares (outdated/large/unused?)
@@ -40,8 +72,9 @@
                    -update local copy of argon 2.3.1 to 'newer' one
                    -add 'safebackup' to rpi-support.sh ROUTER/backup.tar.gz for 10mins
                    -remove luci banner msg support underlying resources
-                   -
-                   -
+                   -remove older argon theme ipks
+                   -remove old/not used?/not polished backup.sh/tasks.sh cron script
+                    helper frame work
                    -
 
 
