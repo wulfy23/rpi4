@@ -410,6 +410,12 @@ Fsub="builds/rpi-4_23.05.2_3.0.6-25_r23630_extra"
 Bname="rpi4.64-23.05.2-29373-3.0.6-25-r23630-ext4-sys.img.gz"
 
 
+Fsub="builds/rpi-4_23.05.3_3.1.5-3_r23809_extra"
+Bname="rpi4.64-23.05.3-29393-3.1.5-3-r23809-ext4-sys.img.gz"
+
+
+
+
 
 #		echo "no release build available"; exit 0
     ;; ############################################################## ENDRELEASE 
@@ -534,6 +540,9 @@ Bname="rpi4.64-23.05.2-29360-3.0.6-9-r23630-ext4-sys.img.gz"
 Fsub="builds/rpi-4_23.05.2_3.0.6-25_r23630_extra"
 Bname="rpi4.64-23.05.2-29373-3.0.6-25-r23630-ext4-sys.img.gz"
 
+
+Fsub="builds/rpi-4_23.05.3_3.1.5-3_r23809_extra"
+Bname="rpi4.64-23.05.3-29393-3.1.5-3-r23809-ext4-sys.img.gz"
 
 
 

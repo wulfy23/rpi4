@@ -1,0 +1,207 @@
+
+
+vert@MSI:/fs/sdd1/openwrt/RTNGext/cache/rpi4/builds$ diff manifest.23.05.2 manifest.23.05.3  | grep -vE 'php|perl|python|kmod|bind'
+5,7c5,7
+
+
+
+< acme-common - 1.0.3
+< adblock - 4.1.5-8
+< adblock-fast - 1.1.1-1
+---
+> acme-common - 1.0.4
+> adblock - 4.1.5-9
+> adblock-fast - 1.1.1-r7
+16,17c16,17
+< banip - 0.9.2-4
+< base-files - 1550-r23630-842932a63d
+---
+> banip - 0.9.4-3
+> base-files - 1554-r23809-234f1a2efa
+20,30c20,30
+< bcm27xx-gpu-fw - 2022-05-16-3673be308132de102fdff491d1333d9d0f823557
+< bcm27xx-userland - c4fd1b8986c6d6d4ae5cd51e65a8bbeb495dfa4e-1
+---
+> bcm27xx-gpu-fw - 2024-01-11-0968de28716a9b1f106b8492646d0ed0a2800152
+> bcm27xx-userland - 96a7334ae9d5fc9db7ac92e59852377df63f1848-1
+71c71
+< curl - 8.5.0-1
+---
+> curl - 8.6.0-1
+85c85
+< dnsmasq-full - 2.89-4
+---
+> dnsmasq-full - 2.90-2
+87,88c87,88
+< dropbear - 2022.82-5
+< dropbearconvert - 2022.82-5
+---
+> dropbear - 2022.82-6
+> dropbearconvert - 2022.82-6
+112c112
+< htop - 3.2.2-1
+---
+> htop - 3.3.0-1
+114c114
+< https-dns-proxy - 2023-10-25-5
+---
+> https-dns-proxy - 2023.11.19-r1
+144,349c144,349
+< jsonfilter - 2018-02-04-c7e938d6-1
+< kernel - 5.15.137-1-4d407d5f01a611de6825ef905c07d710
+---
+> jsonfilter - 2024-01-23-594cfa86-1
+> kernel - 5.15.150-1-bd9c06a169c49b7613087c1d65b97108
+359c359
+< libcares - 1.19.1-1
+---
+> libcares - 1.27.0-1
+361c361
+< libcurl4 - 8.5.0-1
+---
+> libcurl4 - 8.6.0-1
+377c377
+< libgnutls - 3.8.0-3
+---
+> libgnutls - 3.8.3-1
+395c395
+< liblzma - 5.4.4-1
+---
+> liblzma - 5.4.6-1
+398c398
+< libmbedtls12 - 2.28.5-2
+---
+> libmbedtls12 - 2.28.7-2
+402c402
+< libmosquitto-ssl - 2.0.17-1
+---
+> libmosquitto-ssl - 2.0.18-2
+417,419c417,419
+< libopenssl-conf - 3.0.12-1
+< libopenssl-legacy - 3.0.12-1
+< libopenssl3 - 3.0.12-1
+---
+> libopenssl-conf - 3.0.13-1
+> libopenssl-legacy - 3.0.13-1
+> libopenssl3 - 3.0.13-1
+452c452
+< libuv1 - 1.45.0-1
+---
+> libuv1 - 1.48.0-1
+464,465c464,466
+< luci-app-adblock - git-23.189.72983-3072876
+< luci-app-banip - git-23.314.65560-16dc1f7
+---
+> luci-app-adblock - git-24.086.45142-09d5a38
+> luci-app-adblock-fast - 1.1.1-r7
+> luci-app-banip - git-24.086.45142-09d5a38
+469,470c470,471
+< luci-app-firewall - git-23.338.81541-d56ca14
+< luci-app-https-dns-proxy - 2023-10-25-5
+---
+> luci-app-firewall - git-24.067.01746-69867db
+> luci-app-https-dns-proxy - 2023.11.19-r1
+477,478c478,479
+< luci-app-openvpn - git-23.353.61132-117ca02
+< luci-app-opkg - git-23.311.75635-769b30c
+---
+> luci-app-openvpn - git-24.039.49284-d5c562e
+> luci-app-opkg - git-24.043.63812-c89a68b
+482,483c483,484
+< luci-app-statistics - git-23.353.71282-6acefbc
+< luci-app-travelmate - git-23.338.73324-2f0529f
+---
+> luci-app-statistics - git-24.034.36441-feee897
+> luci-app-travelmate - git-24.086.45142-09d5a38
+489,490c490,491
+< luci-base - git-23.357.58018-024e7ab
+< luci-compat - git-23.351.85440-817a5e6
+---
+> luci-base - git-24.086.45142-09d5a38
+> luci-compat - git-24.086.45108-51aee90
+494c495
+< luci-lib-nixio - git-23.338.82551-ea30bd9
+---
+> luci-lib-nixio - git-24.034.54875-21210dc
+498,500c499,501
+< luci-mod-network - git-23.353.11917-0c35f71
+< luci-mod-status - git-23.351.85404-a962261
+< luci-mod-system - git-23.306.39416-7d3abf8
+---
+> luci-mod-network - git-24.075.44893-ac63bea
+> luci-mod-status - git-24.087.58493-9370bdd
+> luci-mod-system - git-24.067.01860-7a82b2f
+504c505
+< luci-proto-ipv6 - git-23.355.78874-80140aa
+---
+> luci-proto-ipv6 - git-24.086.45108-51aee90
+508,512c509,513
+< luci-proto-qmi - git-21.231.25157-5ff3ef7
+< luci-proto-wireguard - git-23.338.83621-1c2acbe
+< luci-theme-bootstrap - git-23.338.81541-94798fc
+< luci-theme-material - git-23.088.30860-f464199
+< luci-theme-openwrt - git-23.009.43662-21b4065
+---
+> luci-proto-qmi - git-24.087.04037-98843bf
+> luci-proto-wireguard - git-24.047.55123-7964117
+> luci-theme-bootstrap - git-24.086.46634-1ffe078
+> luci-theme-material - git-24.089.55517-835ac75
+> luci-theme-openwrt - git-24.067.02009-8516918
+520,521c521,522
+< mosquitto-client-ssl - 2.0.17-1
+< mosquitto-ssl - 2.0.17-1
+---
+> mosquitto-client-ssl - 2.0.18-2
+> mosquitto-ssl - 2.0.18-2
+529c530
+< netifd - 2023-11-10-35facc83-1.1
+---
+> netifd - 2024-01-04-c18cc79d-1
+547,548c548,549
+< openssh-sftp-server - 9.5p1-1
+< openssl-util - 3.0.12-1
+---
+> openssh-sftp-server - 9.6p1-1
+> openssl-util - 3.0.13-1
+550c551
+< openvpn-openssl - 2.5.8-3
+---
+> openvpn-openssl - 2.5.8-5
+600,608c601,609
+---
+677c678
+< rpcd-mod-luci - 20230123-1
+---
+> rpcd-mod-luci - 20240305-1
+699c700
+< travelmate - 2.1.1-2
+---
+> travelmate - 2.1.2-6
+717,718c718,719
+< uhttpd - 2023-06-25-34a8a74d-1
+< uhttpd-mod-ubus - 2023-06-25-34a8a74d-1
+---
+> uhttpd - 2023-06-25-34a8a74d-2
+> uhttpd-mod-ubus - 2023-06-25-34a8a74d-2
+736c737
+< wireless-regdb - 2023.09.01-1
+---
+> wireless-regdb - 2024.01.23-1
+743,745c744,745
+< xz - 5.4.4-1
+< xz-utils - 5.4.4-1
+< yt-dlp - 2023.3.4-1
+---
+> xz - 5.4.6-1
+> xz-utils - 5.4.6-1
+
+
+
+
+
+
+
+
+
+
+

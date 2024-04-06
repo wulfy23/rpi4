@@ -6,11 +6,18 @@
 
 
 
-		two builds below seem to not install argon config app, when resolved manually
-                bing background is not enabled like in previous theme version
+		20240407 -> 23.05.3 (.2)
+                       -build against new release...
+                          -wifi stuff looks like might need manual updating again TBA
+                          -personally had major issue with no/incorrect /dev/console
+                           related to some config.txt/inittab stuff that I think should
+                           only effect mostly me at this stage... causes most custom
+                           scripts to hang when no console device is present / correct?
+                           this has happened before and is a note for myself to better
+                           handle, especially if building post 5.15 anything!!!
 
-		was gonna try fix but it's erroring out on me... will just dump a config if does
-		not exist
+
+
 
 
 		20240105on -> 23.05.2 (.21+)
@@ -228,6 +235,27 @@
 ##########################################################################################3
 ########################################### DEMARK COMMENTS BELOW GETTING OLD
 ###########################################################################################
+		
+
+
+
+		### FROM AROUND 23.05 changover... argon / argon app is known to need work
+                    or not working (app) etc. not a priority
+                    until / unless major break in argon theme
+
+
+
+
+
+		two builds below seem to not install argon config app, when resolved manually
+                bing background is not enabled like in previous theme version
+
+		was gonna try fix but it's erroring out on me... will just dump a config if does
+		not exist
+
+
+
+
 
 
         note: there is no ujail(added back r19003 removed post due to simple-adblock issue)
