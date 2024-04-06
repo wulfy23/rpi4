@@ -4,6 +4,12 @@
         
 
 
+        23.05.3 (.5+)
+                    -add 43456 from RPIDISTRO debian (400 compute module blobs)
+                     (previously symlinked to 43455)
+
+
+
 
         23.05.3 (.3)
                     -carries over previous cleanup in progress changes (no changes)
